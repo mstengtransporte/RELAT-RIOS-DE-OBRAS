@@ -406,8 +406,8 @@ tbody td:last-child{border-right:0}
 tbody td:first-child{text-align:left;padding-left:8px}
 .row-num{color:var(--text3);font-size:10px;font-weight:900;width:20px;display:inline-block;text-align:right;margin-right:3px}
 
-/* Selects de nome e função */
-select.cell-name,select.cell-func{
+/* Selects de nome, função e veículo */
+select.cell-name,select.cell-func,select.cell-vehicle{
   background:transparent;border:none;border-bottom:1.5px solid #000;
   width:100%;padding:2px 4px;color:var(--text);font-size:13px;font-weight:900;
   outline:none;cursor:pointer;min-height:24px;
@@ -418,8 +418,9 @@ select.cell-name,select.cell-func{
 }
 select.cell-name{min-width:130px}
 select.cell-func{min-width:100px;color:var(--text)}
+select.cell-vehicle{min-width:100px;color:var(--text)}
 .cell-print-text{display:none}
-input.cell-name,input.cell-func{
+input.cell-name,input.cell-func,input.cell-vehicle{
   background:transparent;border:none;border-bottom:1.5px solid var(--accent);
   width:100%;padding:2px 4px;color:var(--text);font-size:12px;font-weight:900;outline:none;
   min-height:24px;text-transform:uppercase
@@ -1120,8 +1121,8 @@ input.login-input,
     font-size:8pt!important;
     font-weight:900!important
   }
-  /* Selects de nome/função → texto puro */
-  select.cell-name,select.cell-func{
+  /* Selects de nome/função/veículo → texto puro */
+  select.cell-name,select.cell-func,select.cell-vehicle{
     border:none!important;
     background:transparent!important;
     background-image:none!important;
@@ -1540,6 +1541,7 @@ input.login-input,
     <span style="display:flex;gap:8px;flex-wrap:wrap">
       <button class="btn-manage-list" onclick="abrirListModal('names')">✏️ Editar Lista de Nomes</button>
       <button class="btn-manage-list" onclick="abrirListModal('funcs')">🔧 Editar Lista de Funções</button>
+      <button class="btn-manage-list" onclick="abrirListModal('vehicles')">🚚 Editar Lista de Veículos</button>
     </span>
   </div>
   <div class="table-wrap">
@@ -1550,6 +1552,7 @@ input.login-input,
             <th style="width:34px">#</th>
             <th style="min-width:140px;text-align:left">Funcionário</th>
             <th style="min-width:100px;text-align:left">Função</th>
+            <th style="min-width:100px;text-align:left">Veículo</th>
             <th class="th-ose" id="th-o1">OSE 01<br><small>Hrs</small></th>
             <th class="th-ose" id="th-o2">OSE 02<br><small>Hrs</small></th>
             <th class="th-ose" id="th-o3">OSE 03<br><small>Hrs</small></th>
@@ -1563,7 +1566,7 @@ input.login-input,
         <tbody id="workers-body"></tbody>
         <tfoot>
           <tr>
-            <td colspan="3">⬛ TOTAL H.H</td>
+            <td colspan="4">⬛ TOTAL H.H</td>
             <td id="foot-o1" class="col-sem">0</td>
             <td id="foot-o2" class="col-sem">0</td>
             <td id="foot-o3" class="col-sem">0</td>
@@ -2982,6 +2985,7 @@ async function _syncSalvarSupabaseReal(d,rdoKey){
         encarregado:h.enc||null,
         names_list:d.namesList||[],
         funcs_list:d.funcsList||[],
+        vehicles_list:d.vehiclesList||[],
         row_counter:d.rowCounter||0,
         criado_por:idAtualConfirmado
       },{onConflict:'rdo_key'})
@@ -3013,7 +3017,7 @@ async function _syncSalvarSupabaseReal(d,rdoKey){
     const workersRows=(d.workers||[])
       .filter(w=>w.name||(w.hrs||[]).some(v=>v))
       .map((w,idx)=>({
-        rdo_id:rdoId,worker_index:idx,nome:w.name||null,funcao:w.func||null,hrs:w.hrs||[],hst:w.hst||[]
+        rdo_id:rdoId,worker_index:idx,nome:w.name||null,funcao:w.func||null,veiculo:w.vehicle||null,hrs:w.hrs||[],hst:w.hst||[]
       }));
     if(workersRows.length){
       const{error:erroWorkers}=await supabaseClient.from('rdo_workers').insert(workersRows);
@@ -3087,14 +3091,15 @@ async function buscarERestaurarDaNuvem(dataDe,dataAte){
         });
         const workersArr=(workersPorRdo[r.id]||[])
           .slice().sort((a,b)=>(a.worker_index??0)-(b.worker_index??0))
-          .map(w=>({name:w.nome||'',func:w.funcao||'',hrs:w.hrs||[],hst:w.hst||[]}));
+          .map(w=>({name:w.nome||'',func:w.funcao||'',vehicle:w.veiculo||'',hrs:w.hrs||[],hst:w.hst||[]}));
         const d={
           header:{nrdo:r.nrdo||'',data:r.data||'',obra:r.obra||'',enc:r.encarregado||'',disc:r.disciplina||''},
           rowCounter:r.row_counter||0,
           workers:workersArr,
           oses:osesArr,
           namesList:r.names_list||[],
-          funcsList:r.funcs_list||[]
+          funcsList:r.funcs_list||[],
+          vehiclesList:r.vehicles_list||[]
         };
         localStorage.setItem(r.rdo_key,JSON.stringify(d));
         marcarComoEnviado(r.rdo_key); // já está na nuvem, então já conta como enviado
@@ -3779,6 +3784,13 @@ function atualizarBannerObra(){
 // ── LISTAS SUSPENSAS ──
 let namesList = [];
 let funcsList = ['Mecânico','Soldador','Montador','Encanador','Instrumentista','Eletricista','Mont. Andaime','Mec. Montador','Eletric. Montador','1/2 Oficial Mecânica','Pintor','Ajudante','Operador','Supervisor','Encarregado'];
+// Lista de veículos — hoje preenchida manualmente pelo encarregado/admin, igual Nome e
+// Função. O CAMPO já nasce pronto pra, no futuro, ser preenchido AUTOMATICAMENTE puxando
+// do sistema "Relatório de Obras" (quando aquele sistema escalar um funcionário pra um
+// veículo, este RDO buscaria e preencheria sozinho) — mas essa integração é uma etapa
+// separada, futura; por enquanto a ferramenta funciona 100% manual, do mesmo jeito que
+// Nome/Função já funcionam.
+let vehiclesList = [];
 let listModalType = '';
 let listModalTemp = [];
 
@@ -3792,6 +3804,12 @@ function buildFuncOptions(selected=''){
   let opts=`<option value="">— Função —</option>`;
   funcsList.forEach(f=>{ opts+=`<option value="${f}" ${f===selected?'selected':''}>${f}</option>`; });
   opts+=`<option value="__custom__">✏️ Digitar função...</option>`;
+  return opts;
+}
+function buildVehicleOptions(selected=''){
+  let opts=`<option value="">— Veículo —</option>`;
+  vehiclesList.forEach(v=>{ opts+=`<option value="${v}" ${v===selected?'selected':''}>${v}</option>`; });
+  opts+=`<option value="__custom__">✏️ Digitar veículo...</option>`;
   return opts;
 }
 
@@ -3873,26 +3891,69 @@ function onFuncChange(sel,i){
   sel.dataset.prev=sel.value;
 }
 
+function onVehicleChange(sel,i){
+  if(sel.value==='__custom__'){
+    const td=sel.parentNode;
+    const inp=document.createElement('input');
+    inp.type='text';
+    inp.className='cell-vehicle';
+    inp.placeholder='Digite o veículo...';
+    inp.style.cssText='width:100%;border:2px solid var(--accent);border-radius:6px;padding:4px 6px;font-size:13px;font-weight:700;background:var(--accent-light);color:var(--text);outline:none;text-transform:uppercase';
+    td.replaceChild(inp,sel);
+    inp.focus();
+    function confirmar(){
+      const v=inp.value.trim();
+      if(v){
+        if(!vehiclesList.includes(v)){vehiclesList.push(v);salvarListas();}
+        const novaSel=document.createElement('select');
+        novaSel.className='cell-vehicle';
+        novaSel.id=`vehicle-${i}`;
+        novaSel.onchange=function(){onVehicleChange(this,i);};
+        novaSel.innerHTML=buildVehicleOptions(v);
+        novaSel.value=v;
+        td.replaceChild(novaSel,inp);
+      } else {
+        const novaSel=document.createElement('select');
+        novaSel.className='cell-vehicle';
+        novaSel.id=`vehicle-${i}`;
+        novaSel.onchange=function(){onVehicleChange(this,i);};
+        novaSel.innerHTML=buildVehicleOptions('');
+        td.replaceChild(novaSel,inp);
+      }
+    }
+    inp.addEventListener('keydown',e=>{if(e.key==='Enter')confirmar();if(e.key==='Escape'){e.stopPropagation();inp.value='';confirmar();}});
+    inp.addEventListener('blur',()=>setTimeout(confirmar,150));
+    return;
+  }
+  sel.dataset.prev=sel.value;
+}
+
 function salvarListas(){
   try{
     localStorage.setItem('rdo-names-list',JSON.stringify(namesList));
     localStorage.setItem('rdo-funcs-list',JSON.stringify(funcsList));
+    localStorage.setItem('rdo-vehicles-list',JSON.stringify(vehiclesList));
   }catch(e){ console.error('salvarListas error:',e); }
 }
 function carregarListas(){
   const n=localStorage.getItem('rdo-names-list');
   const f=localStorage.getItem('rdo-funcs-list');
+  const v=localStorage.getItem('rdo-vehicles-list');
   if(n) try{namesList=JSON.parse(n);}catch(e){}
   if(f) try{funcsList=JSON.parse(f);}catch(e){}
+  if(v) try{vehiclesList=JSON.parse(v);}catch(e){}
 }
 
 // Modal gerenciar listas
 function abrirListModal(type){
   listModalType=type;
   const isNames=type==='names';
-  document.getElementById('list-modal-title').textContent=isNames?'👷 Gerenciar Lista de Nomes':'🔧 Gerenciar Lista de Funções';
-  document.getElementById('list-new-item').placeholder=isNames?'Nome do funcionário...':'Função...';
-  listModalTemp=[...(isNames?namesList:funcsList)];
+  const isVehicles=type==='vehicles';
+  const titulo=isNames?'👷 Gerenciar Lista de Nomes':(isVehicles?'🚚 Gerenciar Lista de Veículos':'🔧 Gerenciar Lista de Funções');
+  const placeholder=isNames?'Nome do funcionário...':(isVehicles?'Placa ou identificação do veículo...':'Função...');
+  document.getElementById('list-modal-title').textContent=titulo;
+  document.getElementById('list-new-item').placeholder=placeholder;
+  listModalTemp=[...(isNames?namesList:(isVehicles?vehiclesList:funcsList))];
   renomeacoesPendentes=[];
   renderListItems();
   document.getElementById('list-modal').classList.add('show');
@@ -3935,12 +3996,13 @@ function addListItem(){
 function removeListItem(idx){listModalTemp.splice(idx,1);renderListItems();}
 function salvarListModal(){
   if(listModalType==='names') namesList=[...listModalTemp];
+  else if(listModalType==='vehicles') vehiclesList=[...listModalTemp];
   else funcsList=[...listModalTemp];
   salvarListas();
 
-  // Aplica correções de nome/função já lançadas nas linhas de funcionários (pra quem
-  // corrigiu um nome digitado errado não precisar refazer a seleção linha por linha)
-  const seletor=listModalType==='names'?'select.cell-name':'select.cell-func';
+  // Aplica correções de nome/função/veículo já lançadas nas linhas de funcionários (pra
+  // quem corrigiu um valor digitado errado não precisar refazer a seleção linha por linha)
+  const seletor=listModalType==='names'?'select.cell-name':(listModalType==='vehicles'?'select.cell-vehicle':'select.cell-func');
   renomeacoesPendentes.forEach(({de,para})=>{
     document.querySelectorAll(seletor).forEach(sel=>{ if(sel.value===de) sel.dataset.corrigirPara=para; });
   });
@@ -3955,6 +4017,12 @@ function salvarListModal(){
   document.querySelectorAll('select.cell-func').forEach(sel=>{
     const cur=sel.dataset.corrigirPara||sel.value;
     sel.innerHTML=buildFuncOptions(cur);
+    sel.value=cur;
+    delete sel.dataset.corrigirPara;
+  });
+  document.querySelectorAll('select.cell-vehicle').forEach(sel=>{
+    const cur=sel.dataset.corrigirPara||sel.value;
+    sel.innerHTML=buildVehicleOptions(cur);
     sel.value=cur;
     delete sel.dataset.corrigirPara;
   });
@@ -4115,6 +4183,11 @@ function addWorkerRow(doRecalc=true){
     <td style="min-width:110px">
       <select class="cell-func" id="func-${i}" onchange="onFuncChange(this,${i})">
         ${buildFuncOptions()}
+      </select>
+    </td>
+    <td style="min-width:110px">
+      <select class="cell-vehicle" id="vehicle-${i}" onchange="onVehicleChange(this,${i})">
+        ${buildVehicleOptions()}
       </select>
     </td>
     ${hc}
@@ -4520,9 +4593,11 @@ function getFormData(){
     const i=tr.dataset.row;if(!i)return;
     const nameSel=document.getElementById(`name-${i}`);
     const funcSel=document.getElementById(`func-${i}`);
+    const vehicleSel=document.getElementById(`vehicle-${i}`);
     const w={idx:i,
       name:nameSel?.value||'',
       func:funcSel?.value||'',
+      vehicle:vehicleSel?.value||'',
       hrs:[],hst:[]};
     for(let o=1;o<=NUM_OSE;o++){
       w.hrs.push(document.getElementById(`hrs-${i}-${o}`)?.value||'');
@@ -4534,7 +4609,7 @@ function getFormData(){
   for(let o=1;o<=NUM_OSE;o++){
     oses.push({name:document.getElementById(`ose-name-${o}`)?.value||'',status:document.getElementById(`ose-status-${o}`)?.value||'sem',desc:document.getElementById(`ose-desc-${o}`)?.innerHTML||'',descText:document.getElementById(`ose-desc-${o}`)?.innerText||'',resp:document.getElementById(`ose-resp-${o}`)?.value||''});
   }
-  return{header:{nrdo:document.getElementById('h-nrdo').value,data:document.getElementById('h-data').value,obra:document.getElementById('h-obra').value,enc:document.getElementById('h-enc').value,disc:document.getElementById('h-disc').value},rowCounter,workers,oses,namesList,funcsList};
+  return{header:{nrdo:document.getElementById('h-nrdo').value,data:document.getElementById('h-data').value,obra:document.getElementById('h-obra').value,enc:document.getElementById('h-enc').value,disc:document.getElementById('h-disc').value},rowCounter,workers,oses,namesList,funcsList,vehiclesList};
 }
 
 // Trava contra clique duplo acidental nos botões de Salvar/Exportar — muito comum no
@@ -4720,6 +4795,7 @@ function restoreRow(w,i){
   tr.innerHTML=`<td><span class="row-num">${i}</span></td>
     <td style="min-width:140px"><select class="cell-name" id="name-${i}" onchange="onNameChange(this,${i})">${buildNameOptions(w.name||'')}</select></td>
     <td style="min-width:110px"><select class="cell-func" id="func-${i}" onchange="onFuncChange(this,${i})">${buildFuncOptions(w.func||'')}</select></td>
+    <td style="min-width:110px"><select class="cell-vehicle" id="vehicle-${i}" onchange="onVehicleChange(this,${i})">${buildVehicleOptions(w.vehicle||'')}</select></td>
     ${hc}<td class="total-hrs s-sem" id="rowtotal-${i}">0</td>
     <td><button class="btn-del-row" onclick="deleteRow(${i})" title="Excluir">✕</button></td>`;
   tbody.appendChild(tr);
@@ -4880,6 +4956,7 @@ function restaurarEstadoCompleto(d){
   const h=d.header||{};
   if(d.namesList&&d.namesList.length) namesList=d.namesList;
   if(d.funcsList&&d.funcsList.length) funcsList=d.funcsList;
+  if(d.vehiclesList&&d.vehiclesList.length) vehiclesList=d.vehiclesList;
   if(h.nrdo)document.getElementById('h-nrdo').value=h.nrdo;
   else document.getElementById('h-nrdo').value=gerarProximoNRDO(h.obra);
   if(h.data){document.getElementById('h-data').value=h.data;updateDiaSemana();}
@@ -4959,6 +5036,7 @@ function desfazerUltimaAcao(){
 function aplicarModeloNovoDia(d,proximoNRDO,manterStatus=true,dataAlvo=null,manterDescricoes=false){
   if(d.namesList&&d.namesList.length) namesList=d.namesList;
   if(d.funcsList&&d.funcsList.length) funcsList=d.funcsList;
+  if(d.vehiclesList&&d.vehiclesList.length) vehiclesList=d.vehiclesList;
 
   const h=d.header||{};
   document.getElementById('h-nrdo').value=proximoNRDO;
@@ -8641,7 +8719,7 @@ function showToast(msg,color){
 // celular quebrar, resetar ou trocar de dono (hoje tudo fica só no
 // localStorage deste aparelho, sem nenhuma cópia em outro lugar).
 // ════════════════════════════════════════════════════════════
-const CHAVES_META_BACKUP=['rdo-names-list','rdo-funcs-list','rdo-theme','rdo-frases','rdo-last-key','rdo-clientes-cache','rdo-ultimo-usuario-id','rdo-enviados'];
+const CHAVES_META_BACKUP=['rdo-names-list','rdo-funcs-list','rdo-vehicles-list','rdo-theme','rdo-frases','rdo-last-key','rdo-clientes-cache','rdo-ultimo-usuario-id','rdo-enviados'];
 
 function coletarTodosOsDadosParaBackup(){
   autoSilentSave(); // trava de segurança: o backup tem que sempre incluir a última edição feita na tela
