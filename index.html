@@ -1087,18 +1087,20 @@ input.login-input,
     font-size:8pt!important
   }
   /* Larguras em % (não em px) — garante que a tabela sempre caiba na largura da página,
-     sem empurrar a coluna "TOTAL H.H/DIA" pra fora da folha impressa */
-  table th:nth-child(1),table td:nth-child(1){width:4%!important}
-  table th:nth-child(2),table td:nth-child(2){width:19%!important}
-  table th:nth-child(3),table td:nth-child(3){width:13%!important}
-  table th:nth-child(4),table td:nth-child(4),
+     sem empurrar a coluna "TOTAL H.H/DIA" pra fora da folha impressa.
+     Ordem das colunas: 1=# 2=Nome 3=Função 4=Veículo 5-10=OSE01-06 11=Total 12=Excluir */
+  table th:nth-child(1),table td:nth-child(1){width:3%!important}
+  table th:nth-child(2),table td:nth-child(2){width:18%!important}
+  table th:nth-child(3),table td:nth-child(3){width:11%!important}
+  table th:nth-child(4),table td:nth-child(4){width:11%!important}
   table th:nth-child(5),table td:nth-child(5),
   table th:nth-child(6),table td:nth-child(6),
   table th:nth-child(7),table td:nth-child(7),
   table th:nth-child(8),table td:nth-child(8),
-  table th:nth-child(9),table td:nth-child(9){width:7.5%!important}
-  table th:nth-child(10),table td:nth-child(10){width:12%!important}
-  table th:nth-child(11),table td:nth-child(11){display:none!important} /* coluna do botão excluir */
+  table th:nth-child(9),table td:nth-child(9),
+  table th:nth-child(10),table td:nth-child(10){width:7%!important}
+  table th:nth-child(11),table td:nth-child(11){width:15%!important}
+  table th:nth-child(12),table td:nth-child(12){display:none!important} /* coluna do botão excluir */
   thead tr{
     background:#0a1e42!important;
     -webkit-print-color-adjust:exact!important;
@@ -6008,7 +6010,7 @@ async function exportarXLSX(){
 
   // ── ABA 1: RDO PRINCIPAL ──
   const ws1=wb.addWorksheet('RDO',{properties:{tabColor:{argb:'FF0A3C64'}}});
-  const NCOL=10;
+  const NCOL=11;
   ws1.mergeCells(1,1,1,NCOL);
   ws1.getCell(1,1).value='MASTER ENERGY — MONTAGEM E MANUTENÇÃO INDUSTRIAL';
   ws1.mergeCells(2,1,2,NCOL);
@@ -6033,7 +6035,7 @@ async function exportarXLSX(){
   linhaInfo(6,[['Encarregado:',(h.enc||'').toUpperCase()]]);
 
   const headerRow=8;
-  const headers=['#','FUNCIONÁRIO','FUNÇÃO','OSE 01','OSE 02','OSE 03','OSE 04','OSE 05','OSE 06','TOTAL DE HORAS/DIA'];
+  const headers=['#','FUNCIONÁRIO','FUNÇÃO','VEÍCULO','OSE 01','OSE 02','OSE 03','OSE 04','OSE 05','OSE 06','TOTAL DE HORAS/DIA'];
   headers.forEach((hd,ci)=>{
     const c=ws1.getCell(headerRow,ci+1);
     c.value=hd; c.font={bold:true,color:{argb:'FFFFFFFF'},size:9.5};
@@ -6052,10 +6054,11 @@ async function exportarXLSX(){
     ws1.getCell(L,1).value=idx+1; ws1.getCell(L,1).alignment={horizontal:'center'};
     ws1.getCell(L,2).value=w.name||''; ws1.getCell(L,2).font={bold:true,size:10};
     ws1.getCell(L,3).value=w.func||'';
+    ws1.getCell(L,4).value=w.vehicle||'';
     w.hrs.forEach((v,oi)=>{
       const n=parseHrs(v); rt+=n; oseTotals[oi+1]+=n;
       const status=oseStatus[oi+1]||'sem';
-      const c=ws1.getCell(L,4+oi);
+      const c=ws1.getCell(L,5+oi);
       c.value=v||'';
       c.font={bold:true,color:{argb:corFonte[status]}};
       c.fill={type:'pattern',pattern:'solid',fgColor:{argb:corFill[status]}};
@@ -6063,9 +6066,9 @@ async function exportarXLSX(){
       c.border={top:{style:'thin',color:{argb:'FF000000'}},bottom:{style:'thin',color:{argb:'FF000000'}},left:{style:'thin',color:{argb:'FF000000'}},right:{style:'thin',color:{argb:'FF000000'}}};
     });
     grand+=rt;
-    const ct=ws1.getCell(L,10); ct.value=Number(rt.toFixed(1)); ct.numFmt='0.0'; ct.font={bold:true}; ct.alignment={horizontal:'center'};
-    // Bordas nas colunas #/Funcionário/Função/Total também, pra fechar a linha inteira
-    [1,2,3,10].forEach(col=>{
+    const ct=ws1.getCell(L,11); ct.value=Number(rt.toFixed(1)); ct.numFmt='0.0'; ct.font={bold:true}; ct.alignment={horizontal:'center'};
+    // Bordas nas colunas #/Funcionário/Função/Veículo/Total também, pra fechar a linha inteira
+    [1,2,3,4,11].forEach(col=>{
       ws1.getCell(L,col).border={top:{style:'thin',color:{argb:'FF000000'}},bottom:{style:'thin',color:{argb:'FF000000'}},left:{style:'thin',color:{argb:'FF000000'}},right:{style:'thin',color:{argb:'FF000000'}}};
     });
     L++;
@@ -6073,17 +6076,17 @@ async function exportarXLSX(){
 
   // Linha TOTAL
   ws1.getCell(L,3).value='TOTAL DE HORAS'; ws1.getCell(L,3).font={bold:true}; ws1.getCell(L,3).alignment={horizontal:'center'};
-  [1,2,3].forEach(col=>{ ws1.getCell(L,col).border={top:{style:'medium',color:{argb:'FF000000'}},bottom:{style:'medium',color:{argb:'FF000000'}},left:{style:'thin',color:{argb:'FF000000'}},right:{style:'thin',color:{argb:'FF000000'}}}; });
+  [1,2,3,4].forEach(col=>{ ws1.getCell(L,col).border={top:{style:'medium',color:{argb:'FF000000'}},bottom:{style:'medium',color:{argb:'FF000000'}},left:{style:'thin',color:{argb:'FF000000'}},right:{style:'thin',color:{argb:'FF000000'}}}; });
   for(let o=1;o<=NUM_OSE;o++){
     const status=oseStatus[o]||'sem';
-    const c=ws1.getCell(L,3+o);
+    const c=ws1.getCell(L,4+o);
     c.value=Number(oseTotals[o].toFixed(1)); c.numFmt='0.0';
     c.font={bold:true,color:{argb:corFonte[status]}};
     c.fill={type:'pattern',pattern:'solid',fgColor:{argb:corFill[status]}};
     c.alignment={horizontal:'center'};
     c.border={top:{style:'medium',color:{argb:'FF000000'}},bottom:{style:'medium',color:{argb:'FF000000'}},left:{style:'thin',color:{argb:'FF000000'}},right:{style:'thin',color:{argb:'FF000000'}}};
   }
-  const ctFinal=ws1.getCell(L,10);
+  const ctFinal=ws1.getCell(L,11);
   ctFinal.value=Number(grand.toFixed(1)); ctFinal.numFmt='0.0';
   ctFinal.font={bold:true,color:{argb:'FFFFFFFF'}};
   ctFinal.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF0A3C64'}};
@@ -6096,7 +6099,7 @@ async function exportarXLSX(){
   ws1.getCell(L,1).value='LEGENDA DE STATUS'; ws1.getCell(L,1).font={bold:true,size:11};
   L++;
   const legendOrder=['sem','and','ext','par','blq','conc'];
-  const gruposLegenda=[[1,2],[3,4],[5,6],[7,8],[9],[10]]; // 4 caixas com 2 colunas + 2 caixas com 1 coluna = 10
+  const gruposLegenda=[[1,2],[3,4],[5,6],[7,8],[9,10],[11]]; // 5 caixas com 2 colunas + 1 caixa com 1 coluna = 11
   legendOrder.forEach((st,ci)=>{
     const grupo=gruposLegenda[ci];
     if(grupo.length>1) ws1.mergeCells(L,grupo[0],L,grupo[grupo.length-1]);
@@ -6152,9 +6155,9 @@ async function exportarXLSX(){
     L+=2;
   });
 
-  ws1.getColumn(1).width=15; ws1.getColumn(2).width=26; ws1.getColumn(3).width=18;
-  for(let c=4;c<=9;c++) ws1.getColumn(c).width=11;
-  ws1.getColumn(10).width=16;
+  ws1.getColumn(1).width=15; ws1.getColumn(2).width=26; ws1.getColumn(3).width=18; ws1.getColumn(4).width=16;
+  for(let c=5;c<=10;c++) ws1.getColumn(c).width=11;
+  ws1.getColumn(11).width=16;
 
   const buffer=await wb.xlsx.writeBuffer();
   const blob=new Blob([buffer],{type:'application/octet-stream'});
@@ -6223,7 +6226,7 @@ function sincronizarCamposParaImpressao(){
   // é uma trava do próprio HTML. Pra nomes compridos não saírem cortados na impressão/PDF,
   // cada um ganha um "gêmeo" de texto puro (que quebra linha normalmente) logo do lado,
   // e o campo original fica escondido só na impressão (ver CSS @media print).
-  document.querySelectorAll('#rdo-page select.cell-name,#rdo-page select.cell-func').forEach(sel=>{
+  document.querySelectorAll('#rdo-page select.cell-name,#rdo-page select.cell-func,#rdo-page select.cell-vehicle').forEach(sel=>{
     const antigo=sel.nextElementSibling;
     if(antigo&&antigo.classList.contains('cell-print-text')) antigo.remove();
     const span=document.createElement('span');
@@ -6979,6 +6982,7 @@ function coletarDadosExtraEscopo(dataInicio,dataFim){
             descricao:descTexto?descTexto.toUpperCase():'— (sem descrição preenchida no RDO) —',
             funcionario:(w.name||'—').toUpperCase(),
             funcao:(w.func||'—').toUpperCase(),
+            veiculo:(w.vehicle||'—').toUpperCase(),
             horas
           });
         }
@@ -7206,7 +7210,7 @@ async function exportarExtraEscopoExcel(){
   wb.creator='Master Energy — Sistema de RDO';
   wb.created=new Date();
   const ws=wb.addWorksheet('Extra Escopo',{properties:{tabColor:{argb:'FF158038'}}});
-  const LARG=8;
+  const LARG=9;
 
   ws.mergeCells(1,1,3,LARG);
   const titulo=ws.getCell(1,1);
@@ -7222,7 +7226,7 @@ async function exportarExtraEscopoExcel(){
   ws.getRow(4).height=20;
 
   const headerRow=6;
-  const headers=['DATA','OBRA','OSE','SERVIÇO','DESCRIÇÃO DO QUE FOI FEITO','FUNCIONÁRIO','FUNÇÃO','HORAS'];
+  const headers=['DATA','OBRA','OSE','SERVIÇO','DESCRIÇÃO DO QUE FOI FEITO','FUNCIONÁRIO','FUNÇÃO','VEÍCULO','HORAS'];
   headers.forEach((h,ci)=>{
     const c=ws.getCell(headerRow,ci+1);
     c.value=h; c.font={bold:true,color:{argb:'FFFFFFFF'},size:10};
@@ -7233,7 +7237,7 @@ async function exportarExtraEscopoExcel(){
 
   dados.forEach((r,idx)=>{
     const row=headerRow+1+idx;
-    const valores=[r.dataFmt,r.obra,r.ose,r.servico,r.descricao,r.funcionario,r.funcao,Number(r.horas.toFixed(1))];
+    const valores=[r.dataFmt,r.obra,r.ose,r.servico,r.descricao,r.funcionario,r.funcao,r.veiculo,Number(r.horas.toFixed(1))];
     valores.forEach((v,ci)=>{
       const c=ws.getCell(row,ci+1);
       c.value=v;
@@ -7245,19 +7249,19 @@ async function exportarExtraEscopoExcel(){
   });
 
   const linhaTotal=headerRow+1+dados.length+1;
-  ws.mergeCells(linhaTotal,1,linhaTotal,7);
+  ws.mergeCells(linhaTotal,1,linhaTotal,8);
   ws.getCell(linhaTotal,1).value='TOTAL DE HORAS EXTRAS (EXTRA ESCOPO)';
   ws.getCell(linhaTotal,1).font={bold:true,size:11,color:{argb:'FFFFFFFF'}};
   ws.getCell(linhaTotal,1).alignment={horizontal:'right',vertical:'middle'};
-  ws.getCell(linhaTotal,8).value=Number(totalHoras.toFixed(1));
-  ws.getCell(linhaTotal,8).numFmt='0.0';
-  ws.getCell(linhaTotal,8).font={bold:true,size:12,color:{argb:'FFFFFFFF'}};
-  ws.getCell(linhaTotal,8).alignment={horizontal:'center'};
+  ws.getCell(linhaTotal,9).value=Number(totalHoras.toFixed(1));
+  ws.getCell(linhaTotal,9).numFmt='0.0';
+  ws.getCell(linhaTotal,9).font={bold:true,size:12,color:{argb:'FFFFFFFF'}};
+  ws.getCell(linhaTotal,9).alignment={horizontal:'center'};
   for(let c=1;c<=LARG;c++) ws.getCell(linhaTotal,c).fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF158038'}};
 
   ws.autoFilter={from:{row:headerRow,column:1},to:{row:headerRow,column:LARG}};
   ws.getColumn(1).width=12; ws.getColumn(2).width=24; ws.getColumn(3).width=9; ws.getColumn(4).width=26;
-  ws.getColumn(5).width=50; ws.getColumn(6).width=24; ws.getColumn(7).width=16; ws.getColumn(8).width=11;
+  ws.getColumn(5).width=50; ws.getColumn(6).width=24; ws.getColumn(7).width=16; ws.getColumn(8).width=16; ws.getColumn(9).width=11;
 
   const buffer=await wb.xlsx.writeBuffer();
   const blob=new Blob([buffer],{type:'application/octet-stream'});
@@ -7565,6 +7569,7 @@ function coletarDadosAndamento(dataInicio,dataFim){
             descricao:descTexto?descTexto.toUpperCase():'— (sem descrição preenchida no RDO) —',
             funcionario:(w.name||'—').toUpperCase(),
             funcao:(w.func||'—').toUpperCase(),
+            veiculo:(w.vehicle||'—').toUpperCase(),
             horas
           });
         }
@@ -7822,7 +7827,7 @@ async function exportarAndamentoExcel(){
   wb.creator='Master Energy — Sistema de RDO';
   wb.created=new Date();
   const ws=wb.addWorksheet('Andamento',{properties:{tabColor:{argb:'FF1A52C8'}}});
-  const LARG=8;
+  const LARG=9;
 
   ws.mergeCells(1,1,3,LARG);
   const titulo=ws.getCell(1,1);
@@ -7838,7 +7843,7 @@ async function exportarAndamentoExcel(){
   ws.getRow(4).height=20;
 
   const headerRow=6;
-  const headers=['DATA','OBRA','OSE','PROJETO/SERVIÇO','DESCRIÇÃO DO QUE FOI FEITO','FUNCIONÁRIO','FUNÇÃO','HORAS'];
+  const headers=['DATA','OBRA','OSE','PROJETO/SERVIÇO','DESCRIÇÃO DO QUE FOI FEITO','FUNCIONÁRIO','FUNÇÃO','VEÍCULO','HORAS'];
   headers.forEach((h,ci)=>{
     const c=ws.getCell(headerRow,ci+1);
     c.value=h; c.font={bold:true,color:{argb:'FFFFFFFF'},size:10};
@@ -7849,7 +7854,7 @@ async function exportarAndamentoExcel(){
 
   dados.forEach((r,idx)=>{
     const row=headerRow+1+idx;
-    const valores=[r.dataFmt,r.obra,r.ose,r.servico,r.descricao,r.funcionario,r.funcao,Number(r.horas.toFixed(1))];
+    const valores=[r.dataFmt,r.obra,r.ose,r.servico,r.descricao,r.funcionario,r.funcao,r.veiculo,Number(r.horas.toFixed(1))];
     valores.forEach((v,ci)=>{
       const c=ws.getCell(row,ci+1);
       c.value=v;
@@ -7861,19 +7866,19 @@ async function exportarAndamentoExcel(){
   });
 
   const linhaTotal=headerRow+1+dados.length+1;
-  ws.mergeCells(linhaTotal,1,linhaTotal,7);
+  ws.mergeCells(linhaTotal,1,linhaTotal,8);
   ws.getCell(linhaTotal,1).value='TOTAL DE HORAS EM ANDAMENTO';
   ws.getCell(linhaTotal,1).font={bold:true,size:11,color:{argb:'FFFFFFFF'}};
   ws.getCell(linhaTotal,1).alignment={horizontal:'right',vertical:'middle'};
-  ws.getCell(linhaTotal,8).value=Number(totalHoras.toFixed(1));
-  ws.getCell(linhaTotal,8).numFmt='0.0';
-  ws.getCell(linhaTotal,8).font={bold:true,size:12,color:{argb:'FFFFFFFF'}};
-  ws.getCell(linhaTotal,8).alignment={horizontal:'center'};
+  ws.getCell(linhaTotal,9).value=Number(totalHoras.toFixed(1));
+  ws.getCell(linhaTotal,9).numFmt='0.0';
+  ws.getCell(linhaTotal,9).font={bold:true,size:12,color:{argb:'FFFFFFFF'}};
+  ws.getCell(linhaTotal,9).alignment={horizontal:'center'};
   for(let c=1;c<=LARG;c++) ws.getCell(linhaTotal,c).fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF1A52C8'}};
 
   ws.autoFilter={from:{row:headerRow,column:1},to:{row:headerRow,column:LARG}};
   ws.getColumn(1).width=12; ws.getColumn(2).width=24; ws.getColumn(3).width=9; ws.getColumn(4).width=26;
-  ws.getColumn(5).width=50; ws.getColumn(6).width=24; ws.getColumn(7).width=16; ws.getColumn(8).width=11;
+  ws.getColumn(5).width=50; ws.getColumn(6).width=24; ws.getColumn(7).width=16; ws.getColumn(8).width=16; ws.getColumn(9).width=11;
 
   const buffer=await wb.xlsx.writeBuffer();
   const blob=new Blob([buffer],{type:'application/octet-stream'});
@@ -8097,11 +8102,11 @@ function coletarTodosOsRegistrosFlat(){
       };
       const trabalhadoresComHora=(d.workers||[]).filter(w=>parseHrs((w.hrs||[])[idx]||'')>0);
       if(!trabalhadoresComHora.length){
-        registros.push({...base,funcionario:'—',funcao:'—',horas:0});
+        registros.push({...base,funcionario:'—',funcao:'—',veiculo:'—',horas:0});
         return;
       }
       trabalhadoresComHora.forEach(w=>{
-        registros.push({...base,funcionario:(w.name||'—').toUpperCase(),funcao:(w.func||'—').toUpperCase(),horas:parseHrs((w.hrs||[])[idx]||'')});
+        registros.push({...base,funcionario:(w.name||'—').toUpperCase(),funcao:(w.func||'—').toUpperCase(),veiculo:(w.vehicle||'—').toUpperCase(),horas:parseHrs((w.hrs||[])[idx]||'')});
       });
     });
   }
@@ -8393,7 +8398,7 @@ async function exportarBackupCompletoExcel(btn){
       g.statusSet.add(infoStatus.nome);
       const descComp=`OSE${String(r.oseNumero).padStart(2,'0')} (${r.nomeProjeto}) [${infoStatus.nome}]: ${r.descricao}`;
       if(!g.descricoes.includes(descComp)) g.descricoes.push(descComp);
-      if(r.funcionario&&r.funcionario!=='—') g.funcionarios.push(`${r.funcionario} (${r.funcao}): ${r.horas.toFixed(1)}h`);
+      if(r.funcionario&&r.funcionario!=='—') g.funcionarios.push(`${r.funcionario} (${r.funcao}${r.veiculo&&r.veiculo!=='—'?' | Veíc.: '+r.veiculo:''}): ${r.horas.toFixed(1)}h`);
     });
 
     const linhasOrdenadas=Object.values(porRdoDia).sort((a,b)=>{
