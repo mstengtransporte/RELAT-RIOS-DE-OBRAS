@@ -3836,6 +3836,21 @@ function buildVehicleOptions(selected=''){
   return opts;
 }
 
+// Confere se um nome já está sendo usado em OUTRA linha da tabela (cada
+// funcionário só pode aparecer uma vez por RDO — ele pode ter trabalhado em
+// várias OSEs, mas isso é resolvido preenchendo várias colunas na MESMA
+// linha dele, nunca criando uma segunda linha com o nome repetido).
+function nomeJaUsadoEmOutraLinha(nome,linhaAtual){
+  if(!nome||nome==='__custom__') return false;
+  let repetido=false;
+  document.querySelectorAll('.cell-name').forEach(el=>{
+    const idLinha=(el.id||'').replace('name-','');
+    if(idLinha===String(linhaAtual)) return; // não compara com ela mesma
+    if((el.value||'').trim()===nome.trim()) repetido=true;
+  });
+  return repetido;
+}
+
 function onNameChange(sel,i){
   if(sel.value==='__custom__'){
     // Troca select por input temporário — com "list" ligado ao datalist de
@@ -3854,6 +3869,17 @@ function onNameChange(sel,i){
     function confirmar(){
       const n=inp.value.trim();
       if(n){
+        if(nomeJaUsadoEmOutraLinha(n,i)){
+          showToast(`⚠️ ${n} já está em outra linha deste RDO — um funcionário não pode aparecer duas vezes.`,'#dc2626');
+          const novaSel=document.createElement('select');
+          novaSel.className='cell-name';
+          novaSel.id=`name-${i}`;
+          novaSel.onchange=function(){onNameChange(this,i);};
+          novaSel.innerHTML=buildNameOptions('');
+          td.replaceChild(novaSel,inp);
+          recalcAll();
+          return;
+        }
         if(!namesList.includes(n)){namesList.push(n);salvarListas();}
         const novaSel=document.createElement('select');
         novaSel.className='cell-name';
@@ -3862,6 +3888,7 @@ function onNameChange(sel,i){
         novaSel.innerHTML=buildNameOptions(n);
         novaSel.value=n;
         td.replaceChild(novaSel,inp);
+        buscarVeiculoAutomatico(n,i);
       } else {
         const novaSel=document.createElement('select');
         novaSel.className='cell-name';
@@ -3874,6 +3901,11 @@ function onNameChange(sel,i){
     }
     inp.addEventListener('keydown',e=>{if(e.key==='Enter')confirmar();if(e.key==='Escape'){e.stopPropagation();inp.value='';confirmar();}});
     inp.addEventListener('blur',()=>setTimeout(confirmar,150));
+    return;
+  }
+  if(nomeJaUsadoEmOutraLinha(sel.value,i)){
+    showToast(`⚠️ ${sel.value} já está em outra linha deste RDO — um funcionário não pode aparecer duas vezes.`,'#dc2626');
+    sel.value=sel.dataset.prev||'';
     return;
   }
   sel.dataset.prev=sel.value;
@@ -4020,7 +4052,15 @@ async function carregarVeiculosDaEscala(){
 // linha, em vez de tentar buscar um veículo que não existe nesse caso.
 async function buscarVeiculoAutomatico(nome,i){
   const vehicleSel=document.getElementById(`vehicle-${i}`);
-  if(!nome||nome==='__custom__') return;
+  // SEMPRE limpa qualquer marcação automática de ausência que tenha ficado
+  // de um funcionário anterior nessa mesma linha, antes de qualquer outra
+  // coisa — inclusive se o nome for limpo (voltar pra "— Selecione —"),
+  // pra nunca deixar um status "grudado" de quem estava ali antes.
+  limparStatusAusenciaAutoNaLinha(i);
+  if(!nome||nome==='__custom__'){
+    if(vehicleSel){ vehicleSel.innerHTML=buildVehicleOptions(''); vehicleSel.value=''; }
+    return;
+  }
   const supabaseClient=getSupabaseClient();
   if(!supabaseClient) return;
   const data=document.getElementById('h-data')?.value;
@@ -4076,6 +4116,38 @@ function rotuloStatusAusencia(status){
 // uma opção própria no RDO, então usam o mesmo visual de "outro motivo"
 // (fundo vermelho, texto customizado), sem precisar perguntar nada, já
 // que a palavra certa já veio pronta da Escala.
+// Lista dos textos que a PRÓPRIA integração coloca automaticamente nas
+// células — usada tanto pra aplicar quanto pra saber o que é seguro apagar
+// depois (nunca apaga algo que o encarregado tenha digitado manualmente).
+const ROTULOS_AUTO_AUSENCIA=['FÉRIAS','ATESTADO','AFASTADO','FOLGA'];
+
+// Antes de aplicar um status novo (ou nenhum), limpa qualquer marcação
+// automática de ausência que a integração tenha deixado antes — isso evita
+// que o status de um funcionário anterior "grude" na linha quando o
+// encarregado troca de nome. Só remove o que a integração mesmo colocou
+// (reconhece pelo texto exato "FALTA", "AGUARDANDO" com a classe certa, ou
+// um dos ROTULOS_AUTO_AUSENCIA) — nunca mexe em hora digitada manualmente.
+function limparStatusAusenciaAutoNaLinha(i){
+  for(let o=1;o<=oseVisiveisCount;o++){
+    const sel=document.getElementById(`hst-${i}-${o}`);
+    const inp=document.getElementById(`hrs-${i}-${o}`);
+    if(!sel||!inp) continue;
+    const valorAtual=(inp.value||'').trim().toUpperCase();
+    const eraAutoFalta=inp.classList.contains('falta')&&valorAtual==='FALTA';
+    const eraAutoAguardando=inp.classList.contains('aguardando')&&valorAtual==='AGUARDANDO';
+    const eraAutoOutro=inp.classList.contains('outro')&&ROTULOS_AUTO_AUSENCIA.includes(valorAtual);
+    if(eraAutoFalta||eraAutoAguardando||eraAutoOutro){
+      inp.value='';
+      inp.classList.remove('falta','cedo','integracao','aguardando','outro','special');
+      inp.readOnly=false;
+      inp.placeholder='—';
+      sel.value='normal';
+      atualizarCorCelulaHora(i,o);
+    }
+  }
+  recalcAll();
+}
+
 function aplicarStatusAusenciaNaLinha(i,statusEscala){
   const MAPA_DIRETO={falta:'falta',aguardar_proxima:'aguardando'};
   const MAPA_ROTULO_OUTRO={ferias:'FÉRIAS',atestado:'ATESTADO',afastado:'AFASTADO',folga:'FOLGA'};
