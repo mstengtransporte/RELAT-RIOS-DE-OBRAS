@@ -1425,6 +1425,7 @@ input.login-input,
 </div>
 
 <datalist id="ose-nomes-datalist"></datalist>
+<datalist id="funcionarios-datalist"></datalist>
 
 <!-- TOPBAR -->
 <div class="topbar">
@@ -3568,6 +3569,7 @@ function iniciarAppAposLogin(){
   atualizarSeloUsuarioLogado();
   if(typeof ajustarEspacoTopoTopbar==='function') setTimeout(ajustarEspacoTopoTopbar,50);
   carregarListas();
+  atualizarDatalistFuncionarios();
   document.getElementById('h-data').value = hojeLocal();
   updateDiaSemana();
   document.getElementById('h-data').addEventListener('change',(ev)=>{
@@ -3637,6 +3639,15 @@ function atualizarDatalistNomesProjetos(){
     }catch(e){}
   }
   dl.innerHTML=[...nomes].sort().map(n=>`<option value="${n.replace(/"/g,'&quot;')}">`).join('');
+}
+
+// Mantém o datalist de funcionários sincronizado com "namesList" (que já é
+// alimentada pelos nomes cadastrados na Escala de Trabalho). Usado pelo
+// campo de busca que aparece ao tocar em "🔍 Buscar / digitar nome...".
+function atualizarDatalistFuncionarios(){
+  const dl=document.getElementById('funcionarios-datalist');
+  if(!dl) return;
+  dl.innerHTML=namesList.map(n=>`<option value="${n.replace(/"/g,'&quot;')}">`).join('');
 }
 
 // Gera o próximo número de RDO disponível DENTRO DA MESMA OBRA — cada obra tem sua
@@ -3804,9 +3815,12 @@ let listModalType = '';
 let listModalTemp = [];
 
 function buildNameOptions(selected=''){
+  // "🔍 Buscar funcionário..." fica logo no topo (antes da lista toda) —
+  // com centenas/milhares de nomes cadastrados, ninguém deveria precisar
+  // rolar a lista inteira só pra achar essa opção lá no fim.
   let opts=`<option value="">— Selecione —</option>`;
+  opts+=`<option value="__custom__">🔍 Buscar / digitar nome...</option>`;
   namesList.forEach(n=>{ opts+=`<option value="${n}" ${n===selected?'selected':''}>${n}</option>`; });
-  opts+=`<option value="__custom__">✏️ Digitar nome...</option>`;
   return opts;
 }
 function buildFuncOptions(selected=''){
@@ -3824,13 +3838,16 @@ function buildVehicleOptions(selected=''){
 
 function onNameChange(sel,i){
   if(sel.value==='__custom__'){
-    // Troca select por input temporário
+    // Troca select por input temporário — com "list" ligado ao datalist de
+    // funcionários, o campo passa a sugerir/filtrar em tempo real conforme
+    // a pessoa digita, mesmo com centenas ou milhares de nomes cadastrados.
     const td=sel.parentNode;
     const prev=sel.dataset.prev||'';
     const inp=document.createElement('input');
     inp.type='text';
     inp.className='cell-name';
-    inp.placeholder='Digite o nome...';
+    inp.setAttribute('list','funcionarios-datalist');
+    inp.placeholder='Digite pra buscar...';
     inp.style.cssText='width:100%;border:2px solid var(--accent);border-radius:6px;padding:4px 6px;font-size:13px;font-weight:700;background:var(--accent-light);color:var(--text);outline:none;text-transform:uppercase';
     td.replaceChild(inp,sel);
     inp.focus();
@@ -3963,6 +3980,7 @@ async function carregarFuncionariosDaEscala(){
         sel.value=atual;
       });
     }
+    atualizarDatalistFuncionarios();
   }catch(e){ console.error('carregarFuncionariosDaEscala error:',e); }
 }
 
@@ -3991,10 +4009,17 @@ async function carregarVeiculosDaEscala(){
 }
 
 // Quando um funcionário é escolhido numa linha do RDO, busca automaticamente
-// (na Escala de Trabalho, pela DATA deste RDO) em qual veículo ele foi
-// escalado naquele dia, e já preenche o campo Veículo da linha sozinho.
-// Se não achar nada pra essa data, avisa e deixa o campo livre pra escolha manual.
+// (na Escala de Trabalho) em qual veículo ele foi escalado — a função no
+// banco procura a partir do dia anterior à data do RDO, e se não achar
+// nada exatamente nesse dia, procura até 5 dias pra trás sozinha e
+// devolve de qual dia veio a informação (transparência com o encarregado).
+// Se não achar nada mesmo assim, LIMPA o campo (não deixa o veículo de
+// um funcionário anterior "grudado" na linha) e avisa pra escolha manual.
+// Se a Escala mostrar que o funcionário está de folga/férias/atestado/
+// falta/afastado/aguardando, marca isso sozinho nas células de hora da
+// linha, em vez de tentar buscar um veículo que não existe nesse caso.
 async function buscarVeiculoAutomatico(nome,i){
+  const vehicleSel=document.getElementById(`vehicle-${i}`);
   if(!nome||nome==='__custom__') return;
   const supabaseClient=getSupabaseClient();
   if(!supabaseClient) return;
@@ -4004,20 +4029,68 @@ async function buscarVeiculoAutomatico(nome,i){
     const{data:resultado,error}=await supabaseClient.rpc('buscar_veiculo_funcionario',{p_nome:nome,p_data:data});
     if(error){ console.error('buscar_veiculo_funcionario error:',error); return; }
     const linha=resultado&&resultado[0];
-    if(linha&&linha.encontrado&&linha.veiculo){
+    if(linha&&linha.encontrado&&linha.status_ausencia){
+      // Funcionário está com um status de ausência na Escala (não uma obra
+      // de verdade) — não tem veículo pra buscar. Marca a linha inteira
+      // sozinho, e avisa com destaque pro encarregado conferir.
+      if(vehicleSel){ vehicleSel.innerHTML=buildVehicleOptions(''); vehicleSel.value=''; }
+      const dataEscalaFmt=linha.data_escala?formatarDataBR(linha.data_escala):'';
+      aplicarStatusAusenciaNaLinha(i,linha.status_ausencia);
+      showToast(`⚠️ ${nome} está marcado como ${rotuloStatusAusencia(linha.status_ausencia)} na escala de ${dataEscalaFmt} — confira se ele deveria estar no RDO hoje.`,'#d97706');
+    }else if(linha&&linha.encontrado&&linha.veiculo){
       if(!vehiclesList.includes(linha.veiculo)){ vehiclesList.push(linha.veiculo); salvarListas(); }
-      const vehicleSel=document.getElementById(`vehicle-${i}`);
       if(vehicleSel){
         vehicleSel.innerHTML=buildVehicleOptions(linha.veiculo);
         vehicleSel.value=linha.veiculo;
-        showToast(`🚚 Veículo preenchido automaticamente: ${linha.veiculo} (Escala de ${formatarDataBR(data)})`,'#1457c8');
+        const dataEscalaFmt=linha.data_escala?formatarDataBR(linha.data_escala):'';
+        showToast(`🚚 Veículo preenchido: ${linha.veiculo} (escala de ${dataEscalaFmt})`,'#1457c8');
       }
     }else{
-      // Não achou escala pra esse funcionário nessa data — avisa (sem travar nada)
-      // e deixa o campo Veículo livre pra escolha manual normal.
-      showToast(`ℹ️ Sem escala encontrada pra ${nome} em ${formatarDataBR(data)} — escolha o veículo manualmente.`,'#6b7fa0');
+      // Não achou escala pra esse funcionário em nenhum dos últimos 5 dias
+      // antes do RDO — LIMPA o campo (não pode ficar o veículo de quem
+      // estava selecionado antes) e deixa livre pra escolha manual normal.
+      if(vehicleSel){
+        vehicleSel.innerHTML=buildVehicleOptions('');
+        vehicleSel.value='';
+      }
+      showToast(`ℹ️ Sem escala encontrada pra ${nome} nos últimos dias — escolha o veículo manualmente.`,'#6b7fa0');
     }
   }catch(e){ console.error('buscarVeiculoAutomatico error:',e); }
+}
+
+// Nome amigável de cada status de ausência, pro aviso na tela.
+function rotuloStatusAusencia(status){
+  const mapa={falta:'FALTA',ferias:'FÉRIAS',atestado:'ATESTADO',afastado:'AFASTADO',folga:'FOLGA',aguardar_proxima:'AGUARDANDO A PRÓXIMA PROGRAMAÇÃO'};
+  return mapa[status]||status.toUpperCase();
+}
+
+// Marca automaticamente todas as células de hora já visíveis (OSE 1 até a
+// última revelada) da linha "i" com o status de ausência vindo da Escala —
+// "falta" e "aguardar_proxima" reaproveitam o mecanismo que já existe
+// (applyHrsStatus); os outros 4 (férias/atestado/afastado/folga) não têm
+// uma opção própria no RDO, então usam o mesmo visual de "outro motivo"
+// (fundo vermelho, texto customizado), sem precisar perguntar nada, já
+// que a palavra certa já veio pronta da Escala.
+function aplicarStatusAusenciaNaLinha(i,statusEscala){
+  const MAPA_DIRETO={falta:'falta',aguardar_proxima:'aguardando'};
+  const MAPA_ROTULO_OUTRO={ferias:'FÉRIAS',atestado:'ATESTADO',afastado:'AFASTADO',folga:'FOLGA'};
+  for(let o=1;o<=oseVisiveisCount;o++){
+    const sel=document.getElementById(`hst-${i}-${o}`);
+    const inp=document.getElementById(`hrs-${i}-${o}`);
+    if(!sel||!inp) continue;
+    if(MAPA_DIRETO[statusEscala]){
+      sel.value=MAPA_DIRETO[statusEscala];
+      applyHrsStatus(i,o);
+    }else if(MAPA_ROTULO_OUTRO[statusEscala]){
+      inp.classList.remove('falta','cedo','integracao','aguardando','outro','special');
+      inp.value=MAPA_ROTULO_OUTRO[statusEscala];
+      inp.classList.add('outro');
+      inp.readOnly=false;
+      sel.value='outro';
+      atualizarCorCelulaHora(i,o);
+    }
+  }
+  recalcAll();
 }
 
 // Quando a DATA do RDO muda, o veículo de cada funcionário já escolhido pode
