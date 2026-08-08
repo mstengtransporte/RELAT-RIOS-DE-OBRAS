@@ -865,13 +865,13 @@ input.login-input,
 
 /* TOAST */
 #toast{
-  position:fixed;bottom:20px;right:16px;left:16px;max-width:320px;margin:0 auto;
+  position:fixed;top:64px;right:16px;left:16px;max-width:380px;margin:0 auto;
   padding:12px 18px;font-size:12px;font-weight:900;opacity:0;
   pointer-events:none;transition:opacity .3s;z-index:9999;
   box-shadow:4px 4px 0 rgba(0,0,0,.4);text-align:center;text-transform:none;
   border:2px solid rgba(0,0,0,.3)
 }
-@media(min-width:500px){#toast{left:auto;right:20px;max-width:280px}}
+@media(min-width:500px){#toast{left:auto;right:20px;max-width:340px;margin:0}}
 #toast.show{opacity:1}
 
 /* ══════════════════════════════════════
@@ -8968,7 +8968,13 @@ function showToast(msg,color){
   const t=document.getElementById('toast');
   t.textContent=msg;t.style.background=color||'#16a34a';
   t.classList.add('show');
-  setTimeout(()=>t.classList.remove('show'),2800);
+  clearTimeout(t._timer);
+  // Tempo de exibição se ajusta ao tamanho da mensagem — avisos curtos
+  // ficam o mínimo de 3,5s; avisos mais longos (como os da integração
+  // com a Escala) ficam mais tempo, até um teto de 7s, dando tempo real
+  // de leitura sem travar a tela por tempo demais.
+  const duracao=Math.min(7000,Math.max(3500,msg.length*55));
+  t._timer=setTimeout(()=>t.classList.remove('show'),duracao);
 }
 
 // ════════════════════════════════════════════════════════════
