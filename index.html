@@ -4031,12 +4031,17 @@ async function buscarVeiculoAutomatico(nome,i){
     const linha=resultado&&resultado[0];
     if(linha&&linha.encontrado&&linha.status_ausencia){
       // Funcionário está com um status de ausência na Escala (não uma obra
-      // de verdade) — não tem veículo pra buscar. Marca a linha inteira
-      // sozinho, e avisa com destaque pro encarregado conferir.
-      if(vehicleSel){ vehicleSel.innerHTML=buildVehicleOptions(''); vehicleSel.value=''; }
+      // de verdade) — não tem veículo pra buscar. Em vez de deixar o campo
+      // Veículo vazio, mostra o STATUS bem visível ali mesmo (ex: "⚠️ FALTA"),
+      // e também marca a linha inteira (células de hora) automaticamente.
+      const rotulo=rotuloStatusAusencia(linha.status_ausencia);
+      if(vehicleSel){
+        vehicleSel.innerHTML=buildVehicleOptions('')+`<option value="${rotulo}" selected>⚠️ ${rotulo}</option>`;
+        vehicleSel.value=rotulo;
+      }
       const dataEscalaFmt=linha.data_escala?formatarDataBR(linha.data_escala):'';
       aplicarStatusAusenciaNaLinha(i,linha.status_ausencia);
-      showToast(`⚠️ ${nome} está marcado como ${rotuloStatusAusencia(linha.status_ausencia)} na escala de ${dataEscalaFmt} — confira se ele deveria estar no RDO hoje.`,'#d97706');
+      showToast(`⚠️ ${nome} está marcado como ${rotulo} na escala de ${dataEscalaFmt} — confira se ele deveria estar no RDO hoje.`,'#d97706');
     }else if(linha&&linha.encontrado&&linha.veiculo){
       if(!vehiclesList.includes(linha.veiculo)){ vehiclesList.push(linha.veiculo); salvarListas(); }
       if(vehicleSel){
