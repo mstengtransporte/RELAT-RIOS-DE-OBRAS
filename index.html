@@ -3605,6 +3605,7 @@ function iniciarAppAposLogin(){
     atualizarDatalistNomesProjetos();
     carregarClientes();
     carregarEncarregados();
+    carregarFuncionariosDaEscala();
     reconciliarRDOsApagadosPeloAdmin();
   },150);
 }
@@ -3854,6 +3855,7 @@ function onNameChange(sel,i){
   }
   sel.dataset.prev=sel.value;
   recalcAll();
+  buscarVeiculoAutomatico(sel.value,i);
 }
 
 function onFuncChange(sel,i){
@@ -3928,6 +3930,59 @@ function onVehicleChange(sel,i){
     return;
   }
   sel.dataset.prev=sel.value;
+}
+
+/* ============================================================
+   INTEGRAÇÃO RDO ↔ ESCALA DE TRABALHO
+   ============================================================ */
+
+// Busca os nomes de funcionários cadastrados na Escala de Trabalho
+// (tabela "funcionarios", mesmo banco Supabase) e junta na lista de
+// nomes do RDO — sem apagar nomes que só existem aqui no RDO.
+async function carregarFuncionariosDaEscala(){
+  const supabaseClient=getSupabaseClient();
+  if(!supabaseClient) return;
+  try{
+    const{data,error}=await supabaseClient.from('funcionarios').select('nome').order('nome');
+    if(error||!data) return;
+    const nomesEscala=data.map(f=>f.nome).filter(Boolean);
+    let mudou=false;
+    nomesEscala.forEach(n=>{ if(!namesList.includes(n)){ namesList.push(n); mudou=true; } });
+    if(mudou){
+      namesList.sort();
+      salvarListas();
+      document.querySelectorAll('select.cell-name').forEach(sel=>{
+        const atual=sel.value;
+        sel.innerHTML=buildNameOptions(atual);
+        sel.value=atual;
+      });
+    }
+  }catch(e){ console.error('carregarFuncionariosDaEscala error:',e); }
+}
+
+// Quando um funcionário é escolhido numa linha do RDO, busca automaticamente
+// (na Escala de Trabalho, pela DATA deste RDO) em qual veículo ele foi
+// escalado naquele dia, e já preenche o campo Veículo da linha sozinho.
+async function buscarVeiculoAutomatico(nome,i){
+  if(!nome||nome==='__custom__') return;
+  const supabaseClient=getSupabaseClient();
+  if(!supabaseClient) return;
+  const data=document.getElementById('h-data')?.value;
+  if(!data) return;
+  try{
+    const{data:resultado,error}=await supabaseClient.rpc('buscar_veiculo_funcionario',{p_nome:nome,p_data:data});
+    if(error){ console.error('buscar_veiculo_funcionario error:',error); return; }
+    const linha=resultado&&resultado[0];
+    if(linha&&linha.encontrado&&linha.veiculo){
+      if(!vehiclesList.includes(linha.veiculo)){ vehiclesList.push(linha.veiculo); salvarListas(); }
+      const vehicleSel=document.getElementById(`vehicle-${i}`);
+      if(vehicleSel){
+        vehicleSel.innerHTML=buildVehicleOptions(linha.veiculo);
+        vehicleSel.value=linha.veiculo;
+        showToast(`🚚 Veículo preenchido automaticamente: ${linha.veiculo} (Escala de ${formatarDataBR(data)})`,'#1457c8');
+      }
+    }
+  }catch(e){ console.error('buscarVeiculoAutomatico error:',e); }
 }
 
 function salvarListas(){
