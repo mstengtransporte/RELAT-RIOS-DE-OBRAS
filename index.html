@@ -786,6 +786,8 @@ input.login-input,
 /* ── MULTI PDF ── */
 #multipdf-modal{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:9997;display:none;align-items:center;justify-content:center;padding:14px;backdrop-filter:blur(6px)}
 #multipdf-modal.show{display:flex}
+#absenteismo-periodo-modal{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:9997;display:none;align-items:center;justify-content:center;padding:14px;backdrop-filter:blur(6px)}
+#absenteismo-periodo-modal.show{display:flex}
 #backup-modal{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:9997;display:none;align-items:center;justify-content:center;padding:14px;backdrop-filter:blur(6px)}
 #backup-modal.show{display:flex}
 #novo-rdo-modal{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:9997;display:none;align-items:center;justify-content:center;padding:14px;backdrop-filter:blur(6px)}
@@ -856,6 +858,11 @@ input.login-input,
   padding:9px 8px;font-size:11.5px;font-weight:900;cursor:pointer;text-align:center;line-height:1.4
 }
 .novo-rdo-dia-btn.ativo{background:#1457c8;color:#fff;border-color:#0a3a94}
+.absenteismo-periodo-btn{
+  background:var(--surface2);color:var(--text2);border:2px solid var(--border2);
+  padding:8px 12px;font-size:11.5px;font-weight:800;cursor:pointer;border-radius:6px
+}
+.absenteismo-periodo-btn.ativo{background:#b91c1c;color:#fff;border-color:#7f1d1d}
 .novo-rdo-radio{
   display:flex;align-items:flex-start;gap:10px;
   background:var(--surface2);border:2px solid var(--border2);
@@ -1480,7 +1487,7 @@ input.login-input,
     <button class="btn" style="background:#0a6080;color:#fff" onclick="abrirGrafico()">📊 <span>H.H</span></button>
     <button class="btn" style="background:#0a7060;color:#fff" onclick="abrirFrases()">💬 <span>Frases</span></button>
     <button class="btn admin-only-btn" id="btn-rel-periodo" style="background:#6030bb;color:#fff" onclick="abrirMultiPDF()">📑 <span>Rel.Período</span></button>
-    <button class="btn admin-only-btn" id="btn-absenteismo" style="background:#b91c1c;color:#fff" onclick="exportarRelatorioAbsenteismo()" title="Todo o histórico de FALTA/SAIU MAIS CEDO/TRANSFERIDO, de todas as obras, até agora">🚨 <span>Absenteísmo</span></button>
+    <button class="btn admin-only-btn" id="btn-absenteismo" style="background:#b91c1c;color:#fff" onclick="abrirModalAbsenteismo()" title="Gera relatório de FALTA/SAIU MAIS CEDO/TRANSFERIDO, com opção de período">🚨 <span>Absenteísmo</span></button>
     <button class="btn admin-only-btn" style="background:#374151;color:#fff" onclick="abrirBackup()">🗄️ <span>Backup</span></button>
     <button class="btn admin-only-btn" style="background:#374151;color:#fff" onclick="abrirCheckIntegridade()" title="Verifica inconsistências que podem causar erro na contagem de horas">🩺 <span>Check</span></button>
     <button class="btn btn-pdf"     onclick="exportarPDF()" title="Abre a tela de impressão para salvar como PDF">🖨️ <span>PDF</span></button>
@@ -1746,6 +1753,41 @@ input.login-input,
 </div>
 
 <!-- MULTI PDF (RELATÓRIO PERÍODO) -->
+<!-- ABSENTEÍSMO — ESCOLHA DE PERÍODO -->
+<div id="absenteismo-periodo-modal">
+  <div class="multipdf-box">
+    <div class="multipdf-header" style="background:linear-gradient(135deg,#b91c1c,#7f1d1d)">
+      <span>🚨 Relatório de Absenteísmo</span>
+      <button onclick="document.getElementById('absenteismo-periodo-modal').classList.remove('show')" style="background:none;border:none;color:#fff;font-size:20px;cursor:pointer">✕</button>
+    </div>
+    <div class="multipdf-body">
+      <div>
+        <label>Período rápido</label>
+        <div style="display:flex;flex-wrap:wrap;gap:6px">
+          <button type="button" class="absenteismo-periodo-btn" onclick="selecionarPeriodoAbsenteismo('semana')">📆 Esta semana</button>
+          <button type="button" class="absenteismo-periodo-btn" onclick="selecionarPeriodoAbsenteismo('mes')">🗓️ Este mês</button>
+          <button type="button" class="absenteismo-periodo-btn" onclick="selecionarPeriodoAbsenteismo('semestre')">📅 Este semestre</button>
+          <button type="button" class="absenteismo-periodo-btn" onclick="selecionarPeriodoAbsenteismo('ano')">📈 Este ano</button>
+          <button type="button" class="absenteismo-periodo-btn ativo" id="btn-periodo-tudo" onclick="selecionarPeriodoAbsenteismo('tudo')">♾️ Todo o histórico</button>
+        </div>
+      </div>
+      <div>
+        <label>Ou escolha um período personalizado</label>
+        <div style="display:flex;gap:8px;align-items:center">
+          <input type="date" id="absenteismo-de" style="flex:1" onchange="desmarcarPeriodoRapido()">
+          <span style="font-size:11px;color:var(--text2)">até</span>
+          <input type="date" id="absenteismo-ate" style="flex:1" onchange="desmarcarPeriodoRapido()">
+        </div>
+      </div>
+      <div id="absenteismo-periodo-resumo" style="font-size:12px;font-weight:800;color:var(--text2);text-align:center;background:var(--surface2);padding:8px;border-radius:6px">📊 Todas as obras, desde o início do sistema até hoje</div>
+    </div>
+    <div class="multipdf-footer">
+      <button class="multipdf-cancel" onclick="document.getElementById('absenteismo-periodo-modal').classList.remove('show')">Cancelar</button>
+      <button class="multipdf-gerar" onclick="exportarRelatorioAbsenteismo()" style="background:#b91c1c">📥 Gerar Excel</button>
+    </div>
+  </div>
+</div>
+
 <div id="multipdf-modal">
   <div class="multipdf-box">
     <div class="multipdf-header">
@@ -7301,31 +7343,94 @@ function atualizarTotalMultiPDF(){
 }
 
 // ============================================================
-// ABSENTEÍSMO GLOBAL (só admin) — consulta TODOS os RDOs de TODAS as
-// obras, direto do banco (não do celular), do início do sistema até
-// agora, e gera a planilha linha a linha (um funcionário que faltou em
-// 3 dias diferentes aparece em 3 linhas, uma por data).
+// SELEÇÃO DE PERÍODO DO RELATÓRIO DE ABSENTEÍSMO
+// ============================================================
+function abrirModalAbsenteismo(){
+  const hoje=new Date();
+  const hojeISO=hoje.toISOString().slice(0,10);
+  document.getElementById('absenteismo-ate').value=hojeISO;
+  document.getElementById('absenteismo-de').value='';
+  selecionarPeriodoAbsenteismo('tudo');
+  document.getElementById('absenteismo-periodo-modal').classList.add('show');
+}
+// Calcula a data de início conforme o botão rápido escolhido, preenche os
+// campos de data personalizados (pra pessoa ver e poder ajustar se quiser)
+// e marca visualmente qual botão está ativo.
+function selecionarPeriodoAbsenteismo(tipo){
+  const hoje=new Date();
+  const pad=n=>String(n).padStart(2,'0');
+  const iso=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+  let de=null,resumo='';
+  if(tipo==='semana'){
+    const diaSemana=hoje.getDay()===0?7:hoje.getDay(); // segunda=1 ... domingo=7
+    const seg=new Date(hoje); seg.setDate(hoje.getDate()-(diaSemana-1));
+    de=iso(seg);
+    resumo=`📆 Esta semana — de ${seg.toLocaleDateString('pt-BR')} até hoje`;
+  }else if(tipo==='mes'){
+    de=iso(new Date(hoje.getFullYear(),hoje.getMonth(),1));
+    resumo=`🗓️ Este mês — ${hoje.toLocaleDateString('pt-BR',{month:'long',year:'numeric'})}`;
+  }else if(tipo==='semestre'){
+    const inicioSemestre=hoje.getMonth()<6?0:6;
+    de=iso(new Date(hoje.getFullYear(),inicioSemestre,1));
+    resumo=`📅 ${inicioSemestre===0?'1º':'2º'} semestre de ${hoje.getFullYear()}`;
+  }else if(tipo==='ano'){
+    de=iso(new Date(hoje.getFullYear(),0,1));
+    resumo=`📈 Ano de ${hoje.getFullYear()} inteiro, até hoje`;
+  }else{ // tudo
+    de=null;
+    resumo='📊 Todas as obras, desde o início do sistema até hoje';
+  }
+  document.getElementById('absenteismo-de').value=de||'';
+  document.getElementById('absenteismo-periodo-resumo').textContent=resumo;
+  document.querySelectorAll('.absenteismo-periodo-btn').forEach(b=>b.classList.remove('ativo'));
+  const btnTudo=document.getElementById('btn-periodo-tudo');
+  if(tipo==='tudo'&&btnTudo) btnTudo.classList.add('ativo');
+  else{
+    const alvo=[...document.querySelectorAll('.absenteismo-periodo-btn')].find(b=>b.getAttribute('onclick')===`selecionarPeriodoAbsenteismo('${tipo}')`);
+    if(alvo) alvo.classList.add('ativo');
+  }
+}
+// Se a pessoa mexer manualmente nas datas, nenhum botão rápido continua
+// "selecionado" — evita mostrar um período rápido que não bate mais com
+// as datas reais escolhidas.
+function desmarcarPeriodoRapido(){
+  document.querySelectorAll('.absenteismo-periodo-btn').forEach(b=>b.classList.remove('ativo'));
+  const de=document.getElementById('absenteismo-de').value;
+  const ate=document.getElementById('absenteismo-ate').value;
+  const fmt=v=>v?new Date(v+'T00:00:00').toLocaleDateString('pt-BR'):'o início do sistema';
+  document.getElementById('absenteismo-periodo-resumo').textContent=`📊 De ${fmt(de)} até ${ate?new Date(ate+'T00:00:00').toLocaleDateString('pt-BR'):'hoje'}`;
+}
+
+// ============================================================
+// ABSENTEÍSMO GLOBAL (só admin) — consulta os RDOs de TODAS as obras,
+// direto do banco (não do celular), no período escolhido no modal (ou
+// "desde o início do sistema" se nenhum período foi escolhido), e gera
+// a planilha linha a linha (um funcionário que faltou em 3 dias
+// diferentes aparece em 3 linhas, uma por data).
 //
-// A CONSULTA, os DADOS e o CÁLCULO são exatamente os mesmos de sempre
-// (RPC relatorio_absenteismo, sem nenhuma mudança) — só a MONTAGEM
+// Os DADOS e o CÁLCULO são exatamente os mesmos de sempre (RPC
+// relatorio_absenteismo, sem nenhuma mudança na lógica) — só a MONTAGEM
 // VISUAL do Excel foi refeita, usando ExcelJS (que o projeto já carrega
 // em outro lugar) em vez do XLSX simples, pra ter cor, borda, cabeçalho
-// congelado, filtro e impressão configurada — coisas que o XLSX puro
-// não consegue fazer.
+// congelado e impressão configurada — coisas que o XLSX puro não
+// consegue fazer.
 // ============================================================
 async function exportarRelatorioAbsenteismo(){
   const supabaseClient=getSupabaseClient();
   if(!supabaseClient){ showToast('Sistema não conectado ao banco.','#dc2626'); return; }
-  showToast('🔎 Buscando todo o histórico de absenteísmo...','#b91c1c');
+  const desde=document.getElementById('absenteismo-de')?.value||null;
+  const ate=document.getElementById('absenteismo-ate')?.value||new Date().toISOString().slice(0,10);
+  document.getElementById('absenteismo-periodo-modal')?.classList.remove('show');
+  showToast('🔎 Buscando o histórico de absenteísmo do período escolhido...','#b91c1c');
   try{
-    const{data,error}=await supabaseClient.rpc('relatorio_absenteismo');
+    const{data,error}=await supabaseClient.rpc('relatorio_absenteismo',{p_desde_data:desde,p_ate_data:ate});
     if(error){
       console.error('relatorio_absenteismo error:',error);
       showToast('Erro ao buscar: '+error.message,'#dc2626');
       return;
     }
     if(!data||!data.length){
-      showToast('Nenhuma ocorrência de FALTA/SAIU CEDO/TRANSFERIDO encontrada ainda.','#6b7fa0');
+      showToast('Nenhuma ocorrência de FALTA/SAIU CEDO/TRANSFERIDO encontrada nesse período.','#6b7fa0');
       return;
     }
 
@@ -7356,7 +7461,7 @@ async function exportarRelatorioAbsenteismo(){
     const CORES_STATUS={FALTA:'FFFECACA','SAIU MAIS CEDO':'FFFED7AA',TRANSFERIDO:'FFBFDBFE',PRESENTE:'FFDCFCE7'};
     const TEXTO_STATUS={FALTA:'FF991B1B','SAIU MAIS CEDO':'FF9A3412',TRANSFERIDO:'FF1E40AF',PRESENTE:'FF166534'};
 
-    const colunas=['DATA DO RDO','OBRA / CENTRO DE CUSTO','NOME DO COLABORADOR','FUNÇÃO','DISCIPLINA','ENCARREGADO RESPONSÁVEL','STATUS / OCORRÊNCIA','HORAS TRABALHADAS (OS)','HORAS DE ABSENTEÍSMO'];
+    const colunas=['DATA DO RDO','OBRA / CENTRO DE CUSTO','NOME DO COLABORADOR','FUNÇÃO','DISCIPLINA','ENCARREGADO RESPONSÁVEL','STATUS / OCORRÊNCIA','HORAS TRABALHADAS (OS)','HORAS DE ABSENTEÍSMO ("FALTA")'];
     const larguras=[13,28,28,17,17,24,19,16,17];
 
     const wb=new ExcelJS.Workbook();
@@ -7380,7 +7485,9 @@ async function exportarRelatorioAbsenteismo(){
     ws.mergeCells(2,1,2,colunas.length);
     const agora=new Date();
     const subCell=ws.getCell(2,1);
-    subCell.value=`Gerado em ${agora.toLocaleDateString('pt-BR')} às ${agora.toLocaleTimeString('pt-BR')}  —  Abrangência: todas as obras, desde o início do sistema até a data/hora deste relatório`;
+    const desdeFmt=desde?new Date(desde+'T00:00:00').toLocaleDateString('pt-BR'):'o início do sistema';
+    const ateFmt=new Date(ate+'T00:00:00').toLocaleDateString('pt-BR');
+    subCell.value=`Gerado em ${agora.toLocaleDateString('pt-BR')} às ${agora.toLocaleTimeString('pt-BR')}  —  Período: de ${desdeFmt} até ${ateFmt}  •  Todas as obras`;
     subCell.font={name:'Calibri',size:10,italic:true,color:{argb:BRANCO}};
     subCell.alignment={horizontal:'center',vertical:'middle'};
     subCell.fill={type:'pattern',pattern:'solid',fgColor:{argb:AZUL_CIANO}};
@@ -7412,7 +7519,7 @@ async function exportarRelatorioAbsenteismo(){
         cell.value=v;
         cell.font={name:'Calibri',size:10,color:{argb:CINZA_TEXTO}};
         cell.alignment={horizontal:(c===0||c===7||c===8)?'center':'left',vertical:'middle'};
-        cell.border={top:{style:'hair',color:{argb:CINZA_BORDA}},bottom:{style:'hair',color:{argb:CINZA_BORDA}},left:{style:'hair',color:{argb:CINZA_BORDA}},right:{style:'hair',color:{argb:CINZA_BORDA}}};
+        cell.border={top:{style:'thin',color:{argb:CINZA_BORDA}},bottom:{style:'thin',color:{argb:CINZA_BORDA}},left:{style:'thin',color:{argb:CINZA_BORDA}},right:{style:'thin',color:{argb:CINZA_BORDA}}};
         cell.fill={type:'pattern',pattern:'solid',fgColor:{argb:corFundoZebra}};
       });
       const corStatus=CORES_STATUS[l.status];
@@ -7427,28 +7534,47 @@ async function exportarRelatorioAbsenteismo(){
       row.height=18;
     });
 
-    // Linha de total geral — destacada, mesmo texto exato de sempre
+    // Linha de total geral — destacada, mesmo texto exato de sempre + explicação
     const totalRowNum=headerRowNum+1+linhasDados.length+1;
     ws.mergeCells(totalRowNum,1,totalRowNum,7);
     const totalLabelCell=ws.getCell(totalRowNum,1);
-    totalLabelCell.value='TOTAL GERAL DE HORAS DE ABSENTEÍSMO';
+    totalLabelCell.value='TOTAL GERAL DE HORAS DE ABSENTEÍSMO ("FALTA")';
     totalLabelCell.font={name:'Calibri',size:12,bold:true,color:{argb:BRANCO}};
     totalLabelCell.alignment={horizontal:'right',vertical:'middle'};
     totalLabelCell.fill={type:'pattern',pattern:'solid',fgColor:{argb:AZUL_MARINHO}};
 
+    // Número do total em vermelho (igual as horas de absenteísmo das linhas
+    // acima), com fundo claro pra dar contraste e chamar atenção de verdade.
     ws.mergeCells(totalRowNum,8,totalRowNum,9);
     const totalValorCell=ws.getCell(totalRowNum,8);
     totalValorCell.value=Number(totalAbsenteismo.toFixed(2));
     totalValorCell.numFmt='0.00" h"';
-    totalValorCell.font={name:'Calibri',size:13,bold:true,color:{argb:BRANCO}};
+    totalValorCell.font={name:'Calibri',size:14,bold:true,color:{argb:'FFB91C1C'}};
     totalValorCell.alignment={horizontal:'center',vertical:'middle'};
-    totalValorCell.fill={type:'pattern',pattern:'solid',fgColor:{argb:AZUL_CIANO}};
+    totalValorCell.fill={type:'pattern',pattern:'solid',fgColor:{argb:BRANCO}};
     ws.getRow(totalRowNum).height=26;
+    for(let c=1;c<=colunas.length;c++){
+      ws.getRow(totalRowNum).getCell(c).border={top:{style:'medium',color:{argb:AZUL_CIANO}},bottom:{style:'thin',color:{argb:CINZA_BORDA}},left:{style:'thin',color:{argb:CINZA_BORDA}},right:{style:'thin',color:{argb:CINZA_BORDA}}};
+    }
+
+    // Moldura externa reforçada em volta do relatório inteiro (título até
+    // total), pra fechar visualmente o quadro por fora, de forma organizada.
+    const ultimaLinha=totalRowNum,ultimaColuna=colunas.length;
+    for(let c=1;c<=ultimaColuna;c++){
+      const topo=ws.getCell(1,c).border||{};
+      ws.getCell(1,c).border={...topo,top:{style:'medium',color:{argb:AZUL_MARINHO}}};
+      const base=ws.getCell(ultimaLinha,c).border||{};
+      ws.getCell(ultimaLinha,c).border={...base,bottom:{style:'medium',color:{argb:AZUL_MARINHO}}};
+    }
+    for(let r=1;r<=ultimaLinha;r++){
+      const esq=ws.getCell(r,1).border||{};
+      ws.getCell(r,1).border={...esq,left:{style:'medium',color:{argb:AZUL_MARINHO}}};
+      const dir=ws.getCell(r,ultimaColuna).border||{};
+      ws.getCell(r,ultimaColuna).border={...dir,right:{style:'medium',color:{argb:AZUL_MARINHO}}};
+    }
 
     // Cabeçalho sempre visível ao rolar a planilha
     ws.views=[{state:'frozen',ySplit:headerRowNum,xSplit:0}];
-    // Filtro em cada coluna do cabeçalho
-    ws.autoFilter={from:{row:headerRowNum,column:1},to:{row:headerRowNum,column:colunas.length}};
 
     // ---- Gera e baixa o arquivo (mesmo nome de sempre) ----
     const buffer=await wb.xlsx.writeBuffer();
