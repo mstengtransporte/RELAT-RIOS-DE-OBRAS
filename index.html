@@ -123,7 +123,7 @@ textarea.hrs.falta,textarea.hrs.cedo,textarea.hrs.integracao,textarea.hrs.aguard
    em lugar nenhum — nem no celular, nem no computador. A caixa de login
    fica com fundo escuro sólido + desfoque, então continua legível não
    importa qual parte da imagem esteja atrás dela. */
-#login-overlay{background:#0b1220 url('login-fundo-rdo.jpg') center top / cover no-repeat!important;}
+#login-overlay{background:#0b1220 url('login-fundo-rdo.jpg') center 25% / cover no-repeat!important;}
 #login-overlay button:active{transform:scale(.96);filter:brightness(.8)}
 #login-overlay button:disabled{opacity:.6;transform:none}
 .btn:active{transform:translateY(0);filter:brightness(.9)}
@@ -1415,12 +1415,10 @@ input.login-input,
      sempre (mesmos ids, mesmas funções), só reposicionado por cima.
      A imagem JÁ TEM escrito "Ambiente seguro" e a fileira de ícones
      (Gestão inteligente, Decisões assertivas...) — por isso o cartão
-     NÃO repete esse texto, e é compacto de propósito, pra nunca
-     empurrar/tampar essa parte de baixo da imagem, em nenhum tamanho
-     de tela. Se o cartão ainda assim não couber (tela bem baixinha),
-     "overflow-y:auto" deixa rolar em vez de sobrepor qualquer coisa. -->
-<div id="login-overlay" style="position:fixed;inset:0;z-index:99999;background:#0b1220 url('login-fundo-rdo.jpg') center top / cover no-repeat;color-scheme:dark">
-  <div style="position:absolute;left:50%;top:44.9%;transform:translate(-50%,-50%);max-width:320px;width:calc(100% - 28px);max-height:34vh;overflow-y:auto;background:rgba(8,15,28,.85);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.14);border-radius:14px;padding:12px 14px 10px">
+     NÃO repete esse texto, e é compacto de propósito, cabendo sempre
+     no mesmo tamanho, sem rolagem, em qualquer tela. -->
+<div id="login-overlay" style="position:fixed;inset:0;z-index:99999;background:#0b1220 url('login-fundo-rdo.jpg') center 25% / cover no-repeat;color-scheme:dark">
+  <div style="position:absolute;left:50%;top:44.9%;transform:translate(-50%,-50%);max-width:320px;width:calc(100% - 28px);background:rgba(8,15,28,.85);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.14);border-radius:14px;padding:12px 14px 10px">
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
       <div style="width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,#1457c8,#00A3E0);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0">👥</div>
       <div>
@@ -2066,7 +2064,7 @@ async function verificarSessaoEIniciar(){
   if(!supabaseClient){
     // Sem Supabase configurado — não bloqueia o app (evita ficar todo mundo trancado
     // fora por causa de um problema de configuração; só não terá controle por usuário).
-    overlay?.remove();
+    removerTelaLogin();
     iniciarAppAposLogin();
     return;
   }
@@ -2074,13 +2072,13 @@ async function verificarSessaoEIniciar(){
     const{data:{session}}=await supabaseClient.auth.getSession();
     if(session){
       await carregarPerfilUsuario(session.user);
-      overlay?.remove();
+      removerTelaLogin();
       iniciarAppAposLogin();
     }
     // sem sessão: fica parado na tela de login, esperando o clique em "Entrar"
   }catch(e){
     console.error('verificarSessaoEIniciar error:',e);
-    overlay?.remove();
+    removerTelaLogin();
     iniciarAppAposLogin();
   }
 }
@@ -2102,6 +2100,16 @@ async function carregarPerfilUsuario(userPreCarregado){
 
 // Mostra/esconde a senha digitada no login (o "olho") — ajuda a conferir se digitou
 // certo antes de tentar entrar, principalmente em senhas complicadas.
+// Enquanto a tela de login está visível, a página de trás (escondida atrás
+// dela) pode ser mais alta que a tela — isso deixaria uma barra de rolagem
+// ativa mesmo com o login por cima, cobrindo tudo. Essa função remove a
+// tela de login E libera a rolagem normal da página ao mesmo tempo,
+// sempre juntas, pra nunca esquecer uma das duas.
+function removerTelaLogin(){
+  document.getElementById('login-overlay')?.remove();
+  document.body.style.overflow='';
+}
+
 function alternarMostrarSenha(){
   const campo=document.getElementById('login-senha');
   const btn=document.getElementById('btn-olho-senha');
@@ -2192,7 +2200,7 @@ async function fazerLogin(){
     }
     if(usuarioAtual) localStorage.setItem('rdo-ultimo-usuario-id',usuarioAtual.id);
 
-    document.getElementById('login-overlay')?.remove();
+    removerTelaLogin();
     iniciarAppAposLogin();
   }catch(e){
     console.error('fazerLogin error:',e);
@@ -3698,6 +3706,11 @@ function iniciarAppAposLogin(){
   },150);
 }
 document.addEventListener('DOMContentLoaded',()=>{
+  // Trava a rolagem da página enquanto a tela de login estiver visível — a
+  // página de trás (escondida atrás dela) pode ser mais alta que a tela, e
+  // sem isso apareceria uma barra de rolagem mesmo com o login por cima.
+  // removerTelaLogin() destrava isso de novo assim que o login terminar.
+  document.body.style.overflow='hidden';
   aplicarEmailLembrado();
   verificarSessaoEIniciar();
 });
