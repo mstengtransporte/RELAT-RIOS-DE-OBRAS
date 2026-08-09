@@ -4088,16 +4088,20 @@ function onVehicleChange(sel,i){
 
 // Quando o campo Veículo recebe FALTA/SAIU MAIS CEDO/TRANSFERIDO em vez de
 // um veículo de verdade, ajusta a linha inteira:
-//  • FALTA e TRANSFERIDO — BLOQUEIAM o apontamento de hora (a pessoa não
-//    trabalhou nesta obra hoje, não faz sentido digitar hora nenhuma).
-//  • SAIU MAIS CEDO — NÃO bloqueia: o encarregado ainda precisa digitar
-//    quantas horas a pessoa trabalhou antes de ir embora, pra calcular
-//    o desconto (isso é feito no banco, automaticamente: 9h - horas
-//    digitadas aqui).
+//  • FALTA — BLOQUEIA o apontamento de hora (a pessoa não trabalhou nada
+//    hoje: 0h trabalhadas, 9h de absenteísmo).
+//  • SAIU MAIS CEDO — NÃO bloqueia: o encarregado digita quantas horas a
+//    pessoa trabalhou antes de ir embora. Absenteísmo = 9h - horas
+//    digitadas (calculado sozinho no banco).
+//  • TRANSFERIDO — TAMBÉM NÃO bloqueia: o encarregado digita quantas
+//    horas a pessoa trabalhou NESTA obra antes de ser transferida pra
+//    outra (ex: 2h aqui, o resto das 9h fecha na obra de destino, em
+//    outro RDO). Essa linha NUNCA gera desconto — absenteísmo sempre
+//    0h aqui, mesmo que as horas digitadas sejam menos que 9.
 //  • Veículo normal ou vazio — destrava tudo de novo.
 function aplicarStatusAbsenteismoNaLinha(i,valorVeiculo){
   const sel=document.getElementById(`vehicle-${i}`);
-  const deveBloquear=valorVeiculo==='FALTA'||valorVeiculo==='TRANSFERIDO';
+  const deveBloquear=valorVeiculo==='FALTA';
   const cores={FALTA:'#7a1f1f','SAIU MAIS CEDO':'#8a5a12',TRANSFERIDO:'#1f3a7a'};
   if(sel){
     sel.style.background=cores[valorVeiculo]||'';
@@ -4113,7 +4117,7 @@ function aplicarStatusAbsenteismoNaLinha(i,valorVeiculo){
       inp.disabled=true;
       inp.style.opacity='.35';
       inp.style.cursor='not-allowed';
-      inp.placeholder=valorVeiculo==='FALTA'?'FALTA':'TRANSF.';
+      inp.placeholder='FALTA';
     }else{
       inp.readOnly=false;
       inp.disabled=false;
