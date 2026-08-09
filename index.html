@@ -4108,7 +4108,11 @@ function aplicarStatusAbsenteismoNaLinha(i,valorVeiculo){
     sel.style.color=cores[valorVeiculo]?'#fff':'';
     sel.style.fontWeight=cores[valorVeiculo]?'900':'';
   }
-  for(let o=1;o<=oseVisiveisCount;o++){
+  // IMPORTANTE: percorre TODAS as OSE possíveis (NUM_OSE), não só as que estão
+  // visíveis agora — senão, se alguém marcar FALTA com só 1 OSE visível e DEPOIS
+  // revelar mais colunas (2, 3...), essas colunas ficariam destravadas por
+  // engano, mesmo a pessoa estando marcada como falta.
+  for(let o=1;o<=NUM_OSE;o++){
     const inp=document.getElementById(`hrs-${i}-${o}`);
     if(!inp) continue;
     if(deveBloquear){
@@ -5677,9 +5681,33 @@ function _criarRDOEmBranco(mensagemToast,focarObra){
   const proximoNRDO=gerarProximoNRDO('');
   document.getElementById('h-nrdo').value=proximoNRDO;
   nrdoEditadoManualmente=false;
-  for(let o=1;o<=NUM_OSE;o++){oseStatus[o]='sem';}
+  for(let o=1;o<=NUM_OSE;o++){
+    oseStatus[o]='sem';
+    // "buildOSECards()" reconstrói os cartões de OSE do zero (esses já saem
+    // certos), e "buildWorkersTable()" reconstrói a tabela de funcionários
+    // (as células de hora também saem certas) — mas o resumo de totais
+    // (sum-item-oX) e o rodapé da tabela (foot-oX) são elementos FIXOS,
+    // que não são recriados, só recebem uma classe de cor nova quando você
+    // MEXE no status manualmente. Sem resetar eles aqui também, ficavam
+    // com a cor do RDO anterior "grudada", mesmo o RDO sendo novo/zerado.
+    const sumItem=document.getElementById(`sum-item-o${o}`);
+    if(sumItem) sumItem.className='sum-item ose s-sem';
+    const foot=document.getElementById(`foot-o${o}`);
+    if(foot) foot.className='col-sem';
+  }
   buildOSECards();
   buildWorkersTable(1);
+  // Reforço: repete o mesmo reset DEPOIS de reconstruir os cartões e a
+  // tabela também — cinto e suspensório, caso alguma outra parte do
+  // código toque nessas células durante a reconstrução.
+  for(let o=1;o<=NUM_OSE;o++){
+    const sumItem=document.getElementById(`sum-item-o${o}`);
+    if(sumItem) sumItem.className='sum-item ose s-sem';
+    const foot=document.getElementById(`foot-o${o}`);
+    if(foot) foot.className='col-sem';
+    const card=document.getElementById(`ose-card-${o}`);
+    if(card) card.className='ose-card s-sem';
+  }
   recalcAll();
   showToast(mensagemToast,'#1457c8');
   renderizarRdosDoDia();renderizarObrasParadas();
@@ -9408,5 +9436,6 @@ window.addEventListener('beforeinstallprompt',(e)=>{
   };
 });
 </script>
+<div class="no-print" style="position:fixed;bottom:2px;right:4px;font-size:8px;color:rgba(120,120,120,.4);font-family:monospace;pointer-events:none;z-index:5">v2026.08.09-reset-cores-ose</div>
 </body>
 </html>
