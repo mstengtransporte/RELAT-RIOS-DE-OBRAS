@@ -1412,6 +1412,105 @@ input.login-input,
     print-color-adjust:exact!important
   }
 }
+/* ============================================================
+   POLIMENTO VISUAL — micro-interações discretas, sem mudar layout,
+   cores base ou qualquer id/função. Só refina o que já existe: transição
+   suave, hover elegante, profundidade sutil, bordas levemente mais
+   modernas. Mantém o caráter "industrial" que o sistema já tem (bordas
+   retas, sombra sólida) — só poli, não redesenha.
+   ============================================================ */
+:root{
+  --radius:4px;
+  --radius-sm:3px;
+  --ease:cubic-bezier(.4,0,.2,1);
+}
+
+/* Transição suave em tudo que é clicável/interativo — sem exagero de
+   duração (150-180ms), sem animar propriedades pesadas (layout). */
+.btn, button, select, input, .ose-card, .sum-item, .rdo-do-dia-pill,
+.rdo-do-dia-pill-novo, .novo-rdo-dia-btn, .novo-rdo-radio,
+.absenteismo-periodo-btn, .multipdf-cancel, .multipdf-gerar,
+.vehicle-select, .login-input{
+  transition:transform .16s var(--ease),box-shadow .16s var(--ease),
+    background-color .16s var(--ease),border-color .16s var(--ease),
+    filter .16s var(--ease);
+}
+
+/* Botões — leve elevação no hover (sem exagero, 1px), volta ao lugar no
+   clique (feedback tátil), brilho sutil em vez de sombra pesada. */
+.btn:hover:not(:disabled), button:hover:not(:disabled){
+  filter:brightness(1.07);
+  transform:translateY(-1px);
+}
+.btn:active:not(:disabled), button:active:not(:disabled){
+  transform:translateY(0);
+  filter:brightness(.97);
+}
+.btn:disabled, button:disabled{transform:none!important;filter:none!important}
+
+/* Campos de formulário — anel de foco sutil (não neon), borda muda de
+   cor suavemente em vez de trocar seca. */
+input:focus, select:focus, textarea:focus{
+  outline:none;
+  border-color:var(--accent)!important;
+  box-shadow:0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent);
+}
+
+/* Cartões de OSE e itens de resumo — profundidade sutil no hover, como
+   se levantassem levemente da mesa; mantém a borda sólida que já existe,
+   só acrescenta uma sombra suave por baixo, sem tirar o caráter atual. */
+.ose-card{
+  box-shadow:0 1px 2px rgba(10,22,40,.06);
+}
+.ose-card:hover{
+  transform:translateY(-2px);
+  box-shadow:0 6px 16px rgba(10,22,40,.14);
+}
+.sum-item:hover{
+  filter:brightness(1.04);
+}
+
+/* Linhas da tabela de funcionários — realce sutil ao passar o mouse,
+   ajuda a acompanhar a linha sem poluir visualmente. */
+#workers-body tr{transition:background-color .12s var(--ease)}
+#workers-body tr:hover{background-color:rgba(26,82,200,.04)}
+body.dark #workers-body tr:hover{background-color:rgba(58,110,232,.08)}
+
+/* Botões da barra superior — pequena luz por cima (highlight sutil),
+   dá uma sensação de profundidade/material sem virar gradiente chamativo. */
+.btn{
+  background-image:linear-gradient(180deg,rgba(255,255,255,.08),rgba(255,255,255,0) 40%);
+}
+
+/* Links de texto (Esqueci senha, Cadastre-se etc.) — sublinhado que
+   aparece suavemente no hover, hierarquia clara sem ser chamativo. */
+.link-trocar a{
+  transition:opacity .15s var(--ease);
+  text-decoration:none;
+  border-bottom:1px solid transparent;
+}
+.link-trocar a:hover{
+  border-bottom-color:currentColor;
+}
+
+/* Modais — entrada suave (leve aparecimento + escala mínima), em vez de
+   aparecer seco. Discreto, sem "bounce" nem exagero. */
+#multipdf-modal.show .multipdf-box, #novo-rdo-modal.show .multipdf-box,
+#absenteismo-periodo-modal.show .multipdf-box, #backup-modal.show .multipdf-box,
+#extra-escopo-modal.show .multipdf-box, #andamento-modal.show .multipdf-box{
+  animation:polimento-entrada-modal .18s var(--ease);
+}
+@keyframes polimento-entrada-modal{
+  from{opacity:0;transform:scale(.98) translateY(4px)}
+  to{opacity:1;transform:scale(1) translateY(0)}
+}
+
+/* Toast — mesma ideia, entrada discreta em vez de aparecer/sumir seco. */
+#toast.show{animation:polimento-entrada-toast .2s var(--ease)}
+@keyframes polimento-entrada-toast{
+  from{opacity:0;transform:translateY(6px)}
+  to{opacity:1;transform:translateY(0)}
+}
 </style>
 </head>
 <body>
