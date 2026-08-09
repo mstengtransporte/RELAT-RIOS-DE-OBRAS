@@ -1480,6 +1480,7 @@ input.login-input,
     <button class="btn" style="background:#0a6080;color:#fff" onclick="abrirGrafico()">📊 <span>H.H</span></button>
     <button class="btn" style="background:#0a7060;color:#fff" onclick="abrirFrases()">💬 <span>Frases</span></button>
     <button class="btn admin-only-btn" id="btn-rel-periodo" style="background:#6030bb;color:#fff" onclick="abrirMultiPDF()">📑 <span>Rel.Período</span></button>
+    <button class="btn admin-only-btn" id="btn-absenteismo" style="background:#b91c1c;color:#fff" onclick="exportarRelatorioAbsenteismo()" title="Todo o histórico de FALTA/SAIU MAIS CEDO/TRANSFERIDO, de todas as obras, até agora">🚨 <span>Absenteísmo</span></button>
     <button class="btn admin-only-btn" style="background:#374151;color:#fff" onclick="abrirBackup()">🗄️ <span>Backup</span></button>
     <button class="btn admin-only-btn" style="background:#374151;color:#fff" onclick="abrirCheckIntegridade()" title="Verifica inconsistências que podem causar erro na contagem de horas">🩺 <span>Check</span></button>
     <button class="btn btn-pdf"     onclick="exportarPDF()" title="Abre a tela de impressão para salvar como PDF">🖨️ <span>PDF</span></button>
@@ -3095,7 +3096,8 @@ async function _syncSalvarSupabaseReal(d,rdoKey){
     const workersRows=(d.workers||[])
       .filter(w=>w.name||(w.hrs||[]).some(v=>v))
       .map((w,idx)=>({
-        rdo_id:rdoId,worker_index:idx,nome:w.name||null,funcao:w.func||null,veiculo:w.vehicle||null,hrs:w.hrs||[],hst:w.hst||[]
+        rdo_id:rdoId,worker_index:idx,nome:w.name||null,funcao:w.func||null,veiculo:w.vehicle||null,hrs:w.hrs||[],hst:w.hst||[],
+        status_dia:statusDiaPorRotulo(w.vehicle)
       }));
     if(workersRows.length){
       const{error:erroWorkers}=await supabaseClient.from('rdo_workers').insert(workersRows);
@@ -3912,9 +3914,24 @@ function buildFuncOptions(selected=''){
 }
 function buildVehicleOptions(selected=''){
   let opts=`<option value="">— Veículo —</option>`;
+  opts+=`<optgroup label="⚠️ Ausência / desvio (em vez do veículo)">`;
+  opts+=`<option value="FALTA" ${selected==='FALTA'?'selected':''}>🔴 FALTA</option>`;
+  opts+=`<option value="SAIU MAIS CEDO" ${selected==='SAIU MAIS CEDO'?'selected':''}>🟠 SAIU MAIS CEDO</option>`;
+  opts+=`<option value="TRANSFERIDO" ${selected==='TRANSFERIDO'?'selected':''}>🔵 TRANSFERIDO</option>`;
+  opts+=`</optgroup>`;
   vehiclesList.forEach(v=>{ opts+=`<option value="${v}" ${v===selected?'selected':''}>${v}</option>`; });
   opts+=`<option value="__custom__">✏️ Digitar veículo...</option>`;
   return opts;
+}
+// Os 3 status especiais de ausência que podem ser escolhidos no lugar do
+// veículo — usados em vários pontos (bloquear horas, calcular
+// absenteísmo, colorir a célula).
+const STATUS_ABSENTEISMO_VEICULO=['FALTA','SAIU MAIS CEDO','TRANSFERIDO'];
+function statusDiaPorRotulo(rotulo){
+  if(rotulo==='FALTA') return 'falta';
+  if(rotulo==='SAIU MAIS CEDO') return 'saiu_cedo';
+  if(rotulo==='TRANSFERIDO') return 'transferido';
+  return null;
 }
 
 // Confere se um nome já está sendo usado em OUTRA linha da tabela (cada
@@ -4066,6 +4083,46 @@ function onVehicleChange(sel,i){
     return;
   }
   sel.dataset.prev=sel.value;
+  aplicarStatusAbsenteismoNaLinha(i,sel.value);
+}
+
+// Quando o campo Veículo recebe FALTA/SAIU MAIS CEDO/TRANSFERIDO em vez de
+// um veículo de verdade, ajusta a linha inteira:
+//  • FALTA e TRANSFERIDO — BLOQUEIAM o apontamento de hora (a pessoa não
+//    trabalhou nesta obra hoje, não faz sentido digitar hora nenhuma).
+//  • SAIU MAIS CEDO — NÃO bloqueia: o encarregado ainda precisa digitar
+//    quantas horas a pessoa trabalhou antes de ir embora, pra calcular
+//    o desconto (isso é feito no banco, automaticamente: 9h - horas
+//    digitadas aqui).
+//  • Veículo normal ou vazio — destrava tudo de novo.
+function aplicarStatusAbsenteismoNaLinha(i,valorVeiculo){
+  const sel=document.getElementById(`vehicle-${i}`);
+  const deveBloquear=valorVeiculo==='FALTA'||valorVeiculo==='TRANSFERIDO';
+  const cores={FALTA:'#7a1f1f','SAIU MAIS CEDO':'#8a5a12',TRANSFERIDO:'#1f3a7a'};
+  if(sel){
+    sel.style.background=cores[valorVeiculo]||'';
+    sel.style.color=cores[valorVeiculo]?'#fff':'';
+    sel.style.fontWeight=cores[valorVeiculo]?'900':'';
+  }
+  for(let o=1;o<=oseVisiveisCount;o++){
+    const inp=document.getElementById(`hrs-${i}-${o}`);
+    if(!inp) continue;
+    if(deveBloquear){
+      inp.value='';
+      inp.readOnly=true;
+      inp.disabled=true;
+      inp.style.opacity='.35';
+      inp.style.cursor='not-allowed';
+      inp.placeholder=valorVeiculo==='FALTA'?'FALTA':'TRANSF.';
+    }else{
+      inp.readOnly=false;
+      inp.disabled=false;
+      inp.style.opacity='';
+      inp.style.cursor='';
+      if(inp.placeholder==='FALTA'||inp.placeholder==='TRANSF.') inp.placeholder='—';
+    }
+  }
+  if(typeof recalcAll==='function') recalcAll();
 }
 
 /* ============================================================
@@ -5143,6 +5200,12 @@ function restoreRow(w,i){
       formatHrs(e);
     }
   });
+  // Se esse funcionário já estava marcado como FALTA/SAIU MAIS CEDO/
+  // TRANSFERIDO, reaplica o bloqueio/cor da célula ao reabrir o RDO —
+  // sem isso, a linha voltaria destravada mesmo já estando marcada.
+  if(STATUS_ABSENTEISMO_VEICULO.includes(w.vehicle)){
+    aplicarStatusAbsenteismoNaLinha(i,w.vehicle);
+  }
 }
 
 function carregarRDO(){
@@ -7203,6 +7266,64 @@ function atualizarTotalMultiPDF(){
     }catch(e){}
   });
   document.getElementById('multipdf-total').textContent=count?`${count} RDO(s) — Total: ${fmt(total)} H.H`:'';
+}
+
+// ============================================================
+// ABSENTEÍSMO GLOBAL (só admin) — consulta TODOS os RDOs de TODAS as
+// obras, direto do banco (não do celular), do início do sistema até
+// agora, e gera a planilha linha a linha (um funcionário que faltou em
+// 3 dias diferentes aparece em 3 linhas, uma por data).
+// ============================================================
+async function exportarRelatorioAbsenteismo(){
+  const supabaseClient=getSupabaseClient();
+  if(!supabaseClient){ showToast('Sistema não conectado ao banco.','#dc2626'); return; }
+  showToast('🔎 Buscando todo o histórico de absenteísmo...','#b91c1c');
+  try{
+    const{data,error}=await supabaseClient.rpc('relatorio_absenteismo');
+    if(error){
+      console.error('relatorio_absenteismo error:',error);
+      showToast('Erro ao buscar: '+error.message,'#dc2626');
+      return;
+    }
+    if(!data||!data.length){
+      showToast('Nenhuma ocorrência de FALTA/SAIU CEDO/TRANSFERIDO encontrada ainda.','#6b7fa0');
+      return;
+    }
+    const linhas=[['MASTER ENERGY — RELATÓRIO GLOBAL DE ABSENTEÍSMO'],
+      [`Gerado em: ${new Date().toLocaleString('pt-BR')} — Todas as obras, desde o início do sistema`],[]];
+    linhas.push(['DATA DO RDO','OBRA / CENTRO DE CUSTO','NOME DO COLABORADOR','FUNÇÃO','DISCIPLINA','ENCARREGADO RESPONSÁVEL','STATUS / OCORRÊNCIA','HORAS TRABALHADAS (OS)','HORAS DE ABSENTEÍSMO']);
+    let totalAbsenteismo=0;
+    data.forEach(l=>{
+      const[y,m,dd]=(l.data_rdo||'').split('-');
+      const dataFmt=dd?`${dd}/${m}/${y}`:l.data_rdo||'';
+      totalAbsenteismo+=Number(l.horas_absenteismo)||0;
+      linhas.push([
+        dataFmt,
+        (l.obra||'').toUpperCase(),
+        (l.colaborador||'').toUpperCase(),
+        (l.funcao||'').toUpperCase(),
+        (l.disciplina||'').toUpperCase(),
+        (l.encarregado||'').toUpperCase(),
+        l.status_ocorrencia||'',
+        Number(l.horas_trabalhadas)||0,
+        Number(l.horas_absenteismo)||0
+      ]);
+    });
+    linhas.push([]);
+    linhas.push(['','','','','','','TOTAL GERAL DE HORAS DE ABSENTEÍSMO','',totalAbsenteismo.toFixed(2)]);
+
+    const wb=XLSX.utils.book_new();
+    const ws=XLSX.utils.aoa_to_sheet(linhas);
+    ws['!cols']=[{wch:12},{wch:24},{wch:26},{wch:16},{wch:16},{wch:20},{wch:16},{wch:14},{wch:14}];
+    XLSX.utils.book_append_sheet(wb,ws,'Absenteísmo');
+    const agora=new Date();
+    const carimbo=`${agora.getFullYear()}-${String(agora.getMonth()+1).padStart(2,'0')}-${String(agora.getDate()).padStart(2,'0')}_${String(agora.getHours()).padStart(2,'0')}h${String(agora.getMinutes()).padStart(2,'0')}`;
+    XLSX.writeFile(wb,`Absenteismo_MasterEnergy_ateo_${carimbo}.xlsx`);
+    showToast(`📥 Relatório exportado — ${data.length} ocorrência(s), ${totalAbsenteismo.toFixed(1)}h de absenteísmo no total.`,'#b91c1c');
+  }catch(e){
+    console.error('exportarRelatorioAbsenteismo error:',e);
+    showToast('Erro de conexão ao gerar o relatório.','#dc2626');
+  }
 }
 
 function gerarRelatorioMultiplo(){
