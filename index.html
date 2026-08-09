@@ -119,12 +119,13 @@ textarea.hrs.falta,textarea.hrs.cedo,textarea.hrs.integracao,textarea.hrs.aguard
 .btn:disabled{opacity:.35;cursor:not-allowed}
 .btn:hover{filter:brightness(1.2);transform:translateY(-1px);box-shadow:0 3px 10px rgba(0,0,0,.35)}
 #login-overlay button{transition:transform .1s ease,filter .1s ease,opacity .1s ease}
-/* Preenche a tela inteira (cobre 100%, sem sobrar faixa vazia em lugar
-   nenhum), tanto no celular quanto no computador. "center top" garante
-   que a parte de cima (logo Master Energy) sempre aparece — em telas
-   bem mais largas que altas, a parte de baixo da foto (o chão molhado)
-   é o que fica cortado, o que é preferível a esconder o logo. */
-#login-overlay{background:#0b1220 url('login-fundo-rdo.jpg') center top / cover no-repeat!important;}
+/* A imagem sempre aparece em ALTURA TOTAL (a altura dela sempre bate com
+   a altura da tela) — isso é importante porque garante que a posição do
+   cartão de login (calculada como uma % da altura) sempre caia exatamente
+   no espaço vazio entre "ORGANIZAÇÃO CONTROLE RESULTADOS" (em cima) e
+   "Ambiente seguro" (embaixo), em QUALQUER formato de tela, celular ou
+   computador — sem isso, o cartão às vezes cai em cima do texto. */
+#login-overlay{background:#0b1220 url('login-fundo-rdo.jpg') center top / auto 100% no-repeat!important;}
 #login-overlay button:active{transform:scale(.96);filter:brightness(.8)}
 #login-overlay button:disabled{opacity:.6;transform:none}
 .btn:active{transform:translateY(0);filter:brightness(.9)}
@@ -1420,8 +1421,8 @@ input.login-input,
      empurrar/tampar essa parte de baixo da imagem, em nenhum tamanho
      de tela. Se o cartão ainda assim não couber (tela bem baixinha),
      "overflow-y:auto" deixa rolar em vez de sobrepor qualquer coisa. -->
-<div id="login-overlay" style="position:fixed;inset:0;z-index:99999;background:#0b1220 url('login-fundo-rdo.jpg') center top / cover no-repeat;display:flex;align-items:center;justify-content:center;padding:16px;overflow-y:auto;color-scheme:dark">
-  <div style="max-width:340px;width:100%;background:rgba(8,15,28,.85);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.14);border-radius:16px;padding:16px 18px 14px;margin:auto">
+<div id="login-overlay" style="position:fixed;inset:0;z-index:99999;background:#0b1220 url('login-fundo-rdo.jpg') center top / auto 100% no-repeat;color-scheme:dark">
+  <div style="position:absolute;left:50%;top:44.9%;transform:translate(-50%,-50%);max-width:340px;width:calc(100% - 32px);max-height:90vh;overflow-y:auto;background:rgba(8,15,28,.85);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.14);border-radius:16px;padding:16px 18px 14px">
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
       <div style="width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,#1457c8,#00A3E0);display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0">👥</div>
       <div>
