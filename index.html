@@ -7305,6 +7305,13 @@ function atualizarTotalMultiPDF(){
 // obras, direto do banco (não do celular), do início do sistema até
 // agora, e gera a planilha linha a linha (um funcionário que faltou em
 // 3 dias diferentes aparece em 3 linhas, uma por data).
+//
+// A CONSULTA, os DADOS e o CÁLCULO são exatamente os mesmos de sempre
+// (RPC relatorio_absenteismo, sem nenhuma mudança) — só a MONTAGEM
+// VISUAL do Excel foi refeita, usando ExcelJS (que o projeto já carrega
+// em outro lugar) em vez do XLSX simples, pra ter cor, borda, cabeçalho
+// congelado, filtro e impressão configurada — coisas que o XLSX puro
+// não consegue fazer.
 // ============================================================
 async function exportarRelatorioAbsenteismo(){
   const supabaseClient=getSupabaseClient();
@@ -7321,36 +7328,138 @@ async function exportarRelatorioAbsenteismo(){
       showToast('Nenhuma ocorrência de FALTA/SAIU CEDO/TRANSFERIDO encontrada ainda.','#6b7fa0');
       return;
     }
-    const linhas=[['MASTER ENERGY — RELATÓRIO GLOBAL DE ABSENTEÍSMO'],
-      [`Gerado em: ${new Date().toLocaleString('pt-BR')} — Todas as obras, desde o início do sistema`],[]];
-    linhas.push(['DATA DO RDO','OBRA / CENTRO DE CUSTO','NOME DO COLABORADOR','FUNÇÃO','DISCIPLINA','ENCARREGADO RESPONSÁVEL','STATUS / OCORRÊNCIA','HORAS TRABALHADAS (OS)','HORAS DE ABSENTEÍSMO']);
-    let totalAbsenteismo=0;
-    data.forEach(l=>{
-      const[y,m,dd]=(l.data_rdo||'').split('-');
-      const dataFmt=dd?`${dd}/${m}/${y}`:l.data_rdo||'';
-      totalAbsenteismo+=Number(l.horas_absenteismo)||0;
-      linhas.push([
-        dataFmt,
-        (l.obra||'').toUpperCase(),
-        (l.colaborador||'').toUpperCase(),
-        (l.funcao||'').toUpperCase(),
-        (l.disciplina||'').toUpperCase(),
-        (l.encarregado||'').toUpperCase(),
-        l.status_ocorrencia||'',
-        Number(l.horas_trabalhadas)||0,
-        Number(l.horas_absenteismo)||0
-      ]);
-    });
-    linhas.push([]);
-    linhas.push(['','','','','','','TOTAL GERAL DE HORAS DE ABSENTEÍSMO','',totalAbsenteismo.toFixed(2)]);
 
-    const wb=XLSX.utils.book_new();
-    const ws=XLSX.utils.aoa_to_sheet(linhas);
-    ws['!cols']=[{wch:12},{wch:24},{wch:26},{wch:16},{wch:16},{wch:20},{wch:16},{wch:14},{wch:14}];
-    XLSX.utils.book_append_sheet(wb,ws,'Absenteísmo');
+    // ---- Mesmos dados/cálculo de sempre — só reorganizados em objetos
+    //      pra ficar mais fácil de montar a planilha bonita depois ----
+    let totalAbsenteismo=0;
+    const linhasDados=data.map(l=>{
+      const[y,m,dd]=(l.data_rdo||'').split('-');
+      const dataFmt=dd?`${dd}/${m}/${y}`:(l.data_rdo||'');
+      const horasAbs=Number(l.horas_absenteismo)||0;
+      totalAbsenteismo+=horasAbs;
+      return{
+        data:dataFmt,
+        obra:(l.obra||'').toUpperCase(),
+        colaborador:(l.colaborador||'').toUpperCase(),
+        funcao:(l.funcao||'').toUpperCase(),
+        disciplina:(l.disciplina||'').toUpperCase(),
+        encarregado:(l.encarregado||'').toUpperCase(),
+        status:l.status_ocorrencia||'',
+        horasTrabalhadas:Number(l.horas_trabalhadas)||0,
+        horasAbsenteismo:horasAbs
+      };
+    });
+
+    // ---- Identidade visual Master Energy ----
+    const AZUL_MARINHO='FF0D1B3E',AZUL_CIANO='FF0EA5E9',BRANCO='FFFFFFFF',
+          CINZA_CLARO='FFF1F5F9',CINZA_BORDA='FFCBD5E1',CINZA_TEXTO='FF1E293B';
+    const CORES_STATUS={FALTA:'FFFECACA','SAIU MAIS CEDO':'FFFED7AA',TRANSFERIDO:'FFBFDBFE',PRESENTE:'FFDCFCE7'};
+    const TEXTO_STATUS={FALTA:'FF991B1B','SAIU MAIS CEDO':'FF9A3412',TRANSFERIDO:'FF1E40AF',PRESENTE:'FF166534'};
+
+    const colunas=['DATA DO RDO','OBRA / CENTRO DE CUSTO','NOME DO COLABORADOR','FUNÇÃO','DISCIPLINA','ENCARREGADO RESPONSÁVEL','STATUS / OCORRÊNCIA','HORAS TRABALHADAS (OS)','HORAS DE ABSENTEÍSMO'];
+    const larguras=[13,28,28,17,17,24,19,16,17];
+
+    const wb=new ExcelJS.Workbook();
+    wb.creator='Master Energy';
+    wb.created=new Date();
+    const ws=wb.addWorksheet('Absenteísmo',{
+      pageSetup:{orientation:'landscape',fitToPage:true,fitToWidth:1,fitToHeight:0,paperSize:9}
+    });
+    ws.columns=colunas.map((_,i)=>({width:larguras[i]}));
+
+    // Linha 1 — título corporativo
+    ws.mergeCells(1,1,1,colunas.length);
+    const tituloCell=ws.getCell(1,1);
+    tituloCell.value='MASTER ENERGY  •  RELATÓRIO GLOBAL DE ABSENTEÍSMO';
+    tituloCell.font={name:'Calibri',size:16,bold:true,color:{argb:BRANCO}};
+    tituloCell.alignment={horizontal:'center',vertical:'middle'};
+    tituloCell.fill={type:'pattern',pattern:'solid',fgColor:{argb:AZUL_MARINHO}};
+    ws.getRow(1).height=30;
+
+    // Linha 2 — data/hora de geração + abrangência
+    ws.mergeCells(2,1,2,colunas.length);
     const agora=new Date();
+    const subCell=ws.getCell(2,1);
+    subCell.value=`Gerado em ${agora.toLocaleDateString('pt-BR')} às ${agora.toLocaleTimeString('pt-BR')}  —  Abrangência: todas as obras, desde o início do sistema até a data/hora deste relatório`;
+    subCell.font={name:'Calibri',size:10,italic:true,color:{argb:BRANCO}};
+    subCell.alignment={horizontal:'center',vertical:'middle'};
+    subCell.fill={type:'pattern',pattern:'solid',fgColor:{argb:AZUL_CIANO}};
+    ws.getRow(2).height=20;
+
+    ws.getRow(3).height=6; // respiro visual
+
+    // Linha 4 — cabeçalho da tabela
+    const headerRowNum=4;
+    const headerRow=ws.getRow(headerRowNum);
+    colunas.forEach((titulo,idx)=>{
+      const cell=headerRow.getCell(idx+1);
+      cell.value=titulo;
+      cell.font={name:'Calibri',size:10.5,bold:true,color:{argb:BRANCO}};
+      cell.alignment={horizontal:'center',vertical:'middle',wrapText:true};
+      cell.fill={type:'pattern',pattern:'solid',fgColor:{argb:AZUL_MARINHO}};
+      cell.border={top:{style:'thin',color:{argb:CINZA_BORDA}},bottom:{style:'medium',color:{argb:AZUL_CIANO}},left:{style:'thin',color:{argb:CINZA_BORDA}},right:{style:'thin',color:{argb:CINZA_BORDA}}};
+    });
+    headerRow.height=28;
+
+    // Linhas de dados — zebra (linhas alternadas) + destaque de cor no status
+    linhasDados.forEach((l,idx)=>{
+      const rowNum=headerRowNum+1+idx;
+      const row=ws.getRow(rowNum);
+      const valores=[l.data,l.obra,l.colaborador,l.funcao,l.disciplina,l.encarregado,l.status,l.horasTrabalhadas,l.horasAbsenteismo];
+      const corFundoZebra=idx%2===0?'FFFFFFFF':CINZA_CLARO;
+      valores.forEach((v,c)=>{
+        const cell=row.getCell(c+1);
+        cell.value=v;
+        cell.font={name:'Calibri',size:10,color:{argb:CINZA_TEXTO}};
+        cell.alignment={horizontal:(c===0||c===7||c===8)?'center':'left',vertical:'middle'};
+        cell.border={top:{style:'hair',color:{argb:CINZA_BORDA}},bottom:{style:'hair',color:{argb:CINZA_BORDA}},left:{style:'hair',color:{argb:CINZA_BORDA}},right:{style:'hair',color:{argb:CINZA_BORDA}}};
+        cell.fill={type:'pattern',pattern:'solid',fgColor:{argb:corFundoZebra}};
+      });
+      const corStatus=CORES_STATUS[l.status];
+      if(corStatus){
+        const statusCell=row.getCell(7);
+        statusCell.fill={type:'pattern',pattern:'solid',fgColor:{argb:corStatus}};
+        statusCell.font={name:'Calibri',size:10,bold:true,color:{argb:TEXTO_STATUS[l.status]}};
+      }
+      if(l.horasAbsenteismo>0){
+        row.getCell(9).font={name:'Calibri',size:10,bold:true,color:{argb:'FFB91C1C'}};
+      }
+      row.height=18;
+    });
+
+    // Linha de total geral — destacada, mesmo texto exato de sempre
+    const totalRowNum=headerRowNum+1+linhasDados.length+1;
+    ws.mergeCells(totalRowNum,1,totalRowNum,7);
+    const totalLabelCell=ws.getCell(totalRowNum,1);
+    totalLabelCell.value='TOTAL GERAL DE HORAS DE ABSENTEÍSMO';
+    totalLabelCell.font={name:'Calibri',size:12,bold:true,color:{argb:BRANCO}};
+    totalLabelCell.alignment={horizontal:'right',vertical:'middle'};
+    totalLabelCell.fill={type:'pattern',pattern:'solid',fgColor:{argb:AZUL_MARINHO}};
+
+    ws.mergeCells(totalRowNum,8,totalRowNum,9);
+    const totalValorCell=ws.getCell(totalRowNum,8);
+    totalValorCell.value=Number(totalAbsenteismo.toFixed(2));
+    totalValorCell.numFmt='0.00" h"';
+    totalValorCell.font={name:'Calibri',size:13,bold:true,color:{argb:BRANCO}};
+    totalValorCell.alignment={horizontal:'center',vertical:'middle'};
+    totalValorCell.fill={type:'pattern',pattern:'solid',fgColor:{argb:AZUL_CIANO}};
+    ws.getRow(totalRowNum).height=26;
+
+    // Cabeçalho sempre visível ao rolar a planilha
+    ws.views=[{state:'frozen',ySplit:headerRowNum,xSplit:0}];
+    // Filtro em cada coluna do cabeçalho
+    ws.autoFilter={from:{row:headerRowNum,column:1},to:{row:headerRowNum,column:colunas.length}};
+
+    // ---- Gera e baixa o arquivo (mesmo nome de sempre) ----
+    const buffer=await wb.xlsx.writeBuffer();
+    const blob=new Blob([buffer],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
     const carimbo=`${agora.getFullYear()}-${String(agora.getMonth()+1).padStart(2,'0')}-${String(agora.getDate()).padStart(2,'0')}_${String(agora.getHours()).padStart(2,'0')}h${String(agora.getMinutes()).padStart(2,'0')}`;
-    XLSX.writeFile(wb,`Absenteismo_MasterEnergy_ateo_${carimbo}.xlsx`);
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    a.href=url;a.download=`Absenteismo_MasterEnergy_ateo_${carimbo}.xlsx`;
+    document.body.appendChild(a);a.click();document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
     showToast(`📥 Relatório exportado — ${data.length} ocorrência(s), ${totalAbsenteismo.toFixed(1)}h de absenteísmo no total.`,'#b91c1c');
   }catch(e){
     console.error('exportarRelatorioAbsenteismo error:',e);
