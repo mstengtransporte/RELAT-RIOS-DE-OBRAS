@@ -119,6 +119,12 @@ textarea.hrs.falta,textarea.hrs.cedo,textarea.hrs.integracao,textarea.hrs.aguard
 .btn:disabled{opacity:.35;cursor:not-allowed}
 .btn:hover{filter:brightness(1.2);transform:translateY(-1px);box-shadow:0 3px 10px rgba(0,0,0,.35)}
 #login-overlay button{transition:transform .1s ease,filter .1s ease,opacity .1s ease}
+/* A imagem preenche a tela inteira (cobre 100%, sem sobrar espaço vazio),
+   tanto no celular quanto no computador — "center 15%" mantém sempre
+   visível a parte de cima (logo Master Energy), que é o ponto mais
+   importante da imagem pra identidade visual, mesmo quando a tela é bem
+   mais larga que alta e uma parte de baixo acaba cortada. */
+#login-overlay{background:#0b1220 url('login-fundo-rdo.jpg') center 15% / cover no-repeat!important;}
 #login-overlay button:active{transform:scale(.96);filter:brightness(.8)}
 #login-overlay button:disabled{opacity:.6;transform:none}
 .btn:active{transform:translateY(0);filter:brightness(.9)}
@@ -1404,20 +1410,23 @@ input.login-input,
 </head>
 <body>
 
-<!-- TELA DE LOGIN — fica por cima de tudo até a pessoa entrar -->
-<div id="login-overlay" style="position:fixed;inset:0;z-index:99999;background:#0b1220;display:flex;align-items:center;justify-content:center;padding:20px;color-scheme:dark">
-  <div style="max-width:340px;width:100%">
-    <div style="text-align:center;margin-bottom:24px">
-      <div style="font-size:22px;font-weight:900;color:#fff">📋 RDO — Master Energy</div>
-      <div style="font-size:12.5px;color:#9ca3af;margin-top:4px">Entre com seu e-mail e senha</div>
+<!-- TELA DE LOGIN — fica por cima de tudo até a pessoa entrar. O fundo
+     (login-fundo-rdo.jpg) é só decoração/identidade visual da Master
+     Energy — o formulário continua sendo os mesmos campos reais de
+     sempre (mesmos ids, mesmas funções), só reposicionado por cima. -->
+<div id="login-overlay" style="position:fixed;inset:0;z-index:99999;background:#0b1220 url('login-fundo-rdo.jpg') center top / cover no-repeat;display:flex;align-items:center;justify-content:center;padding:20px;color-scheme:dark">
+  <div style="max-width:340px;width:100%;margin-top:min(30vh,260px);background:rgba(10,18,32,.72);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,.14);border-radius:16px;padding:22px 20px;box-shadow:0 12px 40px rgba(0,0,0,.5)">
+    <div style="text-align:center;margin-bottom:20px">
+      <div style="font-size:20px;font-weight:900;color:#fff">📋 RDO — Master Energy</div>
+      <div style="font-size:12px;color:#9ca3af;margin-top:4px;letter-spacing:.5px">FAÇA LOGIN PARA ACESSAR O SISTEMA</div>
     </div>
     <form id="login-form" onsubmit="return false" style="display:flex;flex-direction:column;gap:10px">
-      <input type="email" id="login-email" placeholder="E-mail" autocomplete="username" autocapitalize="off" autocorrect="off" spellcheck="false" class="login-input" style="padding:13px;border-radius:8px;border:1px solid #2a3548;background:#141c2e;color:#fff;font-size:16px;font-weight:700;letter-spacing:.3px">
+      <input type="email" id="login-email" placeholder="E-mail" autocomplete="username" autocapitalize="off" autocorrect="off" spellcheck="false" class="login-input" style="padding:13px;border-radius:8px;border:1px solid #2a3548;background:#141c2ecc;color:#fff;font-size:16px;font-weight:700;letter-spacing:.3px">
       <div style="position:relative">
-        <input type="password" id="login-senha" placeholder="Senha" autocomplete="current-password" autocapitalize="off" autocorrect="off" spellcheck="false" onkeydown="if(event.key==='Enter')fazerLogin()" class="login-input" style="padding:13px 44px 13px 13px;border-radius:8px;border:1px solid #2a3548;background:#141c2e;color:#fff;font-size:16px;font-weight:700;letter-spacing:.3px;width:100%;box-sizing:border-box">
+        <input type="password" id="login-senha" placeholder="Senha" autocomplete="current-password" autocapitalize="off" autocorrect="off" spellcheck="false" onkeydown="if(event.key==='Enter')fazerLogin()" class="login-input" style="padding:13px 44px 13px 13px;border-radius:8px;border:1px solid #2a3548;background:#141c2ecc;color:#fff;font-size:16px;font-weight:700;letter-spacing:.3px;width:100%;box-sizing:border-box">
         <button type="button" onclick="alternarMostrarSenha()" id="btn-olho-senha" aria-label="Mostrar senha" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;font-size:18px;cursor:pointer;padding:6px;line-height:1">👁️</button>
       </div>
-      <button type="button" id="login-btn" onclick="fazerLogin()" style="padding:14px;border-radius:8px;border:none;background:#1457c8;color:#fff;font-weight:900;font-size:14px;cursor:pointer;margin-top:4px">Entrar</button>
+      <button type="button" id="login-btn" onclick="fazerLogin()" style="padding:14px;border-radius:8px;border:none;background:#1457c8;color:#fff;font-weight:900;font-size:14px;cursor:pointer;margin-top:4px">↪ ENTRAR</button>
       <button type="button" onclick="limparSessaoNaTelaDeLogin()" style="padding:10px;border-radius:8px;border:1.5px solid #dc2626;background:transparent;color:#f87171;font-weight:800;font-size:12px;cursor:pointer">🚪 Sair / Limpar sessão deste aparelho</button>
       <div id="login-erro" style="color:#f87171;font-size:12px;text-align:center;min-height:16px"></div>
     </form>
