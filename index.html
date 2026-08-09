@@ -119,12 +119,17 @@ textarea.hrs.falta,textarea.hrs.cedo,textarea.hrs.integracao,textarea.hrs.aguard
 .btn:disabled{opacity:.35;cursor:not-allowed}
 .btn:hover{filter:brightness(1.2);transform:translateY(-1px);box-shadow:0 3px 10px rgba(0,0,0,.35)}
 #login-overlay button{transition:transform .1s ease,filter .1s ease,opacity .1s ease}
-/* A imagem preenche a tela inteira (cobre 100%, sem sobrar espaço vazio),
-   tanto no celular quanto no computador — "center 15%" mantém sempre
-   visível a parte de cima (logo Master Energy), que é o ponto mais
-   importante da imagem pra identidade visual, mesmo quando a tela é bem
-   mais larga que alta e uma parte de baixo acaba cortada. */
-#login-overlay{background:#0b1220 url('login-fundo-rdo.jpg') center 15% / cover no-repeat!important;}
+/* No celular (formato parecido com o da própria foto, vertical), "cover"
+   preenche a tela toda quase sem cortar nada. Já no computador (tela bem
+   mais larga que alta), "cover" precisaria ampliar demais a imagem e
+   cortaria uma boa parte de cima/baixo — por isso, a partir de 820px,
+   trocamos pra mostrar a imagem em ALTURA TOTAL (sem cortar nada na
+   vertical), com uma faixa escura sobrando nas laterais se a tela for
+   muito larga, em vez de perder conteúdo da foto. */
+#login-overlay{background:#0b1220 url('login-fundo-rdo.jpg') center top / cover no-repeat!important;}
+@media (min-width:820px){
+  #login-overlay{background:#0b1220 url('login-fundo-rdo.jpg') center top / auto 100% no-repeat!important;}
+}
 #login-overlay button:active{transform:scale(.96);filter:brightness(.8)}
 #login-overlay button:disabled{opacity:.6;transform:none}
 .btn:active{transform:translateY(0);filter:brightness(.9)}
@@ -1415,21 +1420,45 @@ input.login-input,
      Energy — o formulário continua sendo os mesmos campos reais de
      sempre (mesmos ids, mesmas funções), só reposicionado por cima. -->
 <div id="login-overlay" style="position:fixed;inset:0;z-index:99999;background:#0b1220 url('login-fundo-rdo.jpg') center top / cover no-repeat;display:flex;align-items:center;justify-content:center;padding:20px;color-scheme:dark">
-  <div style="max-width:340px;width:100%;margin-top:min(30vh,260px);background:rgba(10,18,32,.72);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,.14);border-radius:16px;padding:22px 20px;box-shadow:0 12px 40px rgba(0,0,0,.5)">
-    <div style="text-align:center;margin-bottom:20px">
-      <div style="font-size:20px;font-weight:900;color:#fff">📋 RDO — Master Energy</div>
-      <div style="font-size:12px;color:#9ca3af;margin-top:4px;letter-spacing:.5px">FAÇA LOGIN PARA ACESSAR O SISTEMA</div>
-    </div>
-    <form id="login-form" onsubmit="return false" style="display:flex;flex-direction:column;gap:10px">
-      <input type="email" id="login-email" placeholder="E-mail" autocomplete="username" autocapitalize="off" autocorrect="off" spellcheck="false" class="login-input" style="padding:13px;border-radius:8px;border:1px solid #2a3548;background:#141c2ecc;color:#fff;font-size:16px;font-weight:700;letter-spacing:.3px">
-      <div style="position:relative">
-        <input type="password" id="login-senha" placeholder="Senha" autocomplete="current-password" autocapitalize="off" autocorrect="off" spellcheck="false" onkeydown="if(event.key==='Enter')fazerLogin()" class="login-input" style="padding:13px 44px 13px 13px;border-radius:8px;border:1px solid #2a3548;background:#141c2ecc;color:#fff;font-size:16px;font-weight:700;letter-spacing:.3px;width:100%;box-sizing:border-box">
-        <button type="button" onclick="alternarMostrarSenha()" id="btn-olho-senha" aria-label="Mostrar senha" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;font-size:18px;cursor:pointer;padding:6px;line-height:1">👁️</button>
+  <div style="max-width:360px;width:100%">
+    <div style="max-width:360px;width:100%;background:rgba(8,15,28,.82);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.14);border-radius:18px;padding:22px 22px 18px">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+        <div style="width:42px;height:42px;border-radius:12px;background:linear-gradient(135deg,#1457c8,#00A3E0);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">👥</div>
+        <div>
+          <div style="font-size:16px;font-weight:900;color:#fff;line-height:1.2">RDO <span style="color:#3ea6ff">MASTER ENERGY</span></div>
+          <div style="font-size:11px;color:#8fa5bd;letter-spacing:.5px;font-weight:700">DIÁRIO DE OBRA PRO</div>
+        </div>
       </div>
-      <button type="button" id="login-btn" onclick="fazerLogin()" style="padding:14px;border-radius:8px;border:none;background:#1457c8;color:#fff;font-weight:900;font-size:14px;cursor:pointer;margin-top:4px">↪ ENTRAR</button>
-      <button type="button" onclick="limparSessaoNaTelaDeLogin()" style="padding:10px;border-radius:8px;border:1.5px solid #dc2626;background:transparent;color:#f87171;font-weight:800;font-size:12px;cursor:pointer">🚪 Sair / Limpar sessão deste aparelho</button>
-      <div id="login-erro" style="color:#f87171;font-size:12px;text-align:center;min-height:16px"></div>
-    </form>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+        <div style="flex:1;height:1px;background:rgba(62,166,255,.3)"></div>
+        <div style="font-size:10.5px;color:#3ea6ff;letter-spacing:.5px;font-weight:800;white-space:nowrap">FAÇA LOGIN PARA ACESSAR O SISTEMA</div>
+        <div style="flex:1;height:1px;background:rgba(62,166,255,.3)"></div>
+      </div>
+      <form id="login-form" onsubmit="return false" style="display:flex;flex-direction:column;gap:10px">
+        <div style="position:relative">
+          <span style="position:absolute;left:13px;top:50%;transform:translateY(-50%);font-size:15px;opacity:.7">👤</span>
+          <input type="email" id="login-email" placeholder="E-mail" autocomplete="username" autocapitalize="off" autocorrect="off" spellcheck="false" class="login-input" style="padding:13px 13px 13px 40px;border-radius:9px;border:1px solid #2a3548;background:#141c2ecc;color:#fff;font-size:15px;font-weight:700;letter-spacing:.3px;width:100%;box-sizing:border-box">
+        </div>
+        <div style="position:relative">
+          <span style="position:absolute;left:13px;top:50%;transform:translateY(-50%);font-size:15px;opacity:.7">🔒</span>
+          <input type="password" id="login-senha" placeholder="Senha" autocomplete="current-password" autocapitalize="off" autocorrect="off" spellcheck="false" onkeydown="if(event.key==='Enter')fazerLogin()" class="login-input" style="padding:13px 44px 13px 40px;border-radius:9px;border:1px solid #2a3548;background:#141c2ecc;color:#fff;font-size:15px;font-weight:700;letter-spacing:.3px;width:100%;box-sizing:border-box">
+          <button type="button" onclick="alternarMostrarSenha()" id="btn-olho-senha" aria-label="Mostrar senha" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;font-size:18px;cursor:pointer;padding:6px;line-height:1">👁️</button>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin:2px 0 4px;font-size:12px">
+          <label style="display:flex;align-items:center;gap:6px;color:#cfe3f5;cursor:pointer">
+            <input type="checkbox" id="login-lembrar-me" style="width:15px;height:15px;accent-color:#3ea6ff;cursor:pointer">
+            Lembrar-me
+          </label>
+          <a href="#" onclick="esqueciMinhaSenhaRDO();return false" style="color:#3ea6ff;text-decoration:none;font-weight:700">Esqueci minha senha</a>
+        </div>
+        <button type="button" id="login-btn" onclick="fazerLogin()" style="padding:14px;border-radius:9px;border:none;background:linear-gradient(135deg,#1457c8,#0d8fd8);color:#fff;font-weight:900;font-size:14px;cursor:pointer;margin-top:2px">↪ ENTRAR</button>
+        <button type="button" onclick="limparSessaoNaTelaDeLogin()" style="padding:9px;border-radius:9px;border:1.5px solid #dc2626;background:transparent;color:#f87171;font-weight:800;font-size:11.5px;cursor:pointer">🚪 Sair / Limpar sessão deste aparelho</button>
+        <div id="login-erro" style="color:#f87171;font-size:12px;text-align:center;min-height:16px"></div>
+      </form>
+    </div>
+    <div style="text-align:center;margin-top:14px;font-size:11.5px;color:#8fa5bd;display:flex;align-items:center;justify-content:center;gap:6px">
+      🛡️ <span>Ambiente seguro — seus dados estão protegidos</span>
+    </div>
   </div>
 </div>
 
@@ -2088,6 +2117,52 @@ function alternarMostrarSenha(){
   btn.setAttribute('aria-label',mostrando?'Mostrar senha':'Esconder senha');
 }
 
+// "Lembrar-me": guarda só o e-mail (nunca a senha) no aparelho, pra já vir
+// preenchido da próxima vez que abrir o RDO — evita ter que digitar o
+// e-mail toda vez, sem guardar nada sensível.
+function aplicarEmailLembrado(){
+  const salvo=localStorage.getItem('rdo-email-lembrado');
+  if(salvo){
+    const campo=document.getElementById('login-email');
+    const chk=document.getElementById('login-lembrar-me');
+    if(campo) campo.value=salvo;
+    if(chk) chk.checked=true;
+  }
+}
+function salvarOuEsquecerEmailLembrado(email){
+  const chk=document.getElementById('login-lembrar-me');
+  if(chk&&chk.checked) localStorage.setItem('rdo-email-lembrado',email);
+  else localStorage.removeItem('rdo-email-lembrado');
+}
+
+// "Esqueci minha senha" — de verdade, usando o próprio Supabase pra mandar
+// um e-mail com link de redefinição. Antes disso não existia NENHUM jeito
+// de recuperar a senha do RDO, então isso preenche uma lacuna real.
+async function esqueciMinhaSenhaRDO(){
+  const erroEl=document.getElementById('login-erro');
+  const emailAtual=document.getElementById('login-email')?.value?.trim();
+  const email=prompt('Digite o e-mail da sua conta do RDO. Vamos mandar um link pra você criar uma senha nova.', emailAtual||'');
+  if(email===null) return; // cancelou
+  const emailLimpo=(email||'').trim().toLowerCase();
+  if(!emailLimpo||!emailLimpo.includes('@')){
+    if(erroEl) erroEl.textContent='Digite um e-mail válido.';
+    return;
+  }
+  const supabaseClient=getSupabaseClient();
+  if(!supabaseClient){ if(erroEl) erroEl.textContent='Sistema de login não configurado.'; return; }
+  try{
+    const{error}=await supabaseClient.auth.resetPasswordForEmail(emailLimpo);
+    if(error){
+      if(erroEl) erroEl.textContent='Não foi possível enviar: '+error.message;
+      return;
+    }
+    alert('✅ Se esse e-mail estiver cadastrado, um link pra redefinir a senha foi enviado. Confira sua caixa de entrada (e o spam).');
+  }catch(e){
+    console.error('esqueciMinhaSenhaRDO error:',e);
+    if(erroEl) erroEl.textContent='Erro de conexão. Confira sua internet e tente de novo.';
+  }
+}
+
 async function fazerLogin(){
   const email=document.getElementById('login-email').value.trim().toLowerCase();
   const senha=document.getElementById('login-senha').value;
@@ -2097,14 +2172,15 @@ async function fazerLogin(){
   if(!email||!senha){ erroEl.textContent='Preencha e-mail e senha.'; return; }
   const supabaseClient=getSupabaseClient();
   if(!supabaseClient){ erroEl.textContent='Sistema de login não configurado.'; return; }
-  btn.disabled=true; btn.textContent='Entrando...';
+  btn.disabled=true; btn.textContent='↪ Entrando...';
   try{
     const{data:loginData,error}=await supabaseClient.auth.signInWithPassword({email,password:senha});
     if(error){
       erroEl.textContent=error.message==='Invalid login credentials'?'E-mail ou senha incorretos.':error.message;
-      btn.disabled=false; btn.textContent='Entrar';
+      btn.disabled=false; btn.textContent='↪ ENTRAR';
       return;
     }
+    salvarOuEsquecerEmailLembrado(email);
     await carregarPerfilUsuario(loginData?.user);
 
     // Proteção contra "sujeira" de outro login no mesmo aparelho: se já tinha RDOs
@@ -2126,7 +2202,7 @@ async function fazerLogin(){
   }catch(e){
     console.error('fazerLogin error:',e);
     erroEl.textContent='Erro de conexão. Confira sua internet e tente de novo.';
-    btn.disabled=false; btn.textContent='Entrar';
+    btn.disabled=false; btn.textContent='↪ ENTRAR';
   }
 }
 
@@ -3627,6 +3703,7 @@ function iniciarAppAposLogin(){
   },150);
 }
 document.addEventListener('DOMContentLoaded',()=>{
+  aplicarEmailLembrado();
   verificarSessaoEIniciar();
 });
 
