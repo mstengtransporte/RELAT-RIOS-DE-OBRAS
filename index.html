@@ -109,8 +109,16 @@ textarea.hrs.falta,textarea.hrs.cedo,textarea.hrs.integracao,textarea.hrs.aguard
 .topbar-divider{width:1px;height:28px;background:rgba(255,255,255,.15);flex-shrink:0}
 .topbar-title{color:#fff;font-size:13px;font-weight:900;letter-spacing:.5px;line-height:1.1}
 .topbar-title small{font-size:8px;font-weight:500;opacity:.55;display:block;letter-spacing:1px}
-.topbar-actions{display:flex;gap:6px;flex-wrap:nowrap;align-items:center;width:100%;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;scrollbar-width:thin;padding-bottom:2px}
+.topbar-actions{display:flex;gap:6px;flex-wrap:nowrap;align-items:center;width:100%;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;scrollbar-width:thin;scrollbar-color:#5fb8f0 rgba(255,255,255,.08);padding-bottom:6px}
 .topbar-actions .topbar-divider{margin:0 2px}
+/* Barra de rolagem horizontal dos botões — destacada de propósito, pra
+   ficar óbvio que dá pra arrastar/rolar pros lados quando os botões não
+   cabem todos na tela. Feita pra Chrome/Edge/Safari (::-webkit-scrollbar);
+   o "scrollbar-color" acima cobre o Firefox. */
+.topbar-actions::-webkit-scrollbar{height:8px}
+.topbar-actions::-webkit-scrollbar-track{background:rgba(255,255,255,.08);border-radius:4px}
+.topbar-actions::-webkit-scrollbar-thumb{background:#5fb8f0;border-radius:4px}
+.topbar-actions::-webkit-scrollbar-thumb:hover{background:#8fd0ff}
 .btn{
   padding:6px 10px;border:1.5px solid rgba(255,255,255,.15);cursor:pointer;
   font-size:10px;font-weight:900;display:inline-flex;align-items:center;gap:4px;
@@ -4346,6 +4354,13 @@ async function buscarVeiculoAutomatico(nome,i){
   // coisa — inclusive se o nome for limpo (voltar pra "— Selecione —"),
   // pra nunca deixar um status "grudado" de quem estava ali antes.
   limparStatusAusenciaAutoNaLinha(i);
+  // "limparStatusAusenciaAutoNaLinha" limpa o TEXTO/classe da célula, mas
+  // nunca soltava o bloqueio de verdade (disabled) que o módulo de
+  // Absenteísmo aplica quando alguém é marcado como FALTA — trocar de
+  // funcionário numa linha que estava travada deixava a hora presa,
+  // mesmo pro novo funcionário selecionado. Isso reseta tudo de vez,
+  // pra cada troca de nome sempre começar destravada do zero.
+  aplicarStatusAbsenteismoNaLinha(i,'');
   if(!nome||nome==='__custom__'){
     if(vehicleSel){ vehicleSel.innerHTML=buildVehicleOptions(''); vehicleSel.value=''; }
     return;
@@ -4370,6 +4385,15 @@ async function buscarVeiculoAutomatico(nome,i){
       }
       const dataEscalaFmt=linha.data_escala?formatarDataBR(linha.data_escala):'';
       aplicarStatusAusenciaNaLinha(i,linha.status_ausencia);
+      // IMPORTANTE: quando o valor do campo Veículo é trocado por código
+      // (como aqui), o evento "change" NÃO dispara sozinho — então, sem
+      // esta chamada, o preenchimento automático vindo da Escala nunca
+      // acionava o bloqueio/cor do módulo de Absenteísmo (só a escolha
+      // MANUAL do encarregado acionava). Isso fazia a tela mostrar dois
+      // comportamentos diferentes pro mesmo "FALTA", um vindo da Escala e
+      // outro escolhido na mão — agora os dois caminhos usam a mesma
+      // trava, sempre.
+      aplicarStatusAbsenteismoNaLinha(i,rotulo);
       showToast(`⚠️ ${nome} está marcado como ${rotulo} na escala de ${dataEscalaFmt} — confira se ele deveria estar no RDO hoje.`,'#d97706');
     }else if(linha&&linha.encontrado&&linha.veiculo){
       if(!vehiclesList.includes(linha.veiculo)){ vehiclesList.push(linha.veiculo); salvarListas(); }
@@ -4616,11 +4640,9 @@ function makeHrsCell(i,o){
       <textarea class="hrs col-sem" rows="1" id="hrs-${i}-${o}" placeholder="—"
         oninput="atualizarCorCelulaHora(${i},${o});recalcAll()" onblur="formatHrs(this)"
         onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}"
-        title="Horas normais. Use: FALTA, CEDO"></textarea>
+        title="Horas normais. Ausência/desvio do dia inteiro: use o campo Veículo, na coluna ao lado."></textarea>
       <select class="hrs-status" id="hst-${i}-${o}" onchange="applyHrsStatus(${i},${o})" style="font-size:8px;padding:0 1px;border:none;background:transparent;color:var(--text3);cursor:pointer;max-width:72px;font-weight:800">
         <option value="normal">${normalLabel}</option>
-        <option value="falta">FALTA</option>
-        <option value="cedo">SAIU CEDO</option>
         <option value="integracao">INTEGRAÇÃO</option>
         <option value="aguardando">AGUARDANDO</option>
         <option value="outro">✏️ OUTRO...</option>
@@ -5093,16 +5115,12 @@ function formatHrs(inp){
   const sel=parts.length===3?document.getElementById(`hst-${parts[1]}-${parts[2]}`):null;
 
   // Reconhece pelo INÍCIO do texto (não mais igualdade exata), pra permitir escrever
-  // horas junto do rótulo — ex: "FALTA 4", "SAIU CEDO 3", "INTEGRAÇÃO 2", "AGUARDANDO 1".
-  if(raw.startsWith('FALTA')){
-    inp.classList.add('falta');
-    if(sel) sel.value='falta';
-    inp.readOnly=false;
-  } else if(raw.startsWith('SAIU CEDO')){
-    inp.classList.add('cedo');
-    if(sel) sel.value='cedo';
-    inp.readOnly=false;
-  } else if(raw.startsWith('INTEGRAÇÃO')||raw.startsWith('INTEGRACAO')){
+  // horas junto do rótulo — ex: "INTEGRAÇÃO 2", "AGUARDANDO 1".
+  // FALTA e SAIU CEDO não são mais reconhecidos digitando na célula — agora isso
+  // se escolhe SÓ no campo Veículo (ao lado), pra alimentar o relatório de
+  // Absenteísmo corretamente. Se alguém digitar essas palavras aqui, o texto
+  // fica só como texto normal mesmo, sem virar um status especial.
+  if(raw.startsWith('INTEGRAÇÃO')||raw.startsWith('INTEGRACAO')){
     inp.classList.add('integracao');
     if(sel) sel.value='integracao';
     inp.readOnly=false;
@@ -5635,7 +5653,13 @@ function aplicarModeloNovoDia(d,proximoNRDO,manterStatus=true,dataAlvo=null,mant
     document.getElementById('workers-body').innerHTML='';
     d.workers.forEach((w)=>{
       rowCounter++;
-      const wZerado={...w, hrs:Array(NUM_OSE).fill(''), hst:Array(NUM_OSE).fill('normal')};
+      // Se o veículo do funcionário no RDO anterior era, na verdade, um
+      // status de ausência (FALTA/SAIU MAIS CEDO/TRANSFERIDO), NÃO pode
+      // vir junto pro novo RDO — cada dia é um dia novo, ninguém "nasce"
+      // de falta só porque estava assim ontem. Um veículo de verdade
+      // (ex: "Van 01") continua vindo normalmente, esse não é o problema.
+      const veiculoLimpo=STATUS_ABSENTEISMO_VEICULO.includes(w.vehicle)?'':w.vehicle;
+      const wZerado={...w, vehicle:veiculoLimpo, hrs:Array(NUM_OSE).fill(''), hst:Array(NUM_OSE).fill('normal')};
       restoreRow(wZerado,rowCounter);
     });
   } else {
@@ -9778,6 +9802,6 @@ window.addEventListener('beforeinstallprompt',(e)=>{
   };
 });
 </script>
-<div class="no-print" style="position:fixed;bottom:2px;right:4px;font-size:8px;color:rgba(120,120,120,.4);font-family:monospace;pointer-events:none;z-index:5">v2026.08.10-textura-de-volta</div>
+<div class="no-print" style="position:fixed;bottom:2px;right:4px;font-size:8px;color:rgba(120,120,120,.4);font-family:monospace;pointer-events:none;z-index:5">v2026.08.10-falta-so-no-veiculo</div>
 </body>
 </html>
