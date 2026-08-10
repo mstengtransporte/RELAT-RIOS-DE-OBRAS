@@ -1670,9 +1670,9 @@ body.dark #workers-body tr:hover{background-color:rgba(58,110,232,.08)}
   <div class="section-title" style="justify-content:space-between;flex-wrap:wrap;gap:8px">
     <span>👷 FUNCIONÁRIOS — HORAS POR ORDEM DE SERVIÇO</span>
     <span style="display:flex;gap:8px;flex-wrap:wrap">
-      <button class="btn-manage-list" onclick="abrirListModal('names')">✏️ Editar Lista de Nomes</button>
-      <button class="btn-manage-list" onclick="abrirListModal('funcs')">🔧 Editar Lista de Funções</button>
-      <button class="btn-manage-list" onclick="abrirListModal('vehicles')">🚚 Editar Lista de Veículos</button>
+      <button class="btn-manage-list admin-only-btn" onclick="abrirListModal('names')">✏️ Editar Lista de Nomes</button>
+      <button class="btn-manage-list admin-only-btn" onclick="abrirListModal('funcs')">🔧 Editar Lista de Funções</button>
+      <button class="btn-manage-list admin-only-btn" onclick="abrirListModal('vehicles')">🚚 Editar Lista de Veículos</button>
     </span>
   </div>
   <div class="table-wrap">
@@ -4487,6 +4487,12 @@ function carregarListas(){
 
 // Modal gerenciar listas
 function abrirListModal(type){
+  // Proteção de verdade, não só visual — mesmo que alguém tente chamar essa
+  // função sem passar pelo botão (ex: pelo console), só admin consegue abrir.
+  if(!usuarioAtual||usuarioAtual.papel!=='admin_mestre'){
+    showToast('Só o administrador pode editar essas listas.','#dc2626');
+    return;
+  }
   listModalType=type;
   const isNames=type==='names';
   const isVehicles=type==='vehicles';
@@ -9770,6 +9776,6 @@ window.addEventListener('beforeinstallprompt',(e)=>{
   };
 });
 </script>
-<div class="no-print" style="position:fixed;bottom:2px;right:4px;font-size:8px;color:rgba(120,120,120,.4);font-family:monospace;pointer-events:none;z-index:5">v2026.08.09-polimento-visual</div>
+<div class="no-print" style="position:fixed;bottom:2px;right:4px;font-size:8px;color:rgba(120,120,120,.4);font-family:monospace;pointer-events:none;z-index:5">v2026.08.09-listas-so-admin</div>
 </body>
 </html>
