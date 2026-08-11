@@ -2094,6 +2094,7 @@ body.dark #workers-body tr:hover{background-color:rgba(58,110,232,.08)}
     </div>
     <div class="multipdf-footer">
       <button class="multipdf-cancel" onclick="document.getElementById('check-modal').classList.remove('show')">Fechar</button>
+      <button class="multipdf-gerar" style="background:#b45309" onclick="confirmarExclusao('Limpar RDOs vazios/fantasmas?','Remove deste aparelho qualquer RDO salvo SEM obra e SEM funcionário nenhum preenchido — isso não apaga nenhum RDO de verdade, só os que ficaram vazios por engano (ex: abrir o app sem preencher nada). Confirma?',()=>{ const qtd=limparRDOsFantasmasVazios(); showToast(qtd>0?`🧹 ${qtd} RDO(s) vazio(s) removido(s).`:'Nenhum RDO vazio encontrado.','#16a34a'); executarCheckIntegridade(); })">🧹 Limpar Vazios</button>
       <button class="multipdf-gerar" style="background:#374151" onclick="executarCheckIntegridade()">🔍 Verificar de Novo</button>
     </div>
   </div>
@@ -3430,6 +3431,27 @@ function normalizarObra(texto){
 function chaveRDO(data){
   const d=data||'draft';
   return rdoAtualId ? `rdo-${d}__${rdoAtualId}` : `rdo-${d}`;
+}
+// Remove do celular qualquer RDO salvo que esteja genuinemente vazio —
+// sem obra escolhida e sem nenhum funcionário preenchido. Esses só
+// existiam por causa do autoSilentSave salvando telas em branco sozinho
+// (já corrigido, não acontece mais daqui pra frente) — isso aqui limpa
+// o que já tinha ficado pra trás, de uma vez.
+function limparRDOsFantasmasVazios(){
+  let removidos=0;
+  const chaves=Object.keys(localStorage).filter(k=>k.startsWith('rdo-')&&k!=='rdo-last-key');
+  chaves.forEach(k=>{
+    try{
+      const d=JSON.parse(localStorage.getItem(k));
+      const temObra=(d?.header?.obra||'').trim().length>0;
+      const temFuncionario=(d?.workers||[]).some(w=>(w?.name||'').trim().length>0);
+      if(!temObra && !temFuncionario){
+        localStorage.removeItem(k);
+        removidos++;
+      }
+    }catch(e){ /* chave com dado corrompido/ilegível — ignora, não mexe */ }
+  });
+  return removidos;
 }
 function extrairIdDaChave(key){
   const m=(key||'').match(/^rdo-.+__(.+)$/);
@@ -6826,6 +6848,16 @@ function agendarAutoSave(){
 function autoSilentSave(){
   try{
     const d=getFormData();
+    // Não salva um RDO genuinamente vazio (sem obra escolhida e sem
+    // nenhum funcionário) — antes, só abrir o app numa tela em branco
+    // já criava um "RDO-001, sem obra" fantasma sozinho, sem a pessoa
+    // preencher nada. Isso fazia RDOs vazios de dias diferentes
+    // colidirem no mesmo número no Check de Integridade, mesmo depois
+    // de "apagar tudo" — porque eram recriados na hora seguinte, só de
+    // abrir a tela.
+    const temObra=(d.header.obra||'').trim().length>0;
+    const temFuncionario=(d.workers||[]).some(w=>(w.name||'').trim().length>0);
+    if(!temObra && !temFuncionario) return;
     const key=chaveRDO(d.header.data);
     localStorage.setItem(key,JSON.stringify(d));
     localStorage.setItem('rdo-last-key',key);
@@ -9847,6 +9879,6 @@ window.addEventListener('beforeinstallprompt',(e)=>{
   };
 });
 </script>
-<div class="no-print" style="position:fixed;bottom:2px;right:4px;font-size:8px;color:rgba(120,120,120,.4);font-family:monospace;pointer-events:none;z-index:5">v2026.08.11-erros-visiveis</div>
+<div class="no-print" style="position:fixed;bottom:2px;right:4px;font-size:8px;color:rgba(120,120,120,.4);font-family:monospace;pointer-events:none;z-index:5">v2026.08.11-sem-rdo-fantasma</div>
 </body>
 </html>
