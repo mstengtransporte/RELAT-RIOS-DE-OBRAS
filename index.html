@@ -2094,7 +2094,7 @@ body.dark #workers-body tr:hover{background-color:rgba(58,110,232,.08)}
     </div>
     <div class="multipdf-footer">
       <button class="multipdf-cancel" onclick="document.getElementById('check-modal').classList.remove('show')">Fechar</button>
-      <button class="multipdf-gerar" style="background:#b45309" onclick="confirmarExclusao('Limpar RDOs vazios/fantasmas?','Remove deste aparelho qualquer RDO salvo SEM obra e SEM funcionário nenhum preenchido — isso não apaga nenhum RDO de verdade, só os que ficaram vazios por engano (ex: abrir o app sem preencher nada). Confirma?',()=>{ const qtd=limparRDOsFantasmasVazios(); showToast(qtd>0?`🧹 ${qtd} RDO(s) vazio(s) removido(s).`:'Nenhum RDO vazio encontrado.','#16a34a'); executarCheckIntegridade(); })">🧹 Limpar Vazios</button>
+      <button class="multipdf-gerar" style="background:#b45309" onclick="limparVaziosComConfirmacao()">🧹 Limpar Vazios</button>
       <button class="multipdf-gerar" style="background:#374151" onclick="executarCheckIntegridade()">🔍 Verificar de Novo</button>
     </div>
   </div>
@@ -3452,6 +3452,16 @@ function limparRDOsFantasmasVazios(){
     }catch(e){ /* chave com dado corrompido/ilegível — ignora, não mexe */ }
   });
   return removidos;
+}
+// Confirmação simples (o RDO não tem o sistema de 3 etapas que existe na
+// Escala) — usa o confirm() do próprio navegador, que sempre funciona,
+// sem depender de nenhuma função externa.
+function limparVaziosComConfirmacao(){
+  const ok=confirm('Limpar RDOs vazios/fantasmas?\n\nRemove deste aparelho qualquer RDO salvo SEM obra e SEM funcionário nenhum preenchido — isso NÃO apaga nenhum RDO de verdade, só os que ficaram vazios por engano (ex: abrir o app sem preencher nada).\n\nConfirma?');
+  if(!ok) return;
+  const qtd=limparRDOsFantasmasVazios();
+  showToast(qtd>0?`🧹 ${qtd} RDO(s) vazio(s) removido(s).`:'Nenhum RDO vazio encontrado.','#16a34a');
+  executarCheckIntegridade();
 }
 function extrairIdDaChave(key){
   const m=(key||'').match(/^rdo-.+__(.+)$/);
@@ -9879,6 +9889,6 @@ window.addEventListener('beforeinstallprompt',(e)=>{
   };
 });
 </script>
-<div class="no-print" style="position:fixed;bottom:2px;right:4px;font-size:8px;color:rgba(120,120,120,.4);font-family:monospace;pointer-events:none;z-index:5">v2026.08.11-sem-rdo-fantasma</div>
+<div class="no-print" style="position:fixed;bottom:2px;right:4px;font-size:8px;color:rgba(120,120,120,.4);font-family:monospace;pointer-events:none;z-index:5">v2026.08.11-botao-limpar-corrigido</div>
 </body>
 </html>
