@@ -4048,18 +4048,40 @@ let vehiclesList = [];
 let listModalType = '';
 let listModalTemp = [];
 
+// Compara nomes/veículos ignorando maiúscula/minúscula e espaços a mais
+// nas pontas — "João Silva", "joão silva " e "JOÃO SILVA" contam como o
+// MESMO nome pra fins de duplicata, mesmo que a grafia salva seja diferente.
+function normalizarParaComparar(s){
+  return (s||'').trim().toLowerCase().replace(/\s+/g,' ');
+}
+// Tira duplicatas de uma lista de nomes/veículos, mantendo a PRIMEIRA
+// grafia encontrada de cada um (não mistura maiúsculas no meio do nome).
+// Usado tanto ao carregar quanto direto na hora de montar a lista suspensa
+// — assim, mesmo que algo escape e entre duplicado em algum lugar, a
+// pessoa NUNCA vê duas vezes o mesmo nome pra escolher.
+function semDuplicatas(lista){
+  const vistos=new Set();
+  const resultado=[];
+  (lista||[]).forEach(item=>{
+    const chave=normalizarParaComparar(item);
+    if(!chave||vistos.has(chave)) return;
+    vistos.add(chave);
+    resultado.push(item);
+  });
+  return resultado;
+}
 function buildNameOptions(selected=''){
   // "🔍 Buscar funcionário..." fica logo no topo (antes da lista toda) —
   // com centenas/milhares de nomes cadastrados, ninguém deveria precisar
   // rolar a lista inteira só pra achar essa opção lá no fim.
   let opts=`<option value="">— Selecione —</option>`;
   opts+=`<option value="__custom__">🔍 Buscar / digitar nome...</option>`;
-  namesList.forEach(n=>{ opts+=`<option value="${n}" ${n===selected?'selected':''}>${n}</option>`; });
+  semDuplicatas(namesList).forEach(n=>{ opts+=`<option value="${n}" ${n===selected?'selected':''}>${n}</option>`; });
   return opts;
 }
 function buildFuncOptions(selected=''){
   let opts=`<option value="">— Função —</option>`;
-  funcsList.forEach(f=>{ opts+=`<option value="${f}" ${f===selected?'selected':''}>${f}</option>`; });
+  semDuplicatas(funcsList).forEach(f=>{ opts+=`<option value="${f}" ${f===selected?'selected':''}>${f}</option>`; });
   opts+=`<option value="__custom__">✏️ Digitar função...</option>`;
   return opts;
 }
@@ -4070,7 +4092,7 @@ function buildVehicleOptions(selected=''){
   opts+=`<option value="SAIU MAIS CEDO" ${selected==='SAIU MAIS CEDO'?'selected':''}>🟠 SAIU MAIS CEDO</option>`;
   opts+=`<option value="TRANSFERIDO" ${selected==='TRANSFERIDO'?'selected':''}>🔵 TRANSFERIDO</option>`;
   opts+=`</optgroup>`;
-  vehiclesList.forEach(v=>{ opts+=`<option value="${v}" ${v===selected?'selected':''}>${v}</option>`; });
+  semDuplicatas(vehiclesList).forEach(v=>{ opts+=`<option value="${v}" ${v===selected?'selected':''}>${v}</option>`; });
   opts+=`<option value="__custom__">✏️ Digitar veículo...</option>`;
   return opts;
 }
@@ -4129,7 +4151,7 @@ function onNameChange(sel,i){
           recalcAll();
           return;
         }
-        if(!namesList.includes(n)){namesList.push(n);salvarListas();}
+        if(!namesList.some(x=>normalizarParaComparar(x)===normalizarParaComparar(n))){namesList.push(n);salvarListas();}
         const novaSel=document.createElement('select');
         novaSel.className='cell-name';
         novaSel.id=`name-${i}`;
@@ -4212,7 +4234,7 @@ function onVehicleChange(sel,i){
     function confirmar(){
       const v=inp.value.trim();
       if(v){
-        if(!vehiclesList.includes(v)){vehiclesList.push(v);salvarListas();}
+        if(!vehiclesList.some(x=>normalizarParaComparar(x)===normalizarParaComparar(v))){vehiclesList.push(v);salvarListas();}
         const novaSel=document.createElement('select');
         novaSel.className='cell-vehicle';
         novaSel.id=`vehicle-${i}`;
@@ -4299,7 +4321,7 @@ async function carregarFuncionariosDaEscala(){
     if(error||!data) return;
     const nomesEscala=data.map(f=>f.nome).filter(Boolean);
     let mudou=false;
-    nomesEscala.forEach(n=>{ if(!namesList.includes(n)){ namesList.push(n); mudou=true; } });
+    nomesEscala.forEach(n=>{ if(!namesList.some(x=>normalizarParaComparar(x)===normalizarParaComparar(n))){ namesList.push(n); mudou=true; } });
     if(mudou){
       namesList.sort();
       salvarListas();
@@ -4324,7 +4346,7 @@ async function carregarVeiculosDaEscala(){
     if(error||!data) return;
     const veiculosEscala=data.map(v=>v.nome).filter(Boolean);
     let mudou=false;
-    veiculosEscala.forEach(n=>{ if(!vehiclesList.includes(n)){ vehiclesList.push(n); mudou=true; } });
+    veiculosEscala.forEach(n=>{ if(!vehiclesList.some(x=>normalizarParaComparar(x)===normalizarParaComparar(n))){ vehiclesList.push(n); mudou=true; } });
     if(mudou){
       vehiclesList.sort();
       salvarListas();
@@ -4396,7 +4418,7 @@ async function buscarVeiculoAutomatico(nome,i){
       aplicarStatusAbsenteismoNaLinha(i,rotulo);
       showToast(`⚠️ ${nome} está marcado como ${rotulo} na escala de ${dataEscalaFmt} — confira se ele deveria estar no RDO hoje.`,'#d97706');
     }else if(linha&&linha.encontrado&&linha.veiculo){
-      if(!vehiclesList.includes(linha.veiculo)){ vehiclesList.push(linha.veiculo); salvarListas(); }
+      if(!vehiclesList.some(x=>normalizarParaComparar(x)===normalizarParaComparar(linha.veiculo))){ vehiclesList.push(linha.veiculo); salvarListas(); }
       if(vehicleSel){
         vehicleSel.innerHTML=buildVehicleOptions(linha.veiculo);
         vehicleSel.value=linha.veiculo;
@@ -4509,6 +4531,17 @@ function carregarListas(){
   if(n) try{namesList=JSON.parse(n);}catch(e){}
   if(f) try{funcsList=JSON.parse(f);}catch(e){}
   if(v) try{vehiclesList=JSON.parse(v);}catch(e){}
+  // Limpeza de duplicatas que possam ter ficado salvas de antes dessa
+  // correção (nomes/veículos repetidos com maiúscula diferente ou espaço
+  // a mais) — roda uma vez, sempre que o app abre, e já salva de volta
+  // limpo, pra não precisar limpar de novo depois.
+  const nomesQtdAntes=namesList.length, veicQtdAntes=vehiclesList.length, funcQtdAntes=funcsList.length;
+  namesList=semDuplicatas(namesList);
+  vehiclesList=semDuplicatas(vehiclesList);
+  funcsList=semDuplicatas(funcsList);
+  if(namesList.length!==nomesQtdAntes||vehiclesList.length!==veicQtdAntes||funcsList.length!==funcQtdAntes){
+    salvarListas();
+  }
 }
 
 // Modal gerenciar listas
@@ -9802,6 +9835,6 @@ window.addEventListener('beforeinstallprompt',(e)=>{
   };
 });
 </script>
-<div class="no-print" style="position:fixed;bottom:2px;right:4px;font-size:8px;color:rgba(120,120,120,.4);font-family:monospace;pointer-events:none;z-index:5">v2026.08.10-falta-so-no-veiculo</div>
+<div class="no-print" style="position:fixed;bottom:2px;right:4px;font-size:8px;color:rgba(120,120,120,.4);font-family:monospace;pointer-events:none;z-index:5">v2026.08.11-sem-duplicatas</div>
 </body>
 </html>
