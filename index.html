@@ -4388,12 +4388,16 @@ async function buscarVeiculoAutomatico(nome,i){
     return;
   }
   const supabaseClient=getSupabaseClient();
-  if(!supabaseClient) return;
+  if(!supabaseClient){ showToast('❌ Sistema não conectado ao banco — não deu pra buscar o veículo na Escala.','#dc2626'); return; }
   const data=document.getElementById('h-data')?.value;
-  if(!data) return;
+  if(!data){ showToast('⚠️ Preencha a data do RDO primeiro, pra conseguir buscar o veículo na Escala.','#d97706'); return; }
   try{
     const{data:resultado,error}=await supabaseClient.rpc('buscar_veiculo_funcionario',{p_nome:nome,p_data:data});
-    if(error){ console.error('buscar_veiculo_funcionario error:',error); return; }
+    if(error){
+      console.error('buscar_veiculo_funcionario error:',error);
+      showToast(`❌ Erro ao consultar a Escala: ${error.message||error}`,'#dc2626');
+      return;
+    }
     const linha=resultado&&resultado[0];
     if(linha&&linha.encontrado&&linha.status_ausencia){
       // Funcionário está com um status de ausência na Escala (não uma obra
@@ -4435,7 +4439,15 @@ async function buscarVeiculoAutomatico(nome,i){
       }
       showToast(`ℹ️ Sem escala encontrada pra ${nome} nos últimos dias — escolha o veículo manualmente.`,'#6b7fa0');
     }
-  }catch(e){ console.error('buscarVeiculoAutomatico error:',e); }
+  }catch(e){
+    console.error('buscarVeiculoAutomatico error:',e);
+    // Antes, um erro aqui só ficava escondido no console (que quase
+    // ninguém abre) — a pessoa via o campo Veículo simplesmente vazio,
+    // sem nenhuma pista do motivo. Agora aparece um aviso na tela, com o
+    // erro de verdade, pra dar pra identificar o problema na hora, sem
+    // precisar rodar SQL nem abrir ferramenta nenhuma de desenvolvedor.
+    showToast(`❌ Erro ao buscar veículo na Escala pra "${nome}": ${e.message||e}`,'#dc2626');
+  }
 }
 
 // Nome amigável de cada status de ausência, pro aviso na tela.
@@ -9835,6 +9847,6 @@ window.addEventListener('beforeinstallprompt',(e)=>{
   };
 });
 </script>
-<div class="no-print" style="position:fixed;bottom:2px;right:4px;font-size:8px;color:rgba(120,120,120,.4);font-family:monospace;pointer-events:none;z-index:5">v2026.08.11-sem-duplicatas</div>
+<div class="no-print" style="position:fixed;bottom:2px;right:4px;font-size:8px;color:rgba(120,120,120,.4);font-family:monospace;pointer-events:none;z-index:5">v2026.08.11-erros-visiveis</div>
 </body>
 </html>
