@@ -119,6 +119,35 @@ textarea.hrs.falta,textarea.hrs.cedo,textarea.hrs.integracao,textarea.hrs.aguard
 .topbar-actions::-webkit-scrollbar-track{background:rgba(255,255,255,.08);border-radius:4px}
 .topbar-actions::-webkit-scrollbar-thumb{background:#5fb8f0;border-radius:4px}
 .topbar-actions::-webkit-scrollbar-thumb:hover{background:#8fd0ff}
+/* ============================================================
+   COMPUTADOR (≥960px): a barra de botões vira uma lista vertical fixa
+   à esquerda, em vez de uma fileira horizontal no topo — mais fácil de
+   escanear com o olho numa tela grande, e não some quando tem muito
+   botão. No celular continua exatamente como já era (fileira horizontal
+   que rola pros lados), sem mudar nada lá.
+   ============================================================ */
+@media (min-width:960px){
+  .topbar{ padding-bottom:0; }
+  .topbar-actions{
+    position:fixed; top:52px; left:0; bottom:0; z-index:150;
+    width:172px; height:calc(100vh - 52px); box-sizing:border-box;
+    flex-direction:column; align-items:stretch; flex-wrap:nowrap;
+    overflow-x:hidden; overflow-y:auto;
+    padding:10px 8px 14px; gap:4px;
+    background:var(--hbg-solid); border-right:3px solid var(--accent);
+    scrollbar-width:thin; scrollbar-color:#5fb8f0 rgba(255,255,255,.08);
+  }
+  .topbar-actions::-webkit-scrollbar{width:7px;height:auto}
+  .topbar-actions .topbar-divider{width:100%;height:1px;margin:3px 0}
+  .topbar-actions .btn{
+    width:100%; justify-content:flex-start; white-space:normal;
+    line-height:1.2; padding:7px 8px; font-size:9.5px;
+  }
+  #rdo-page{ margin-left:172px; }
+  /* A faixa de "instalar app" também não pode mais cobrir a lista —
+     mesmo erro que já corrigi na Escala com a barra do WhatsApp. */
+  #faixa-instalar-pwa{ left:172px !important; }
+}
 .btn{
   padding:6px 10px;border:1.5px solid rgba(255,255,255,.15);cursor:pointer;
   font-size:10px;font-weight:900;display:inline-flex;align-items:center;gap:4px;
@@ -1578,24 +1607,28 @@ body.dark #workers-body tr:hover{background-color:rgba(58,110,232,.08)}
   <div class="topbar-actions">
     <button class="btn btn-theme"   onclick="toggleTheme()">🌙 <span id="theme-label">Escuro</span></button>
     <button class="btn btn-save"    onclick="salvarRDO()" title="Salva neste aparelho E envia pro admin">💾 <span>Salvar e Enviar</span></button>
-    <button class="btn" style="background:#d97706;color:#fff" onclick="verificarEReenviarPendentes()" title="Confere se algum RDO seu ficou só neste aparelho sem chegar no admin, e reenvia">🔄 <span>Reenviar</span></button>
+    <button class="btn" style="background:#3a5f9e;color:#fff" onclick="verificarEReenviarPendentes()" title="Confere se algum RDO seu ficou só neste aparelho sem chegar no admin, e reenvia">🔄 <span>Reenviar</span></button>
     <button class="btn btn-new"     onclick="novoRDO()">📄 <span>Novo</span></button>
     <button class="btn" style="background:#dc2626;color:#fff" onclick="fazerLogout()" title="Sair da conta">🚪 <span>Sair</span></button>
     <span class="topbar-divider"></span>
     <button class="btn btn-search"  onclick="abrirBuscaRDO()">🔍 <span>Buscar</span></button>
-    <button class="btn admin-only-btn" style="background:#0a3c64;color:#fff" onclick="abrirDashboardAoVivo()" title="Visão geral ao vivo — atualiza sozinho, mostra tudo que está acontecendo no sistema agora">📡 <span>Dashboard</span></button>
-    <button class="btn admin-only-btn" style="background:#9d174d;color:#fff" onclick="abrirPainelExecutivo()" title="Visão geral de todos os encarregados, ou individual de cada um">🎯 <span>Executivo</span></button>
+    <button class="btn admin-only-btn" style="background:#2c4a7c;color:#fff" onclick="abrirDashboardAoVivo()" title="Visão geral ao vivo — atualiza sozinho, mostra tudo que está acontecendo no sistema agora">📡 <span>Dashboard</span></button>
+    <button class="btn admin-only-btn" style="background:#3a5f9e;color:#fff" onclick="abrirPainelExecutivo()" title="Visão geral de todos os encarregados, ou individual de cada um">🎯 <span>Executivo</span></button>
+    <!-- Verde e azul mantidos de propósito — são as mesmas cores da legenda de
+         status (Extra Escopo / Em Andamento), não é decoração solta. -->
     <button class="btn admin-only-btn" style="background:#158038;color:#fff" onclick="abrirExtraEscopo()" title="Controle consolidado de todo o Extra Escopo/Adicional registrado">🟢 <span>Extra Escopo</span></button>
     <button class="btn admin-only-btn" style="background:#1a52c8;color:#fff" onclick="abrirAndamento()" title="Controle consolidado de horas por projeto (Em Andamento)">🔵 <span>Andamento</span></button>
-    <button class="btn admin-only-btn" style="background:#c2410c;color:#fff" onclick="abrirProjetos()" title="Total de horas de cada projeto, do início até a conclusão, em qualquer status">📁 <span>Horas/Projeto</span></button>
+    <button class="btn admin-only-btn" style="background:#3a5f9e;color:#fff" onclick="abrirProjetos()" title="Total de horas de cada projeto, do início até a conclusão, em qualquer status">📁 <span>Horas/Projeto</span></button>
     <span class="topbar-divider"></span>
-    <button class="btn admin-only-btn" style="background:#0a6080;color:#fff" onclick="abrirGerenciarClientes()" title="Adicionar/remover clientes da lista de Obra/Projeto">👥 <span>Clientes</span></button>
-    <button class="btn" id="btn-desfazer" style="background:#7c5a00;color:#fff" onclick="desfazerUltimaAcao()" title="Desfazer: volta ao estado de antes da última ação (excluir funcionário, criar novo RDO)">↩️ <span>Desfazer</span></button>
+    <button class="btn admin-only-btn" style="background:#2c4a7c;color:#fff" onclick="abrirGerenciarClientes()" title="Adicionar/remover clientes da lista de Obra/Projeto">👥 <span>Clientes</span></button>
+    <button class="btn" id="btn-desfazer" style="background:#3a5f9e;color:#fff" onclick="desfazerUltimaAcao()" title="Desfazer: volta ao estado de antes da última ação (excluir funcionário, criar novo RDO)">↩️ <span>Desfazer</span></button>
     <button class="btn btn-wpp-pdf" onclick="pdfParaWhatsApp()" title="Gera o PDF e já abre o compartilhamento (WhatsApp, Drive etc.)">📎 <span>PDF+WPP</span></button>
     <span class="topbar-divider"></span>
-    <button class="btn" style="background:#0a6080;color:#fff" onclick="abrirGrafico()">📊 <span>H.H</span></button>
-    <button class="btn" style="background:#0a7060;color:#fff" onclick="abrirFrases()">💬 <span>Frases</span></button>
-    <button class="btn admin-only-btn" id="btn-rel-periodo" style="background:#6030bb;color:#fff" onclick="abrirMultiPDF()">📑 <span>Rel.Período</span></button>
+    <button class="btn" style="background:#2c4a7c;color:#fff" onclick="abrirGrafico()">📊 <span>H.H</span></button>
+    <button class="btn" style="background:#3a5f9e;color:#fff" onclick="abrirFrases()">💬 <span>Frases</span></button>
+    <button class="btn admin-only-btn" id="btn-rel-periodo" style="background:#2c4a7c;color:#fff" onclick="abrirMultiPDF()">📑 <span>Rel.Período</span></button>
+    <!-- Vermelho mantido de propósito — é alerta/ação séria (mesma cor
+         semântica de FALTA no status), não é decoração solta. -->
     <button class="btn admin-only-btn" id="btn-absenteismo" style="background:#b91c1c;color:#fff" onclick="abrirModalAbsenteismo()" title="Gera relatório de FALTA/SAIU MAIS CEDO/TRANSFERIDO, com opção de período">🚨 <span>Absenteísmo</span></button>
     <button class="btn admin-only-btn" style="background:#374151;color:#fff" onclick="abrirBackup()">🗄️ <span>Backup</span></button>
     <button class="btn admin-only-btn" style="background:#374151;color:#fff" onclick="abrirCheckIntegridade()" title="Verifica inconsistências que podem causar erro na contagem de horas">🩺 <span>Check</span></button>
@@ -9889,6 +9922,6 @@ window.addEventListener('beforeinstallprompt',(e)=>{
   };
 });
 </script>
-<div class="no-print" style="position:fixed;bottom:2px;right:4px;font-size:8px;color:rgba(120,120,120,.4);font-family:monospace;pointer-events:none;z-index:5">v2026.08.11-botao-limpar-corrigido</div>
+<div class="no-print" style="position:fixed;bottom:2px;right:4px;font-size:8px;color:rgba(120,120,120,.4);font-family:monospace;pointer-events:none;z-index:5">v2026.08.11-lista-lateral-suave</div>
 </body>
 </html>
