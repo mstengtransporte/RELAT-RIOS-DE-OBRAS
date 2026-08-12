@@ -46,7 +46,7 @@
   --c-sem:#ffffff; --ct-sem:#2c4060; --cb-sem:#b0bdd0;
   --c-and:#1a52c8; --ct-and:#fff;    --cb-and:#0e3a9a;
   --c-par:#e07010; --ct-par:#fff;    --cb-par:#a04e08;
-  --c-blq:#cc2020; --ct-blq:#fff;    --cb-blq:#8a1010;
+  --c-blq:#b91c1c; --ct-blq:#fff;    --cb-blq:#7f1d1d;
   --c-ext:#158038; --ct-ext:#fff;    --cb-ext:#0d5228;
   --c-conc:#6830cc; --ct-conc:#fff;  --cb-conc:#4a1e96;
 }
@@ -1694,7 +1694,7 @@ body.dark #workers-body tr:hover{background-color:rgba(58,110,232,.08)}
       <span class="badge badge-and">🔵 Em Andamento</span>
       <span class="badge badge-ext">🟢 Extra Escopo / Adicional</span>
       <span class="badge badge-par">🟠 Paralisado</span>
-      <span class="badge badge-blq">🔴 Falta / Saiu Cedo</span>
+      <span class="badge badge-blq">🔴 Absenteísmo</span>
       <span class="badge badge-conc">🟣 Concluído</span>
     </div>
   </div>
@@ -1705,15 +1705,15 @@ body.dark #workers-body tr:hover{background-color:rgba(58,110,232,.08)}
     <div class="print-legend-item"><span class="print-legend-dot" style="background:#1a52c8"></span>Em Andamento</div>
     <div class="print-legend-item"><span class="print-legend-dot" style="background:#158038"></span>Extra Escopo / Adicional</div>
     <div class="print-legend-item"><span class="print-legend-dot" style="background:#e07010"></span>Paralisado</div>
-    <div class="print-legend-item"><span class="print-legend-dot" style="background:#cc2020"></span>Falta / Saiu Cedo</div>
+    <div class="print-legend-item"><span class="print-legend-dot" style="background:#b91c1c"></span>Absenteísmo</div>
     <div class="print-legend-item"><span class="print-legend-dot" style="background:#0891b2"></span>Integração / Outro</div>
     <div class="print-legend-item"><span class="print-legend-dot" style="background:#6830cc"></span>Concluído</div>
   </div>
 
   <!-- TABELA FUNCIONÁRIOS -->
-  <div class="section-title" style="justify-content:space-between;flex-wrap:wrap;gap:8px">
-    <span>👷 FUNCIONÁRIOS — HORAS POR ORDEM DE SERVIÇO</span>
-    <span style="display:flex;gap:8px;flex-wrap:wrap">
+  <div class="section-title" style="position:relative;flex-wrap:wrap;gap:8px">
+    <span style="position:absolute;left:50%;transform:translateX(-50%);white-space:nowrap">👷 FUNCIONÁRIOS — HORAS POR ORDEM DE SERVIÇO</span>
+    <span style="display:flex;gap:8px;flex-wrap:wrap;margin-left:auto">
       <button class="btn-manage-list admin-only-btn" onclick="abrirListModal('names')">✏️ Editar Lista de Nomes</button>
       <button class="btn-manage-list admin-only-btn" onclick="abrirListModal('funcs')">🔧 Editar Lista de Funções</button>
       <button class="btn-manage-list admin-only-btn" onclick="abrirListModal('vehicles')">🚚 Editar Lista de Veículos</button>
@@ -3752,7 +3752,7 @@ const STATUS_LIST = [
   {val:'and', label:'EM ANDAMENTO'},
   {val:'ext', label:'EXTRA ESCOPO / ADICIONAL'},
   {val:'par', label:'PARALISADO'},
-  {val:'blq', label:'FALTA / SAIU CEDO'},
+  {val:'blq', label:'ABSENTEÍSMO'},
   {val:'conc',label:'CONCLUÍDO'},
 ];
 
@@ -4341,7 +4341,7 @@ function onVehicleChange(sel,i){
 function aplicarStatusAbsenteismoNaLinha(i,valorVeiculo){
   const sel=document.getElementById(`vehicle-${i}`);
   const deveBloquear=valorVeiculo==='FALTA';
-  const cores={FALTA:'#7a1f1f','SAIU MAIS CEDO':'#8a5a12',TRANSFERIDO:'#1f3a7a'};
+  const cores={FALTA:'#b91c1c','SAIU MAIS CEDO':'#8a5a12',TRANSFERIDO:'#1f3a7a'};
   if(sel){
     sel.style.background=cores[valorVeiculo]||'';
     sel.style.color=cores[valorVeiculo]?'#fff':'';
@@ -6225,7 +6225,7 @@ function gerarPdfComJsPDF(){
     gray:[90,105,130], light:[240,243,250], border:[0,0,0]
   };
   const STATUS_CLR={and:C.and,ext:C.ext,par:C.par,blq:C.blq,conc:C.conc};
-  const STATUS_LBL={sem:'SEM ATIVIDADE',and:'EM ANDAMENTO',ext:'EXTRA ESCOPO / ADICIONAL',par:'PARALISADO',blq:'FALTA / SAIU CEDO',conc:'CONCLUÍDO'};
+  const STATUS_LBL={sem:'SEM ATIVIDADE',and:'EM ANDAMENTO',ext:'EXTRA ESCOPO / ADICIONAL',par:'PARALISADO',blq:'ABSENTEÍSMO',conc:'CONCLUÍDO'};
   const sColor=s=>STATUS_CLR[s]||C.hdr;
 
   const sf=c=>doc.setFillColor(c[0],c[1],c[2]);
@@ -6336,7 +6336,7 @@ function gerarPdfComJsPDF(){
     {lbl:'EM ANDAMENTO',c:C.and,tc:C.white},
     {lbl:'EXTRA ESCOPO',c:C.ext,tc:C.white},
     {lbl:'PARALISADO',c:C.par,tc:C.white},
-    {lbl:'FALTA / SAIU CEDO',c:C.blq,tc:C.white},
+    {lbl:'ABSENTEÍSMO',c:C.blq,tc:C.white},
     {lbl:'CONCLUÍDO',c:C.conc,tc:C.white},
   ];
   const LBW=30, LBH=5, lbY=y+4.5;
@@ -6712,7 +6712,7 @@ async function exportarXLSX(){
   if(typeof ExcelJS==='undefined'){ showToast('Biblioteca de Excel ainda carregando — espera 2 segundos e tenta de novo.','#d97706'); return; }
   const d=getFormData(); const h=d.header;
   const dia=document.getElementById('h-dia').value;
-  const sL={sem:'SEM ATIVIDADE',and:'EM ANDAMENTO',par:'PARALISADO',blq:'FALTA / SAIU CEDO',ext:'EXTRA ESCOPO / ADICIONAL',conc:'CONCLUÍDO'};
+  const sL={sem:'SEM ATIVIDADE',and:'EM ANDAMENTO',par:'PARALISADO',blq:'ABSENTEÍSMO',ext:'EXTRA ESCOPO / ADICIONAL',conc:'CONCLUÍDO'};
   const corFill={sem:'FFE8ECF4',and:'FF1A52C8',par:'FFE07010',blq:'FFCC2020',ext:'FF158038',conc:'FF6830CC'};
   const corFonte={sem:'FF4A5568',and:'FFFFFFFF',par:'FFFFFFFF',blq:'FFFFFFFF',ext:'FFFFFFFF',conc:'FFFFFFFF'};
 
@@ -7848,7 +7848,7 @@ async function exportarRelatorioAbsenteismo(){
 function gerarRelatorioMultiplo(){
   const checks=[...document.querySelectorAll('#multipdf-lista input[type=checkbox]:checked')];
   if(!checks.length){showToast('Selecione ao menos um RDO.','#d97706');return;}
-  const sL={sem:'SEM ATIVIDADE',and:'EM ANDAMENTO',ext:'EXTRA ESCOPO / ADICIONAL',par:'PARALISADO',blq:'FALTA / SAIU CEDO',conc:'CONCLUÍDO'};
+  const sL={sem:'SEM ATIVIDADE',and:'EM ANDAMENTO',ext:'EXTRA ESCOPO / ADICIONAL',par:'PARALISADO',blq:'ABSENTEÍSMO',conc:'CONCLUÍDO'};
   const wb=XLSX.utils.book_new();
   // ABA RESUMO
   const resumoRows=[['MASTER ENERGY — RELATÓRIO CONSOLIDADO DE H.H'],[]];
@@ -9038,7 +9038,7 @@ const STATUS_INFO_EXCEL={
   ext:{nome:'EXTRA ESCOPO / ADICIONAL',cor:'FF158038'},
   conc:{nome:'CONCLUÍDO',cor:'FF6830CC'},
   par:{nome:'PARALISADO',cor:'FFE07010'},
-  blq:{nome:'FALTA / SAIU CEDO',cor:'FFCC2020'}
+  blq:{nome:'ABSENTEÍSMO',cor:'FFB91C1C'}
 };
 
 // Varre TODOS os RDOs e devolve uma linha pra cada combinação de
@@ -9923,6 +9923,6 @@ window.addEventListener('beforeinstallprompt',(e)=>{
   };
 });
 </script>
-<div class="no-print" style="position:fixed;bottom:2px;right:4px;font-size:8px;color:rgba(120,120,120,.4);font-family:monospace;pointer-events:none;z-index:5">v2026.08.11-escuro-igual-aos-outros</div>
+<div class="no-print" style="position:fixed;bottom:2px;right:4px;font-size:8px;color:rgba(120,120,120,.4);font-family:monospace;pointer-events:none;z-index:5">v2026.08.11-pdf-absenteismo</div>
 </body>
 </html>
