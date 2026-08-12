@@ -166,7 +166,7 @@ textarea.hrs.falta,textarea.hrs.cedo,textarea.hrs.integracao,textarea.hrs.aguard
 #login-overlay button:active{transform:scale(.96);filter:brightness(.8)}
 #login-overlay button:disabled{opacity:.6;transform:none}
 .btn:active{transform:translateY(0);filter:brightness(.9)}
-.btn-save{background:#3b4c66;color:#fff;border-color:#28374d}
+.btn-save{background:var(--hbg);color:#fff;border-color:#0a3a94}
 @keyframes piscarFaixaPendente{
   0%,100%{background:#dc2626}
   50%{background:#f59e0b}
@@ -186,12 +186,12 @@ textarea.hrs.falta,textarea.hrs.cedo,textarea.hrs.integracao,textarea.hrs.aguard
   animation:none;background:#374151;text-transform:none;font-weight:700;
   border-top-color:rgba(255,255,255,.2);border-bottom-color:rgba(255,255,255,.2)
 }
-.btn-search{background:#3b4c66;color:#fff;border-color:#28374d}
-.btn-new{background:#3b4c66;color:#fff;border-color:#28374d}
-.btn-pdf{background:#3b4c66;color:#fff;border-color:#28374d}
-.btn-wpp-pdf{background:#3b4c66;color:#fff;border-color:#28374d}
-.btn-xlsx{background:#3b4c66;color:#fff;border-color:#28374d}
-.btn-csv{background:#3b4c66;color:#fff;border-color:#28374d}
+.btn-search{background:var(--hbg);color:#fff;border-color:#0a3a94}
+.btn-new{background:var(--hbg);color:#fff;border-color:#0a3a94}
+.btn-pdf{background:var(--hbg);color:#fff;border-color:#0a3a94}
+.btn-wpp-pdf{background:var(--hbg);color:#fff;border-color:#0a3a94}
+.btn-xlsx{background:var(--hbg);color:#fff;border-color:#0a3a94}
+.btn-csv{background:var(--hbg);color:#fff;border-color:#0a3a94}
 .btn-theme{background:rgba(255,255,255,.08);color:#fff;border-color:rgba(255,255,255,.2)}
 
 /* ══════════════════════════════════════
@@ -1607,20 +1607,20 @@ body.dark #workers-body tr:hover{background-color:rgba(58,110,232,.08)}
   <div class="topbar-actions">
     <button class="btn btn-theme"   onclick="toggleTheme()">🌙 <span id="theme-label">Escuro</span></button>
     <button class="btn btn-save"    onclick="salvarRDO()" title="Salva neste aparelho E envia pro admin">💾 <span>Salvar e Enviar</span></button>
-    <button class="btn" style="background:#3b4c66;color:#fff" onclick="verificarEReenviarPendentes()" title="Confere se algum RDO seu ficou só neste aparelho sem chegar no admin, e reenvia">🔄 <span>Reenviar</span></button>
+    <button class="btn" style="background:var(--hbg);color:#fff" onclick="verificarEReenviarPendentes()" title="Confere se algum RDO seu ficou só neste aparelho sem chegar no admin, e reenvia">🔄 <span>Reenviar</span></button>
     <button class="btn btn-new"     onclick="novoRDO()">📄 <span>Novo</span></button>
     <button class="btn btn-search"  onclick="abrirBuscaRDO()">🔍 <span>Buscar</span></button>
-    <button class="btn admin-only-btn" style="background:#3b4c66;color:#fff" onclick="abrirDashboardAoVivo()" title="Visão geral ao vivo — atualiza sozinho, mostra tudo que está acontecendo no sistema agora">📡 <span>Dashboard</span></button>
-    <button class="btn admin-only-btn" style="background:#3b4c66;color:#fff" onclick="abrirPainelExecutivo()" title="Visão geral de todos os encarregados, ou individual de cada um">🎯 <span>Executivo</span></button>
-    <button class="btn admin-only-btn" style="background:#3b4c66;color:#fff" onclick="abrirProjetos()" title="Total de horas de cada projeto, do início até a conclusão, em qualquer status">📁 <span>Horas/Projeto</span></button>
-    <button class="btn admin-only-btn" style="background:#3b4c66;color:#fff" onclick="abrirGerenciarClientes()" title="Adicionar/remover clientes da lista de Obra/Projeto">👥 <span>Clientes</span></button>
-    <button class="btn" id="btn-desfazer" style="background:#3b4c66;color:#fff" onclick="desfazerUltimaAcao()" title="Desfazer: volta ao estado de antes da última ação (excluir funcionário, criar novo RDO)">↩️ <span>Desfazer</span></button>
+    <button class="btn admin-only-btn" style="background:var(--hbg);color:#fff" onclick="abrirDashboardAoVivo()" title="Visão geral ao vivo — atualiza sozinho, mostra tudo que está acontecendo no sistema agora">📡 <span>Dashboard</span></button>
+    <button class="btn admin-only-btn" style="background:var(--hbg);color:#fff" onclick="abrirPainelExecutivo()" title="Visão geral de todos os encarregados, ou individual de cada um">🎯 <span>Executivo</span></button>
+    <button class="btn admin-only-btn" style="background:var(--hbg);color:#fff" onclick="abrirProjetos()" title="Total de horas de cada projeto, do início até a conclusão, em qualquer status">📁 <span>Horas/Projeto</span></button>
+    <button class="btn admin-only-btn" style="background:var(--hbg);color:#fff" onclick="abrirGerenciarClientes()" title="Adicionar/remover clientes da lista de Obra/Projeto">👥 <span>Clientes</span></button>
+    <button class="btn" id="btn-desfazer" style="background:var(--hbg);color:#fff" onclick="desfazerUltimaAcao()" title="Desfazer: volta ao estado de antes da última ação (excluir funcionário, criar novo RDO)">↩️ <span>Desfazer</span></button>
     <button class="btn btn-wpp-pdf" onclick="pdfParaWhatsApp()" title="Gera o PDF e já abre o compartilhamento (WhatsApp, Drive etc.)">📎 <span>PDF+WPP</span></button>
-    <button class="btn" style="background:#3b4c66;color:#fff" onclick="abrirGrafico()">📊 <span>H.H</span></button>
-    <button class="btn" style="background:#3b4c66;color:#fff" onclick="abrirFrases()">💬 <span>Frases</span></button>
-    <button class="btn admin-only-btn" id="btn-rel-periodo" style="background:#3b4c66;color:#fff" onclick="abrirMultiPDF()">📑 <span>Rel.Período</span></button>
-    <button class="btn admin-only-btn" style="background:#3b4c66;color:#fff" onclick="abrirBackup()">🗄️ <span>Backup</span></button>
-    <button class="btn admin-only-btn" style="background:#3b4c66;color:#fff" onclick="abrirCheckIntegridade()" title="Verifica inconsistências que podem causar erro na contagem de horas">🩺 <span>Check</span></button>
+    <button class="btn" style="background:var(--hbg);color:#fff" onclick="abrirGrafico()">📊 <span>H.H</span></button>
+    <button class="btn" style="background:var(--hbg);color:#fff" onclick="abrirFrases()">💬 <span>Frases</span></button>
+    <button class="btn admin-only-btn" id="btn-rel-periodo" style="background:var(--hbg);color:#fff" onclick="abrirMultiPDF()">📑 <span>Rel.Período</span></button>
+    <button class="btn admin-only-btn" style="background:var(--hbg);color:#fff" onclick="abrirBackup()">🗄️ <span>Backup</span></button>
+    <button class="btn admin-only-btn" style="background:var(--hbg);color:#fff" onclick="abrirCheckIntegridade()" title="Verifica inconsistências que podem causar erro na contagem de horas">🩺 <span>Check</span></button>
     <button class="btn btn-pdf"     onclick="exportarPDF()" title="Abre a tela de impressão para salvar como PDF">🖨️ <span>PDF</span></button>
     <button class="btn btn-xlsx"    onclick="exportarXLSX()">📗 <span>Excel</span></button>
 
@@ -9923,6 +9923,6 @@ window.addEventListener('beforeinstallprompt',(e)=>{
   };
 });
 </script>
-<div class="no-print" style="position:fixed;bottom:2px;right:4px;font-size:8px;color:rgba(120,120,120,.4);font-family:monospace;pointer-events:none;z-index:5">v2026.08.11-cores-padronizadas</div>
+<div class="no-print" style="position:fixed;bottom:2px;right:4px;font-size:8px;color:rgba(120,120,120,.4);font-family:monospace;pointer-events:none;z-index:5">v2026.08.11-gradiente-azul</div>
 </body>
 </html>
