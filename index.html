@@ -4754,8 +4754,6 @@ function makeHrsCell(i,o){
         title="Horas normais. Ausência/desvio do dia inteiro: use o campo Veículo, na coluna ao lado."></textarea>
       <select class="hrs-status" id="hst-${i}-${o}" onchange="applyHrsStatus(${i},${o})" style="font-size:8px;padding:0 1px;border:none;background:transparent;color:var(--text3);cursor:pointer;max-width:72px;font-weight:800">
         <option value="normal">${normalLabel}</option>
-        <option value="integracao">INTEGRAÇÃO</option>
-        <option value="aguardando">AGUARDANDO</option>
         <option value="outro">✏️ OUTRO...</option>
       </select>
     </div>
@@ -9923,6 +9921,6 @@ window.addEventListener('beforeinstallprompt',(e)=>{
   };
 });
 </script>
-<div class="no-print" style="position:fixed;bottom:2px;right:4px;font-size:8px;color:rgba(120,120,120,.4);font-family:monospace;pointer-events:none;z-index:5">v2026.08.14-titulo-organizado</div>
+<div class="no-print" style="position:fixed;bottom:2px;right:4px;font-size:8px;color:rgba(120,120,120,.4);font-family:monospace;pointer-events:none;z-index:5">v2026.08.14-sem-integracao-aguardando</div>
 </body>
 </html>
