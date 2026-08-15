@@ -1604,7 +1604,9 @@ body.dark #workers-body tr:hover{background-color:rgba(58,110,232,.08)}
       <span class="topbar-brand-tag">Montagem e Manutenção Industrial</span>
     </div>
     <div class="topbar-title">RDO — Diário de Obra PRO<small>Relatório Diário de Campo</small></div>
-    <div id="usuario-logado-badge" style="margin-left:auto;background:rgba(255,255,255,.12);border:1.5px solid rgba(255,255,255,.3);border-radius:20px;padding:5px 12px;font-size:11px;font-weight:800;color:#fff;white-space:nowrap;display:none"></div>
+    <div id="usuario-logado-badge" style="margin-left:auto;background:rgba(255,255,255,.12);border:1.5px solid rgba(255,255,255,.3);border-radius:20px;padding:5px 12px;font-size:11px;font-weight:800;color:#fff;white-space:nowrap;display:none;align-items:center">
+      <span id="badge-conexao-dot" title="" style="display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;background:#9ca3af;box-shadow:0 0 4px #9ca3af;flex-shrink:0"></span><span id="badge-conexao-texto"></span>
+    </div>
   </div>
   <div class="topbar-actions">
     <button class="btn btn-theme"   onclick="toggleTheme()">🌙 <span id="theme-label">Escuro</span></button>
@@ -1639,6 +1641,9 @@ body.dark #workers-body tr:hover{background-color:rgba(58,110,232,.08)}
     <button class="btn" style="background:#dc2626;color:#fff" onclick="fazerLogout()" title="Sair da conta">🚪 <span>Sair</span></button>
   </div>
   <div id="aviso-rdo-pendente" onclick="abrirListaPendentes()" style="cursor:pointer"></div>
+</div>
+<div style="background:#fef3c7;color:#7c5a00;border-bottom:2px solid #d97706;padding:7px 14px;font-size:12px;font-weight:800;text-align:center">
+  ⚠️ Atenção: O RDO só será transmitido ao sistema após clicar em "Salvar e Enviar".
 </div>
 
 <div class="page" id="rdo-page">
@@ -3833,9 +3838,31 @@ function atualizarSeloUsuarioLogado(){
   const selo=document.getElementById('usuario-logado-badge');
   if(!selo||!usuarioAtual) return;
   const papelLabel=usuarioAtual.papel==='admin_mestre'?'Admin Mestre':'Encarregado';
-  selo.textContent=`👤 ${usuarioAtual.nome} · ${papelLabel}`;
-  selo.style.display='block';
+  const textoEl=document.getElementById('badge-conexao-texto');
+  if(textoEl) textoEl.textContent=`👤 ${usuarioAtual.nome} · ${papelLabel}`;
+  selo.style.display='flex';
+  atualizarBadgeConexao();
 }
+
+// Bolinha luminosa no selo do usuário — 🟢 verde quando está online e conectado ao
+// Supabase, 🔘 cinza quando está offline. Usa navigator.onLine (API do navegador) pra
+// saber se o aparelho tem internet — "conectado" exige TER internet E o cliente do
+// Supabase já estar inicializado, já que só ter internet não garante que o app
+// conseguiu montar a conexão com o banco (ex: variável de ambiente errada, Supabase
+// fora do ar). Atualiza sozinha em tempo real sempre que a conexão cai/volta (eventos
+// nativos "online"/"offline"), com um reforço a cada 20s — em alguns navegadores/
+// aparelhos esses eventos nem sempre disparam de forma confiável sozinhos.
+function atualizarBadgeConexao(){
+  const dot=document.getElementById('badge-conexao-dot');
+  if(!dot) return;
+  const online=navigator.onLine && !!getSupabaseClient();
+  dot.style.background=online?'#22c55e':'#9ca3af';
+  dot.style.boxShadow=online?'0 0 6px #22c55e':'0 0 4px #9ca3af';
+  dot.title=online?'Conectado — online':'Sem conexão — offline (o RDO fica salvo neste aparelho até a internet voltar)';
+}
+window.addEventListener('online',atualizarBadgeConexao);
+window.addEventListener('offline',atualizarBadgeConexao);
+setInterval(atualizarBadgeConexao,20000);
 
 function iniciarAppAposLogin(){
   aplicarPermissoesPorPapel();
@@ -4414,84 +4441,82 @@ async function carregarVeiculosDaEscala(){
 // Se a Escala mostrar que o funcionário está de folga/férias/atestado/
 // falta/afastado/aguardando, marca isso sozinho nas células de hora da
 // linha, em vez de tentar buscar um veículo que não existe nesse caso.
-async function buscarVeiculoAutomatico(nome,i){
+// Mesma consulta à Escala que buscarVeiculoAutomatico faz, mas "quieta" — sem toast
+// individual (quem chama decide o que mostrar, ex: um resumo único depois de rodar pra
+// vários funcionários de uma vez) e devolve um resultado resumido pra quem chamou.
+// Sempre resolve (nunca rejeita), mesmo em erro — pra usar tranquilo dentro de
+// Promise.all sem uma falha isolada derrubar as outras.
+async function buscarVeiculoAutomaticoSilencioso(nome,i){
   const vehicleSel=document.getElementById(`vehicle-${i}`);
-  // SEMPRE limpa qualquer marcação automática de ausência que tenha ficado
-  // de um funcionário anterior nessa mesma linha, antes de qualquer outra
-  // coisa — inclusive se o nome for limpo (voltar pra "— Selecione —"),
-  // pra nunca deixar um status "grudado" de quem estava ali antes.
   limparStatusAusenciaAutoNaLinha(i);
+  aplicarStatusAbsenteismoNaLinha(i,'');
+  if(!nome||nome==='__custom__'){
+    if(vehicleSel){ vehicleSel.innerHTML=buildVehicleOptions(''); vehicleSel.value=''; }
+    return{ok:false};
+  }
+  const supabaseClient=getSupabaseClient();
+  if(!supabaseClient) return{ok:false,erro:true,motivo:'sem-conexao'};
+  const data=document.getElementById('h-data')?.value;
+  if(!data) return{ok:false,erro:true,motivo:'sem-data'};
+  try{
+    const{data:resultado,error}=await supabaseClient.rpc('buscar_veiculo_funcionario',{p_nome:nome,p_data:data});
+    if(error){ console.error('buscar_veiculo_funcionario error:',error); return{ok:false,erro:true,motivo:error.message||String(error)}; }
+    const linha=resultado&&resultado[0];
+    if(linha&&linha.encontrado&&linha.status_ausencia){
+      const rotulo=rotuloStatusAusencia(linha.status_ausencia);
+      if(vehicleSel){
+        vehicleSel.innerHTML=buildVehicleOptions('')+`<option value="${rotulo}" selected>⚠️ ${rotulo}</option>`;
+        vehicleSel.value=rotulo;
+      }
+      aplicarStatusAusenciaNaLinha(i,linha.status_ausencia);
+      aplicarStatusAbsenteismoNaLinha(i,rotulo);
+      return{ok:true,tipo:'ausencia',rotulo,dataEscala:linha.data_escala};
+    }else if(linha&&linha.encontrado&&linha.veiculo){
+      if(!vehiclesList.some(x=>normalizarParaComparar(x)===normalizarParaComparar(linha.veiculo))){ vehiclesList.push(linha.veiculo); salvarListas(); }
+      if(vehicleSel){
+        vehicleSel.innerHTML=buildVehicleOptions(linha.veiculo);
+        vehicleSel.value=linha.veiculo;
+      }
+      return{ok:true,tipo:'veiculo',veiculo:linha.veiculo,dataEscala:linha.data_escala};
+    }else{
+      if(vehicleSel){ vehicleSel.innerHTML=buildVehicleOptions(''); vehicleSel.value=''; }
+      return{ok:true,tipo:'sem-escala'};
+    }
+  }catch(e){
+    console.error('buscarVeiculoAutomaticoSilencioso error:',e);
+    return{ok:false,erro:true,motivo:e.message||String(e)};
+  }
+}
+
+async function buscarVeiculoAutomatico(nome,i){
   // "limparStatusAusenciaAutoNaLinha" limpa o TEXTO/classe da célula, mas
   // nunca soltava o bloqueio de verdade (disabled) que o módulo de
   // Absenteísmo aplica quando alguém é marcado como FALTA — trocar de
   // funcionário numa linha que estava travada deixava a hora presa,
-  // mesmo pro novo funcionário selecionado. Isso reseta tudo de vez,
-  // pra cada troca de nome sempre começar destravada do zero.
-  aplicarStatusAbsenteismoNaLinha(i,'');
+  // mesmo pro novo funcionário selecionado. A versão silenciosa abaixo já
+  // reseta tudo isso por dentro, pra cada troca de nome sempre começar
+  // destravada do zero.
   if(!nome||nome==='__custom__'){
-    if(vehicleSel){ vehicleSel.innerHTML=buildVehicleOptions(''); vehicleSel.value=''; }
+    await buscarVeiculoAutomaticoSilencioso(nome,i);
     return;
   }
   const supabaseClient=getSupabaseClient();
   if(!supabaseClient){ showToast('❌ Sistema não conectado ao banco — não deu pra buscar o veículo na Escala.','#dc2626'); return; }
   const data=document.getElementById('h-data')?.value;
   if(!data){ showToast('⚠️ Preencha a data do RDO primeiro, pra conseguir buscar o veículo na Escala.','#d97706'); return; }
-  try{
-    const{data:resultado,error}=await supabaseClient.rpc('buscar_veiculo_funcionario',{p_nome:nome,p_data:data});
-    if(error){
-      console.error('buscar_veiculo_funcionario error:',error);
-      showToast(`❌ Erro ao consultar a Escala: ${error.message||error}`,'#dc2626');
-      return;
-    }
-    const linha=resultado&&resultado[0];
-    if(linha&&linha.encontrado&&linha.status_ausencia){
-      // Funcionário está com um status de ausência na Escala (não uma obra
-      // de verdade) — não tem veículo pra buscar. Em vez de deixar o campo
-      // Veículo vazio, mostra o STATUS bem visível ali mesmo (ex: "⚠️ FALTA"),
-      // e também marca a linha inteira (células de hora) automaticamente.
-      const rotulo=rotuloStatusAusencia(linha.status_ausencia);
-      if(vehicleSel){
-        vehicleSel.innerHTML=buildVehicleOptions('')+`<option value="${rotulo}" selected>⚠️ ${rotulo}</option>`;
-        vehicleSel.value=rotulo;
-      }
-      const dataEscalaFmt=linha.data_escala?formatarDataBR(linha.data_escala):'';
-      aplicarStatusAusenciaNaLinha(i,linha.status_ausencia);
-      // IMPORTANTE: quando o valor do campo Veículo é trocado por código
-      // (como aqui), o evento "change" NÃO dispara sozinho — então, sem
-      // esta chamada, o preenchimento automático vindo da Escala nunca
-      // acionava o bloqueio/cor do módulo de Absenteísmo (só a escolha
-      // MANUAL do encarregado acionava). Isso fazia a tela mostrar dois
-      // comportamentos diferentes pro mesmo "FALTA", um vindo da Escala e
-      // outro escolhido na mão — agora os dois caminhos usam a mesma
-      // trava, sempre.
-      aplicarStatusAbsenteismoNaLinha(i,rotulo);
-      showToast(`⚠️ ${nome} está marcado como ${rotulo} na escala de ${dataEscalaFmt} — confira se ele deveria estar no RDO hoje.`,'#d97706');
-    }else if(linha&&linha.encontrado&&linha.veiculo){
-      if(!vehiclesList.some(x=>normalizarParaComparar(x)===normalizarParaComparar(linha.veiculo))){ vehiclesList.push(linha.veiculo); salvarListas(); }
-      if(vehicleSel){
-        vehicleSel.innerHTML=buildVehicleOptions(linha.veiculo);
-        vehicleSel.value=linha.veiculo;
-        const dataEscalaFmt=linha.data_escala?formatarDataBR(linha.data_escala):'';
-        showToast(`🚚 Veículo preenchido: ${linha.veiculo} (escala de ${dataEscalaFmt})`,'#1457c8');
-      }
-    }else{
-      // Não achou escala pra esse funcionário em nenhum dos últimos 5 dias
-      // antes do RDO — LIMPA o campo (não pode ficar o veículo de quem
-      // estava selecionado antes) e deixa livre pra escolha manual normal.
-      if(vehicleSel){
-        vehicleSel.innerHTML=buildVehicleOptions('');
-        vehicleSel.value='';
-      }
-      showToast(`ℹ️ Sem escala encontrada pra ${nome} nos últimos dias — escolha o veículo manualmente.`,'#6b7fa0');
-    }
-  }catch(e){
-    console.error('buscarVeiculoAutomatico error:',e);
-    // Antes, um erro aqui só ficava escondido no console (que quase
-    // ninguém abre) — a pessoa via o campo Veículo simplesmente vazio,
-    // sem nenhuma pista do motivo. Agora aparece um aviso na tela, com o
-    // erro de verdade, pra dar pra identificar o problema na hora, sem
-    // precisar rodar SQL nem abrir ferramenta nenhuma de desenvolvedor.
-    showToast(`❌ Erro ao buscar veículo na Escala pra "${nome}": ${e.message||e}`,'#dc2626');
+  const r=await buscarVeiculoAutomaticoSilencioso(nome,i);
+  if(r.erro){
+    showToast(`❌ Erro ao buscar veículo na Escala pra "${nome}": ${r.motivo}`,'#dc2626');
+    return;
+  }
+  if(r.tipo==='ausencia'){
+    const dataEscalaFmt=r.dataEscala?formatarDataBR(r.dataEscala):'';
+    showToast(`⚠️ ${nome} está marcado como ${r.rotulo} na escala de ${dataEscalaFmt} — confira se ele deveria estar no RDO hoje.`,'#d97706');
+  }else if(r.tipo==='veiculo'){
+    const dataEscalaFmt=r.dataEscala?formatarDataBR(r.dataEscala):'';
+    showToast(`🚚 Veículo preenchido: ${r.veiculo} (escala de ${dataEscalaFmt})`,'#1457c8');
+  }else if(r.tipo==='sem-escala'){
+    showToast(`ℹ️ Sem escala encontrada pra ${nome} hoje — escolha o veículo manualmente.`,'#6b7fa0');
   }
 }
 
@@ -5327,27 +5352,13 @@ async function salvarRDO(){
   try{
     const d=getFormData();
 
-    // CAMPOS OBRIGATÓRIOS: nunca deixa enviar um RDO pro admin sem essas informações
-    // básicas preenchidas — sem elas, o RDO não serve pra nada (admin não sabe de qual
-    // obra é, quem preencheu, nem quando), então trava aqui antes de qualquer coisa.
-    const faltando=[];
-    const camposObrigatorios=[
-      {id:'h-data',rotulo:'Data',valor:d.header.data},
-      {id:'h-dia',rotulo:'Dia da Semana',valor:document.getElementById('h-dia')?.value},
-      {id:'h-obra',rotulo:'Obra / Projeto (Cliente)',valor:d.header.obra},
-      {id:'h-disc',rotulo:'Disciplina',valor:d.header.disc},
-      {id:'h-enc',rotulo:'Encarregado',valor:d.header.enc}
-    ];
-    camposObrigatorios.forEach(c=>{
-      const el=document.getElementById(c.id);
-      if(!c.valor){
-        faltando.push(c.rotulo);
-        if(el){ el.style.outline='3px solid #dc2626'; el.style.outlineOffset='2px'; setTimeout(()=>{el.style.outline='';el.style.outlineOffset='';},6000); }
-      }
-    });
+    // VALIDAÇÃO COMPLETA: nunca deixa enviar um RDO pro admin com qualquer pendência —
+    // cabeçalho, equipe, veículo/status, horas, projeto/OS, status do projeto ou
+    // descrição. Cada campo com problema é destacado em vermelho na tela.
+    const faltando=validarRDOCompletoEDestacar(d);
     if(faltando.length){
       showToast(`⚠️ Faltam preencher: ${faltando.join(', ')}`,'#dc2626');
-      alert(`Não é possível enviar o RDO — faltam preencher estes campos:\n\n${faltando.map(f=>'• '+f).join('\n')}\n\nEsses campos são obrigatórios: sem eles, o admin não consegue saber de qual obra é esse RDO nem quem preencheu, e ele não serve pra nada. Preencha e tente enviar de novo.`);
+      alert(`Não é possível enviar o RDO — faltam preencher/corrigir estes itens:\n\n${faltando.map(f=>'• '+f).join('\n')}\n\nOs campos com pendência foram destacados em vermelho na tela. Preencha e tente enviar de novo.`);
       return;
     }
 
@@ -5694,7 +5705,7 @@ function desfazerUltimaAcao(){
 // e zera horas e responsável (que são específicos do dia). Descrição das OSEs só é apagada
 // se "manterDescricoes" for false — e isso é sempre uma escolha explícita do usuário no
 // modal de Novo RDO, nunca uma decisão automática do sistema.
-function aplicarModeloNovoDia(d,proximoNRDO,manterStatus=true,dataAlvo=null,manterDescricoes=false){
+async function aplicarModeloNovoDia(d,proximoNRDO,manterStatus=true,dataAlvo=null,manterDescricoes=false){
   if(d.namesList&&d.namesList.length) namesList=d.namesList;
   if(d.funcsList&&d.funcsList.length) funcsList=d.funcsList;
   if(d.vehiclesList&&d.vehiclesList.length) vehiclesList=d.vehiclesList;
@@ -5739,17 +5750,37 @@ function aplicarModeloNovoDia(d,proximoNRDO,manterStatus=true,dataAlvo=null,mant
   if(d.workers&&d.workers.length){
     rowCounter=0;
     document.getElementById('workers-body').innerHTML='';
+    const linhasParaChecarEscala=[]; // {nome,i} — só funcionários de verdade, não linhas vazias
     d.workers.forEach((w)=>{
       rowCounter++;
-      // Se o veículo do funcionário no RDO anterior era, na verdade, um
-      // status de ausência (FALTA/SAIU MAIS CEDO/TRANSFERIDO), NÃO pode
-      // vir junto pro novo RDO — cada dia é um dia novo, ninguém "nasce"
-      // de falta só porque estava assim ontem. Um veículo de verdade
-      // (ex: "Van 01") continua vindo normalmente, esse não é o problema.
-      const veiculoLimpo=STATUS_ABSENTEISMO_VEICULO.includes(w.vehicle)?'':w.vehicle;
-      const wZerado={...w, vehicle:veiculoLimpo, hrs:Array(NUM_OSE).fill(''), hst:Array(NUM_OSE).fill('normal')};
+      // O veículo NUNCA vem copiado do RDO anterior — nem um veículo de verdade (ex:
+      // "Van 01"), nem um status de ausência (FALTA/SAIU MAIS CEDO/TRANSFERIDO). Cada
+      // dia é um dia novo: o veículo de cada funcionário é sempre buscado de novo na
+      // Escala da NOVA data, logo abaixo (mantendo só Nome e Função do modelo).
+      const wZerado={...w, vehicle:'', hrs:Array(NUM_OSE).fill(''), hst:Array(NUM_OSE).fill('normal')};
       restoreRow(wZerado,rowCounter);
+      if(w.name && w.name!=='__custom__') linhasParaChecarEscala.push({nome:w.name,i:rowCounter});
     });
+
+    // Reatribuição automática: pra cada funcionário trazido do modelo, consulta a
+    // Escala na data NOVA do RDO — se estiver escalado hoje com um veículo, preenche
+    // sozinho; se estiver de folga/férias/atestado/afastado, marca o status
+    // correspondente; se não achar nada, o campo fica livre pra escolha manual
+    // (veículo real ou Falta/Saiu mais cedo/Transferido). Roda tudo de uma vez,
+    // silencioso (sem toast por funcionário), com um resumo único no final.
+    if(linhasParaChecarEscala.length){
+      const resultados=await Promise.all(linhasParaChecarEscala.map(l=>buscarVeiculoAutomaticoSilencioso(l.nome,l.i)));
+      const qtdVeiculo=resultados.filter(r=>r.tipo==='veiculo').length;
+      const qtdAusencia=resultados.filter(r=>r.tipo==='ausencia').length;
+      const qtdLivre=resultados.filter(r=>r.tipo==='sem-escala').length;
+      const qtdErro=resultados.filter(r=>r.erro).length;
+      const partes=[];
+      if(qtdVeiculo) partes.push(`${qtdVeiculo} veículo(s) atualizado(s) pela escala de hoje`);
+      if(qtdAusencia) partes.push(`${qtdAusencia} com status de ausência na escala`);
+      if(qtdLivre) partes.push(`${qtdLivre} sem escala hoje (livre pra preencher)`);
+      if(partes.length) showToast(`🚚 Equipe carregada — ${partes.join(', ')}.`,'#1457c8');
+      if(qtdErro) showToast(`⚠️ Não deu pra consultar a escala de ${qtdErro} funcionário(s) — confira o veículo deles manualmente.`,'#d97706');
+    }
   } else {
     buildWorkersTable(1);
   }
@@ -5875,7 +5906,7 @@ async function novoRDOComNomes(){
     const proximoNRDO=gerarProximoNRDO(d.header?.obra);
     const novaData=dataParaNovoRDO();
     const manterDescricoes=!!document.getElementById('chk-manter-descricoes')?.checked;
-    aplicarModeloNovoDia(d,proximoNRDO,false,novaData,manterDescricoes); // false = não mantém o status das OSEs
+    await aplicarModeloNovoDia(d,proximoNRDO,false,novaData,manterDescricoes); // false = não mantém o status das OSEs
     rdoAtualId=gerarRdoId(); // identidade própria — nunca sobrescreve o RDO de origem, nem outro do mesmo dia
     localStorage.setItem('rdo-last-key', chaveRDO(novaData));
     showToast(`📄 Novo RDO Nº ${proximoNRDO} criado com os nomes do último diário!`,'#1457c8');
@@ -6633,6 +6664,79 @@ function validarRDOAntesDeCompartilhar(h,oses){
   if(!h.enc) problemas.push('Encarregado');
   const temOSE=(oses||[]).some((o,idx)=>oseTemConteudo(idx+1));
   if(!temOSE) problemas.push('nenhuma OSE preenchida');
+  return problemas;
+}
+
+// Validação COMPLETA e rigorosa antes de "Salvar e Enviar" — cobre todo o formulário
+// (não só o cabeçalho): Obra, Disciplina, Data, Encarregado, Equipe, Veículo/Status de
+// cada funcionário, Horas lançadas, Projeto/OS, Status do Projeto e Descrição de cada
+// OSE ativa. Cada campo com pendência é destacado em vermelho na tela (o destaque some
+// sozinho depois de alguns segundos). Devolve a lista de problemas encontrados — lista
+// vazia significa "tudo certo, pode enviar".
+function validarRDOCompletoEDestacar(d){
+  const problemas=[];
+  function destacar(el){
+    if(!el) return;
+    el.style.outline='3px solid #dc2626';
+    el.style.outlineOffset='2px';
+    setTimeout(()=>{el.style.outline='';el.style.outlineOffset='';},6000);
+  }
+
+  // ── Cabeçalho: Obra, Disciplina, Data, Dia da Semana, Encarregado ──
+  const camposHeader=[
+    {id:'h-data',rotulo:'Data',valor:d.header.data},
+    {id:'h-dia',rotulo:'Dia da Semana',valor:document.getElementById('h-dia')?.value},
+    {id:'h-obra',rotulo:'Obra / Projeto (Cliente)',valor:d.header.obra},
+    {id:'h-disc',rotulo:'Disciplina',valor:d.header.disc},
+    {id:'h-enc',rotulo:'Encarregado',valor:d.header.enc}
+  ];
+  camposHeader.forEach(c=>{
+    if(!c.valor){ problemas.push(c.rotulo); destacar(document.getElementById(c.id)); }
+  });
+
+  // ── Equipe: precisa de pelo menos 1 funcionário selecionado ──
+  const workersComNome=(d.workers||[]).filter(w=>w.name&&w.name!=='__custom__');
+  if(!workersComNome.length){
+    problemas.push('Equipe (nenhum funcionário selecionado)');
+  }
+
+  // ── Pra cada funcionário com nome: Veículo/Status e Horas ──
+  workersComNome.forEach(w=>{
+    if(!w.vehicle){
+      problemas.push(`Veículo/Status de ${w.name}`);
+      destacar(document.getElementById(`vehicle-${w.idx}`));
+    }
+    const temHoras=(w.hrs||[]).some(v=>parseHrs(v)>0);
+    // Quem está marcado com um status de ausência (Falta/Saiu mais cedo/Transferido)
+    // não precisa ter horas lançadas — o próprio status já explica a ausência do dia.
+    if(!temHoras && !STATUS_ABSENTEISMO_VEICULO.includes(w.vehicle)){
+      problemas.push(`Horas de ${w.name}`);
+      for(let o=1;o<=NUM_OSE;o++) destacar(document.getElementById(`hrs-${w.idx}-${o}`));
+    }
+  });
+
+  // ── Projeto/OS: precisa de pelo menos 1 OSE preenchida ──
+  const osesComNome=(d.oses||[]).filter(o=>o.name);
+  if(!osesComNome.length){
+    problemas.push('Projeto/OS (nenhuma OSE preenchida)');
+    destacar(document.getElementById('ose-name-1'));
+  }
+
+  // ── Pra cada OSE preenchida: Status do Projeto e Descrição ──
+  (d.oses||[]).forEach((o,idx)=>{
+    const n=idx+1;
+    if(!o.name) return; // OSE em branco não precisa de status/descrição
+    if(!o.status){
+      problemas.push(`Status do Projeto da OSE ${n} (${o.name})`);
+      destacar(document.getElementById(`ose-status-${n}`));
+    } else if(o.status!=='sem' && !(o.descText||'').trim()){
+      // Qualquer status diferente de "Sem Atividade" precisa vir acompanhado de uma
+      // descrição do que foi feito — sem isso o RDO não serve pra documentar nada.
+      problemas.push(`Descrição da OSE ${n} (${o.name})`);
+      destacar(document.getElementById(`ose-desc-${n}`));
+    }
+  });
+
   return problemas;
 }
 
