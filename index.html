@@ -998,6 +998,16 @@ input.login-input,
   .rdo-header-grid{grid-template-columns:repeat(3,1fr)}
 }
 
+/* Extra Escopo e Em Andamento: min-width de 850px só a partir daqui pra cima —
+   em telas menores que isso (a maioria dos encarregados usa o app no celular)
+   o modal fica em width:90vw (responsivo), senão 850px fixos estourariam a
+   tela e forçariam rolagem horizontal num celular comum. */
+@media(min-width:900px){
+  #extra-escopo-modal .multipdf-box, #andamento-modal .multipdf-box{
+    min-width:850px;
+  }
+}
+
 /* Celular deitado (paisagem) — tela baixa e larga: os modais não podem ficar mais
    altos que a tela disponível, senão o cabeçalho/rodapé somem de novo como no
    problema já corrigido antes. */
@@ -1987,7 +1997,7 @@ body.dark #workers-body tr:hover{background-color:rgba(58,110,232,.08)}
 <!-- CONTROLE DE EXTRA ESCOPO — consolida todo o Extra Escopo/Adicional já registrado em
      qualquer RDO salvo (data, serviço, quem trabalhou, quantas horas), sempre disponível -->
 <div id="extra-escopo-modal">
-  <div class="multipdf-box" style="max-width:1180px;width:96vw;height:90vh;max-height:90vh">
+  <div class="multipdf-box" style="max-width:1180px;width:90vw;height:90vh;max-height:90vh">
     <div class="multipdf-header" style="background:linear-gradient(135deg,#158038,#0d5228)">
       <span>🟢 Controle de Extra Escopo / Adicional</span>
       <button onclick="document.getElementById('extra-escopo-modal').classList.remove('show')" style="background:none;border:none;color:#fff;font-size:20px;cursor:pointer">✕</button>
@@ -2007,7 +2017,7 @@ body.dark #workers-body tr:hover{background-color:rgba(58,110,232,.08)}
       </div>
       <button type="button" onclick="forcarAtualizacaoPainel('extraescopo',this)" style="flex-shrink:0;background:#158038;color:#fff;border:2px solid #0d5228;padding:9px;font-size:11px;font-weight:900;cursor:pointer;text-transform:uppercase">🔄 Atualizar agora (busca tudo de novo na nuvem)</button>
       <div id="ee-resumo" style="flex-shrink:0;display:grid;grid-template-columns:repeat(3,1fr);gap:8px"></div>
-      <div id="ee-lista-wrap" style="flex:1;min-height:0;overflow-y:auto;border:2px solid #000;padding:12px"></div>
+      <div id="ee-lista-wrap" style="flex:1;min-height:350px;overflow-y:auto;border:2px solid #000;padding:14px"></div>
     </div>
     <div class="multipdf-footer" style="flex-wrap:wrap">
       <button class="multipdf-cancel" onclick="document.getElementById('extra-escopo-modal').classList.remove('show')">Fechar</button>
@@ -2023,7 +2033,7 @@ body.dark #workers-body tr:hover{background-color:rgba(58,110,232,.08)}
      projeto/OSE (que pode se repetir em vários dias), consolidando quantas horas cada
      projeto já recebeu ao longo do tempo -->
 <div id="andamento-modal">
-  <div class="multipdf-box" style="max-width:1180px;width:96vw;height:90vh;max-height:90vh">
+  <div class="multipdf-box" style="max-width:1180px;width:90vw;height:90vh;max-height:90vh">
     <div class="multipdf-header" style="background:linear-gradient(135deg,#1a52c8,#0e3a9a)">
       <span>🔵 Controle de Andamento por Projeto</span>
       <button onclick="document.getElementById('andamento-modal').classList.remove('show')" style="background:none;border:none;color:#fff;font-size:20px;cursor:pointer">✕</button>
@@ -2043,7 +2053,7 @@ body.dark #workers-body tr:hover{background-color:rgba(58,110,232,.08)}
       </div>
       <button type="button" onclick="forcarAtualizacaoPainel('andamento',this)" style="flex-shrink:0;background:#158038;color:#fff;border:2px solid #0d5228;padding:9px;font-size:11px;font-weight:900;cursor:pointer;text-transform:uppercase">🔄 Atualizar agora (busca tudo de novo na nuvem)</button>
       <div id="an-resumo" style="flex-shrink:0;display:grid;grid-template-columns:repeat(3,1fr);gap:8px"></div>
-      <div id="an-lista-wrap" style="flex:1;min-height:0;overflow-y:auto;border:2px solid #000;padding:12px"></div>
+      <div id="an-lista-wrap" style="flex:1;min-height:350px;overflow-y:auto;border:2px solid #000;padding:14px"></div>
     </div>
     <div class="multipdf-footer" style="flex-wrap:wrap">
       <button class="multipdf-cancel" onclick="document.getElementById('andamento-modal').classList.remove('show')">Fechar</button>
