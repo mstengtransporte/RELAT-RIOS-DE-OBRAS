@@ -294,6 +294,18 @@ body.dark #menu-usuario-dropdown{background:#1a2530}
   min-height:26px;text-transform:uppercase;box-sizing:border-box
 }
 .hfield select{text-overflow:ellipsis;overflow:hidden;white-space:nowrap}
+.hfield-readonly-wrap{
+  background:transparent;
+  font-size:13px;font-weight:900;color:var(--text);width:100%;max-width:100%;
+  min-height:26px;text-transform:uppercase;box-sizing:border-box;
+  padding:2px 0;cursor:not-allowed;opacity:.85;
+  /* Isto aqui é o que realmente resolve a quebra de linha — um <input readonly> ou
+     <select> NUNCA quebra texto em duas linhas, não importa o CSS (é assim que o
+     navegador desenha esses elementos por baixo dos panos). Uma div comum já
+     quebra normalmente, então nomes compostos longos ficam 100% visíveis, uma
+     parte embaixo da outra quando não cabe numa linha só. */
+  white-space:normal;word-break:break-word;overflow-wrap:break-word;line-height:1.25;
+}
 .hfield textarea{
   font-family:inherit;resize:none;overflow:hidden;box-sizing:border-box;
   white-space:pre-wrap;word-break:break-word;overflow-wrap:break-word;line-height:1.25
@@ -1767,8 +1779,8 @@ body.dark #workers-body tr:hover{background-color:rgba(58,110,232,.08)}
         <div style="flex:1;padding:5px 14px;border-right:2px solid #000;display:flex;flex-direction:column;gap:2px"><label style="font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.8px;color:var(--text3)">Data</label><input type="date" id="h-data" style="background:transparent;border:none;border-bottom:2px solid #000;padding:2px 0;font-size:15px;font-weight:900;color:var(--text);width:100%;outline:none;min-height:28px"></div>
         <div style="flex:1;padding:5px 14px;display:flex;flex-direction:column;gap:2px"><label style="font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.8px;color:var(--text3)">Dia da Semana</label><input type="text" id="h-dia" readonly style="background:transparent;border:none;border-bottom:2px solid #000;padding:2px 0;font-size:15px;font-weight:900;color:var(--text);width:100%;outline:none;min-height:28px"></div>
       </div>
-      <div class="hfield"><label>Obra / Projeto (Cliente)</label><select id="h-obra" onchange="onMudarClienteSelecionado()" onblur="revalidarNRDOSeNovo()" style="text-transform:uppercase"><option value="">Selecione...</option></select></div>
-      <div class="hfield"><label>Disciplina</label><select id="h-disc" onchange="atualizarBannerObra()" style="text-transform:uppercase">
+      <div class="hfield"><label>Obra / Projeto (Cliente)</label><select id="h-obra" onchange="onMudarClienteSelecionado();ajustarFontePorTextoSelect(this)" onblur="revalidarNRDOSeNovo()" style="text-transform:uppercase"><option value="">Selecione...</option></select></div>
+      <div class="hfield"><label>Disciplina</label><select id="h-disc" onchange="atualizarBannerObra();ajustarFontePorTextoSelect(this)" style="text-transform:uppercase">
         <option value="">— Selecione —</option>
         <option value="MECÂNICA">MECÂNICA</option>
         <option value="ELÉTRICA">ELÉTRICA</option>
@@ -1778,7 +1790,7 @@ body.dark #workers-body tr:hover{background-color:rgba(58,110,232,.08)}
         <option value="PINTURA">PINTURA</option>
         <option value="TÉC. SEGURANÇA">TÉC. SEGURANÇA</option>
       </select></div>
-      <div class="hfield" style="border-right:none"><label>Encarregado <span style="font-weight:400;font-size:9px;opacity:.7">(automático)</span></label><input type="text" id="h-enc" readonly style="cursor:not-allowed;opacity:.85"></div>
+      <div class="hfield" style="border-right:none"><label>Encarregado <span style="font-weight:400;font-size:9px;opacity:.7">(automático)</span></label><div id="h-enc" class="hfield-readonly-wrap" tabindex="-1"></div></div>
     </div>
   </div>
 
@@ -2572,7 +2584,12 @@ function popularFiltroEncarregado(selectId){
 function popularSelectEncarregado(){
   const campo=document.getElementById('h-enc');
   if(!campo||!usuarioAtual) return;
-  campo.value=(usuarioAtual.nome||'').toUpperCase();
+  const nome=(usuarioAtual.nome||'').toUpperCase();
+  campo.textContent=nome;
+  let fs=13;
+  if(nome.length>34) fs=10.5;
+  else if(nome.length>24) fs=11.5;
+  campo.style.fontSize=fs+'px';
 }
 
 // Mantido só por compatibilidade com chamadas antigas (ex: ao restaurar um RDO salvo) —
@@ -3845,7 +3862,8 @@ function descartarRdoPendente(todasChaves){
     // Limpa os campos visíveis também — senão o autosave, na próxima vez que rodar
     // sozinho, salva de novo exatamente o que acabou de ser apagado.
     localStorage.removeItem('rdo-last-key');
-    ['h-obra','h-enc','h-disc'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+    ['h-obra','h-disc'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+    popularSelectEncarregado();
     for(let o=1;o<=NUM_OSE;o++) oseStatus[o]='sem';
     if(typeof buildOSECards==='function') buildOSECards();
     if(typeof atualizarBannerObra==='function') atualizarBannerObra();
@@ -4973,11 +4991,30 @@ function autoGrowTA(el){
   el.style.height='auto';
   el.style.height=el.scrollHeight+'px';
 }
+// Elementos <select> (Obra, Disciplina) nunca conseguem quebrar o texto selecionado em
+// duas linhas — é assim que o navegador desenha esses elementos, nenhum CSS muda isso.
+// O que dá pra fazer (e ajuda bastante): encolher a fonte sozinha conforme o nome
+// escolhido fica mais comprido, então cabe mais texto antes de precisar cortar com "...".
+function ajustarFontePorTextoSelect(sel){
+  if(!sel) return;
+  const texto=(sel.options[sel.selectedIndex]&&sel.options[sel.selectedIndex].text)||'';
+  const len=texto.trim().length;
+  let fs=13;
+  if(len>34) fs=10;
+  else if(len>26) fs=11;
+  else if(len>20) fs=12;
+  sel.style.fontSize=fs+'px';
+}
+function ajustarFontesCabecalhoLongo(){
+  ajustarFontePorTextoSelect(document.getElementById('h-obra'));
+  ajustarFontePorTextoSelect(document.getElementById('h-disc'));
+}
 // Aplica autoGrowTA em todos os campos "textarea-de-linha-única" da página de uma vez —
 // chamado depois de carregar/restaurar um RDO salvo, já que setar .value via JS não
 // dispara o evento "input" sozinho.
 function ajustarTextareasAuto(){
   document.querySelectorAll('#h-obra,#h-disc,#h-enc,.ose-resp textarea').forEach(autoGrowTA);
+  ajustarFontesCabecalhoLongo();
 }
 
 function makeHrsCell(i,o){
@@ -5527,7 +5564,7 @@ function getFormData(){
   for(let o=1;o<=NUM_OSE;o++){
     oses.push({name:document.getElementById(`ose-name-${o}`)?.value||'',status:document.getElementById(`ose-status-${o}`)?.value||'sem',desc:document.getElementById(`ose-desc-${o}`)?.innerHTML||'',descText:document.getElementById(`ose-desc-${o}`)?.innerText||'',resp:document.getElementById(`ose-resp-${o}`)?.value||''});
   }
-  return{header:{nrdo:document.getElementById('h-nrdo').value,data:document.getElementById('h-data').value,obra:document.getElementById('h-obra').value,enc:document.getElementById('h-enc').value,disc:document.getElementById('h-disc').value},rowCounter,workers,oses,namesList,funcsList,vehiclesList};
+  return{header:{nrdo:document.getElementById('h-nrdo').value,data:document.getElementById('h-data').value,obra:document.getElementById('h-obra').value,enc:document.getElementById('h-enc').textContent,disc:document.getElementById('h-disc').value},rowCounter,workers,oses,namesList,funcsList,vehiclesList};
 }
 
 // Trava contra clique duplo acidental nos botões de Salvar/Exportar — muito comum no
@@ -6233,7 +6270,7 @@ function _criarRDOEmBranco(mensagemToast,focarObra){
   const novaData=dataParaNovoRDO();
   rdoAtualId=gerarRdoId(); // identidade própria — nunca sobrescreve outro RDO já salvo
   localStorage.removeItem('rdo-last-key');
-  ['h-obra','h-enc','h-disc'].forEach(id=>{const el=document.getElementById(id); if(el) el.value='';});
+  ['h-obra','h-disc'].forEach(id=>{const el=document.getElementById(id); if(el) el.value='';});
   popularSelectEncarregado(); // sempre o nome de quem está logado, mesmo depois de limpar o campo
   document.getElementById('h-data').value=novaData;
   updateDiaSemana();
