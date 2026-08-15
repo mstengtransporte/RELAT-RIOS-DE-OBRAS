@@ -933,6 +933,7 @@ input.login-input,
   .btn span{display:block;font-size:7.5px;font-weight:800;white-space:nowrap;letter-spacing:.2px}
   .page{padding:8px 6px}
   .rdo-banner{padding:10px 12px}
+  #ee-resumo, #an-resumo{grid-template-columns:repeat(2,1fr)!important}
   .banner-logo{height:36px}
   .banner-title h1{font-size:14px}
   .rdo-header-grid{grid-template-columns:1fr 1fr}
@@ -1997,27 +1998,21 @@ body.dark #workers-body tr:hover{background-color:rgba(58,110,232,.08)}
 <!-- CONTROLE DE EXTRA ESCOPO — consolida todo o Extra Escopo/Adicional já registrado em
      qualquer RDO salvo (data, serviço, quem trabalhou, quantas horas), sempre disponível -->
 <div id="extra-escopo-modal">
-  <div class="multipdf-box" style="max-width:1180px;width:90vw;height:90vh;max-height:90vh">
+  <div class="multipdf-box" style="max-width:1180px;width:90vw;height:92vh;max-height:92vh">
     <div class="multipdf-header" style="background:linear-gradient(135deg,#158038,#0d5228)">
       <span>🟢 Controle de Extra Escopo / Adicional</span>
       <button onclick="document.getElementById('extra-escopo-modal').classList.remove('show')" style="background:none;border:none;color:#fff;font-size:20px;cursor:pointer">✕</button>
     </div>
-    <div class="multipdf-body" style="overflow-y:hidden;padding:16px;gap:10px">
-      <div style="flex-shrink:0">
-        <label>Período (deixe em branco pra ver tudo)</label>
-        <div style="display:flex;gap:8px">
-          <input type="date" id="ee-de" style="flex:1">
-          <input type="date" id="ee-ate" style="flex:1">
-          <button type="button" onclick="renderizarExtraEscopo()" style="background:#158038;color:#fff;border:2px solid #0d5228;padding:0 14px;font-size:12px;font-weight:900;cursor:pointer">🔍 Filtrar</button>
-        </div>
+    <div class="multipdf-body" style="overflow-y:hidden;padding:12px 16px;gap:8px">
+      <div style="flex-shrink:0;display:flex;flex-wrap:wrap;gap:6px;align-items:center">
+        <input type="date" id="ee-de" title="Data inicial (deixe em branco pra ver tudo)" style="flex:1;min-width:118px;padding:6px">
+        <input type="date" id="ee-ate" title="Data final (deixe em branco pra ver tudo)" style="flex:1;min-width:118px;padding:6px">
+        <select id="ee-encarregado" onchange="renderizarExtraEscopo()" title="Ver só de um encarregado" style="flex:1.6;min-width:150px;padding:6px"><option value="">— Todos os encarregados —</option></select>
+        <button type="button" onclick="renderizarExtraEscopo()" style="background:#158038;color:#fff;border:2px solid #0d5228;padding:6px 12px;font-size:11px;font-weight:900;cursor:pointer;white-space:nowrap">🔍 Filtrar</button>
+        <button type="button" onclick="forcarAtualizacaoPainel('extraescopo',this)" style="background:#0d5228;color:#fff;border:2px solid #063d1c;padding:6px 12px;font-size:11px;font-weight:900;cursor:pointer;white-space:nowrap">🔄 Atualizar da nuvem</button>
       </div>
-      <div style="flex-shrink:0">
-        <label>Ver só de um encarregado (opcional)</label>
-        <select id="ee-encarregado" onchange="renderizarExtraEscopo()" style="width:100%"><option value="">— Todos os encarregados —</option></select>
-      </div>
-      <button type="button" onclick="forcarAtualizacaoPainel('extraescopo',this)" style="flex-shrink:0;background:#158038;color:#fff;border:2px solid #0d5228;padding:9px;font-size:11px;font-weight:900;cursor:pointer;text-transform:uppercase">🔄 Atualizar agora (busca tudo de novo na nuvem)</button>
-      <div id="ee-resumo" style="flex-shrink:0;display:grid;grid-template-columns:repeat(3,1fr);gap:8px"></div>
-      <div id="ee-lista-wrap" style="flex:1;min-height:350px;overflow-y:auto;border:2px solid #000;padding:14px"></div>
+      <div id="ee-resumo" style="flex-shrink:0;display:grid;grid-template-columns:repeat(4,1fr);gap:6px"></div>
+      <div id="ee-lista-wrap" style="flex:1;min-height:380px;overflow-y:auto;border:2px solid #000;padding:14px"></div>
     </div>
     <div class="multipdf-footer" style="flex-wrap:wrap">
       <button class="multipdf-cancel" onclick="document.getElementById('extra-escopo-modal').classList.remove('show')">Fechar</button>
@@ -2033,27 +2028,21 @@ body.dark #workers-body tr:hover{background-color:rgba(58,110,232,.08)}
      projeto/OSE (que pode se repetir em vários dias), consolidando quantas horas cada
      projeto já recebeu ao longo do tempo -->
 <div id="andamento-modal">
-  <div class="multipdf-box" style="max-width:1180px;width:90vw;height:90vh;max-height:90vh">
+  <div class="multipdf-box" style="max-width:1180px;width:90vw;height:92vh;max-height:92vh">
     <div class="multipdf-header" style="background:linear-gradient(135deg,#1a52c8,#0e3a9a)">
       <span>🔵 Controle de Andamento por Projeto</span>
       <button onclick="document.getElementById('andamento-modal').classList.remove('show')" style="background:none;border:none;color:#fff;font-size:20px;cursor:pointer">✕</button>
     </div>
-    <div class="multipdf-body" style="overflow-y:hidden;padding:16px;gap:10px">
-      <div style="flex-shrink:0">
-        <label>Período (deixe em branco pra ver tudo)</label>
-        <div style="display:flex;gap:8px">
-          <input type="date" id="an-de" style="flex:1">
-          <input type="date" id="an-ate" style="flex:1">
-          <button type="button" onclick="renderizarAndamento()" style="background:#1a52c8;color:#fff;border:2px solid #0e3a9a;padding:0 14px;font-size:12px;font-weight:900;cursor:pointer">🔍 Filtrar</button>
-        </div>
+    <div class="multipdf-body" style="overflow-y:hidden;padding:12px 16px;gap:8px">
+      <div style="flex-shrink:0;display:flex;flex-wrap:wrap;gap:6px;align-items:center">
+        <input type="date" id="an-de" title="Data inicial (deixe em branco pra ver tudo)" style="flex:1;min-width:118px;padding:6px">
+        <input type="date" id="an-ate" title="Data final (deixe em branco pra ver tudo)" style="flex:1;min-width:118px;padding:6px">
+        <select id="an-encarregado" onchange="renderizarAndamento()" title="Ver só de um encarregado" style="flex:1.6;min-width:150px;padding:6px"><option value="">— Todos os encarregados —</option></select>
+        <button type="button" onclick="renderizarAndamento()" style="background:#1a52c8;color:#fff;border:2px solid #0e3a9a;padding:6px 12px;font-size:11px;font-weight:900;cursor:pointer;white-space:nowrap">🔍 Filtrar</button>
+        <button type="button" onclick="forcarAtualizacaoPainel('andamento',this)" style="background:#0e3a9a;color:#fff;border:2px solid #082763;padding:6px 12px;font-size:11px;font-weight:900;cursor:pointer;white-space:nowrap">🔄 Atualizar da nuvem</button>
       </div>
-      <div style="flex-shrink:0">
-        <label>Ver só de um encarregado (opcional)</label>
-        <select id="an-encarregado" onchange="renderizarAndamento()" style="width:100%"><option value="">— Todos os encarregados —</option></select>
-      </div>
-      <button type="button" onclick="forcarAtualizacaoPainel('andamento',this)" style="flex-shrink:0;background:#158038;color:#fff;border:2px solid #0d5228;padding:9px;font-size:11px;font-weight:900;cursor:pointer;text-transform:uppercase">🔄 Atualizar agora (busca tudo de novo na nuvem)</button>
-      <div id="an-resumo" style="flex-shrink:0;display:grid;grid-template-columns:repeat(3,1fr);gap:8px"></div>
-      <div id="an-lista-wrap" style="flex:1;min-height:350px;overflow-y:auto;border:2px solid #000;padding:14px"></div>
+      <div id="an-resumo" style="flex-shrink:0;display:grid;grid-template-columns:repeat(4,1fr);gap:6px"></div>
+      <div id="an-lista-wrap" style="flex:1;min-height:380px;overflow-y:auto;border:2px solid #000;padding:14px"></div>
     </div>
     <div class="multipdf-footer" style="flex-wrap:wrap">
       <button class="multipdf-cancel" onclick="document.getElementById('andamento-modal').classList.remove('show')">Fechar</button>
