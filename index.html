@@ -838,6 +838,30 @@ input.login-input,
 #projetos-modal{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:9997;display:none;align-items:center;justify-content:center;padding:14px;backdrop-filter:blur(6px)}
 #projetos-modal.show{display:flex}
 #check-modal{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:9997;display:none;align-items:center;justify-content:center;padding:14px;backdrop-filter:blur(6px)}
+
+/* Modal de alerta de pendências — reestilizado a pedido: fundo CLARO (não escuro feito
+   os toasts), com uma faixa de destaque âmbar/vermelha no topo, texto escuro bem
+   legível, e um botão de confirmação grande. z-index mais alto que os outros modais,
+   pra aparecer por cima mesmo se disparado durante uma exportação com outro painel
+   aberto. */
+#modal-pendencias-rdo{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:99999;display:none;align-items:center;justify-content:center;padding:16px}
+#modal-pendencias-rdo.show{display:flex}
+.pendencias-caixa{
+  background:#fffbeb;color:#1f2937;width:100%;max-width:440px;border-radius:12px;
+  border-top:6px solid #f59e0b;box-shadow:0 20px 60px rgba(0,0,0,.4);overflow:hidden;
+  animation:pendenciasEntrar .18s ease-out;
+}
+@keyframes pendenciasEntrar{from{transform:translateY(-14px);opacity:0}to{transform:translateY(0);opacity:1}}
+.pendencias-titulo{font-size:19px;font-weight:900;color:#92400e;padding:22px 24px 0;line-height:1.3}
+.pendencias-msg{font-size:14px;color:#1f2937;line-height:1.55;padding:10px 24px 0;margin:0}
+.pendencias-lista{margin:14px 24px 0;padding:12px 14px;background:#fff7ed;border:1.5px solid #fde68a;border-radius:8px;list-style:disc;padding-left:32px;font-size:12.5px;color:#57534e;line-height:1.7;max-height:180px;overflow-y:auto}
+.pendencias-rodape{padding:20px 24px 24px}
+.pendencias-btn{
+  width:100%;background:#f59e0b;color:#fff;border:none;border-radius:9px;padding:13px;
+  font-size:14.5px;font-weight:900;cursor:pointer;box-shadow:0 3px 0 #b45309;
+}
+.pendencias-btn:hover{background:#d97706}
+.pendencias-btn:active{transform:translateY(2px);box-shadow:none}
 #check-modal.show{display:flex}
 .check-item{border-left:4px solid #d97706;background:#fffbeb;padding:8px 10px;margin-bottom:6px;font-size:11.5px}
 .check-item.grave{border-left-color:#dc2626;background:#fef2f2}
@@ -6746,6 +6770,43 @@ function destacarCampoInvalido(el){
   el.addEventListener('change',limpar);
 }
 
+// Destaque agrupado específico pras células de HORAS de um funcionário: diferente de
+// destacarCampoInvalido (que limpa só a própria célula quando ELA é preenchida), aqui
+// TODAS as células de hora da linha são destacadas juntas, mas assim que QUALQUER UMA
+// delas passa a ter horas>0, o destaque some de TODAS ao mesmo tempo — porque a regra é
+// "pelo menos 1 OS com horas", não "todas as OS preenchidas". Preencher só uma já resolve
+// a pendência da linha inteira, na hora, sem precisar preencher as demais.
+function destacarHorasFuncionario(idx){
+  const celulas=[];
+  for(let o=1;o<=NUM_OSE;o++){
+    const el=document.getElementById(`hrs-${idx}-${o}`);
+    if(el) celulas.push(el);
+  }
+  if(!celulas.length) return;
+  celulas.forEach(el=>{
+    el.classList.add('campo-invalido');
+    el.style.outline='3px solid #dc2626';
+    el.style.outlineOffset='2px';
+    el.style.boxShadow='0 0 0 2px rgba(220,38,38,.35)';
+  });
+  const limparTodas=()=>{
+    const temAlguma=celulas.some(el=>parseHrs(el.value)>0);
+    if(!temAlguma) return;
+    celulas.forEach(el=>{
+      el.style.outline='';
+      el.style.outlineOffset='';
+      el.style.boxShadow='';
+      el.classList.remove('campo-invalido');
+      el.removeEventListener('input',limparTodas);
+      el.removeEventListener('change',limparTodas);
+    });
+  };
+  celulas.forEach(el=>{
+    el.addEventListener('input',limparTodas);
+    el.addEventListener('change',limparTodas);
+  });
+}
+
 // VALIDAÇÃO ÚNICA E UNIFICADA do formulário inteiro — usada antes de QUALQUER ação que
 // transmita ou gere um documento a partir do RDO: Salvar/Enviar ao Supabase, Exportar
 // Excel, Exportar PDF e Compartilhar via WhatsApp. Cobre Obra, Disciplina, Data,
@@ -6785,9 +6846,10 @@ function validarFormularioRDO(d){
     const temHoras=(w.hrs||[]).some(v=>parseHrs(v)>0);
     // Quem está marcado com um status de ausência (Falta/Saiu mais cedo/Transferido)
     // não precisa ter horas lançadas — o próprio status já explica a ausência do dia.
+    // Basta 1 OS com horas>0 — as outras colunas dessa linha NÃO são exigidas.
     if(!temHoras && !STATUS_ABSENTEISMO_VEICULO.includes(w.vehicle)){
-      problemas.push(`Horas de ${w.name}`);
-      for(let o=1;o<=NUM_OSE;o++) destacarCampoInvalido(document.getElementById(`hrs-${w.idx}-${o}`));
+      problemas.push(`Horas de ${w.name} (precisa de pelo menos 1 OS com horas)`);
+      destacarHorasFuncionario(w.idx);
     }
   });
 
@@ -6798,17 +6860,17 @@ function validarFormularioRDO(d){
     destacarCampoInvalido(document.getElementById('ose-name-1'));
   }
 
-  // ── Pra cada OSE preenchida: Status do Projeto e Descrição ──
+  // ── Pra cada OSE preenchida: Status do Projeto (sempre obrigatório) e Descrição dos
+  // Serviços Realizados (sempre obrigatória, mesmo quando o status é "Sem Atividade") ──
   (d.oses||[]).forEach((o,idx)=>{
     const n=idx+1;
     if(!o.name) return; // OSE em branco não precisa de status/descrição
     if(!o.status){
       problemas.push(`Status do Projeto da OSE ${n} (${o.name})`);
       destacarCampoInvalido(document.getElementById(`ose-status-${n}`));
-    } else if(o.status!=='sem' && !(o.descText||'').trim()){
-      // Qualquer status diferente de "Sem Atividade" precisa vir acompanhado de uma
-      // descrição do que foi feito — sem isso o RDO não serve pra documentar nada.
-      problemas.push(`Descrição da OSE ${n} (${o.name})`);
+    }
+    if(!(o.descText||'').trim()){
+      problemas.push(`Descrição dos Serviços Realizados — OSE ${n} (${o.name})`);
       destacarCampoInvalido(document.getElementById(`ose-desc-${n}`));
     }
   });
@@ -6816,15 +6878,30 @@ function validarFormularioRDO(d){
   return problemas;
 }
 
+// Modal de alerta de pendências — reestilizado a pedido, substitui o antigo
+// toast+alert() nativo do navegador (que ficava escuro e pouco legível). Mostra o
+// título e a mensagem fixos pedidos, mais a lista específica do que está faltando
+// (mantém a informação detalhada que já existia, só que num visual mais claro).
+function _escaparParaListaPendencias(s){
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+function abrirModalPendenciasRDO(problemas){
+  const lista=document.getElementById('pendencias-lista-itens');
+  if(lista) lista.innerHTML=(problemas||[]).map(p=>`<li>${_escaparParaListaPendencias(p)}</li>`).join('');
+  document.getElementById('modal-pendencias-rdo')?.classList.add('show');
+}
+function fecharModalPendenciasRDO(){
+  document.getElementById('modal-pendencias-rdo')?.classList.remove('show');
+}
+
 // Dispara a validação unificada e trata o bloqueio de forma padronizada — usada nos 4
 // pontos de entrada (Salvar/Enviar, Excel, PDF, WhatsApp). Devolve true se está tudo
-// certo (pode prosseguir) e false se bloqueou (mostra o alerta padrão e destaca os
-// campos, quem chamou só precisa dar "return" quando vier false).
+// certo (pode prosseguir) e false se bloqueou (mostra o modal de pendências e destaca
+// os campos, quem chamou só precisa dar "return" quando vier false).
 function bloquearSeFormularioInvalido(d){
   const problemas=validarFormularioRDO(d);
   if(!problemas.length) return true;
-  showToast('⚠️ Preencha todos os campos obrigatórios em destaque para prosseguir.','#dc2626');
-  alert(`Preencha todos os campos obrigatórios em destaque para prosseguir.\n\nPendências encontradas:\n${problemas.map(f=>'• '+f).join('\n')}`);
+  abrirModalPendenciasRDO(problemas);
   return false;
 }
 
@@ -10206,5 +10283,19 @@ window.addEventListener('beforeinstallprompt',(e)=>{
 });
 </script>
 <div class="no-print" style="position:fixed;bottom:2px;right:4px;font-size:8px;color:rgba(120,120,120,.4);font-family:monospace;pointer-events:none;z-index:5">v2026.08.14-sem-integracao-aguardando</div>
+
+<!-- MODAL DE ALERTA DE PENDÊNCIAS — substitui o toast/alert escuro de antes. Aparece
+     sempre que a validação unificada (validarFormularioRDO) bloqueia uma tentativa de
+     salvar/enviar ou exportar (Excel/PDF/WhatsApp) com campos obrigatórios em branco. -->
+<div id="modal-pendencias-rdo" role="alertdialog" aria-modal="true" aria-labelledby="pendencias-titulo-txt">
+  <div class="pendencias-caixa">
+    <div class="pendencias-titulo" id="pendencias-titulo-txt">⚠️ Atenção: Campos Pendentes</div>
+    <p class="pendencias-msg">Preencha todos os campos obrigatórios em destaque para poder salvar, enviar ou exportar o RDO.</p>
+    <ul class="pendencias-lista" id="pendencias-lista-itens"></ul>
+    <div class="pendencias-rodape">
+      <button type="button" class="pendencias-btn" onclick="fecharModalPendenciasRDO()">Entendi / Corrigir</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>
