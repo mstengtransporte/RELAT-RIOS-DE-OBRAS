@@ -4,11 +4,16 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>RDO — Master Energy</title>
-<!-- PWA: permite "Instalar app" / "Adicionar à tela inicial" no celular e no computador -->
+<!-- PWA: permite "Instalar app" / "Adicionar à tela inicial" no celular e no computador —
+     ícone oficial novo (raio + "M" azul sobre fundo azul-marinho escuro, com "RDO" escrito) -->
 <link rel="manifest" href="./manifest.json">
-<meta name="theme-color" content="#1457c8">
+<meta name="theme-color" content="#010d24">
+<link rel="icon" type="image/x-icon" href="./favicon.ico">
+<link rel="icon" type="image/png" sizes="16x16" href="./favicon-16.png">
+<link rel="icon" type="image/png" sizes="32x32" href="./favicon-32.png">
 <link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png">
-<link rel="apple-touch-icon" href="./icon-192.png">
+<link rel="icon" type="image/png" sizes="512x512" href="./icon-512.png">
+<link rel="apple-touch-icon" href="./apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="RDO Master Energy">
@@ -151,12 +156,13 @@ textarea.hrs.falta,textarea.hrs.cedo,textarea.hrs.integracao,textarea.hrs.aguard
 .btn{
   padding:6px 10px;border:1.5px solid rgba(255,255,255,.15);cursor:pointer;
   font-size:10px;font-weight:900;display:inline-flex;align-items:center;gap:4px;
-  transition:all .12s;white-space:nowrap;letter-spacing:.3px;
+  transition:transform .14s ease,box-shadow .14s ease,filter .12s;white-space:nowrap;letter-spacing:.3px;
   -webkit-appearance:none;touch-action:manipulation;
-  border-radius:3px;text-transform:uppercase;flex-shrink:0
+  border-radius:3px;text-transform:uppercase;flex-shrink:0;
+  box-shadow:2px 2px 0 rgba(0,0,0,.85)
 }
 .btn:disabled{opacity:.35;cursor:not-allowed}
-.btn:hover{filter:brightness(1.2);transform:translateY(-1px);box-shadow:0 3px 10px rgba(0,0,0,.35)}
+.btn:hover{filter:brightness(1.15);transform:translate(-2px,-2px);box-shadow:4px 4px 0 rgba(0,0,0,.85)}
 #login-overlay button{transition:transform .1s ease,filter .1s ease,opacity .1s ease}
 /* Papel de parede de verdade: cobre 100% da tela, sem sobrar faixa vazia
    em lugar nenhum — nem no celular, nem no computador. A caixa de login
@@ -165,7 +171,24 @@ textarea.hrs.falta,textarea.hrs.cedo,textarea.hrs.integracao,textarea.hrs.aguard
 #login-overlay{background:#0b1220 url('login-fundo-rdo.jpg') center center / cover no-repeat!important;}
 #login-overlay button:active{transform:scale(.96);filter:brightness(.8)}
 #login-overlay button:disabled{opacity:.6;transform:none}
-.btn:active{transform:translateY(0);filter:brightness(.9)}
+.btn:active{transform:translate(0,0);box-shadow:1px 1px 0 rgba(0,0,0,.85);filter:brightness(.9)}
+
+/* Menu dropdown do usuário logado — abre pra baixo, alinhado à direita do botão. */
+.user-menu-wrap{display:flex}
+#menu-usuario-dropdown{
+  display:none;position:absolute;top:calc(100% + 8px);right:0;min-width:190px;
+  background:var(--surface,#fff);border:2px solid #000;border-radius:8px;
+  box-shadow:4px 4px 0 rgba(0,0,0,.85);overflow:hidden;z-index:500;
+}
+#menu-usuario-dropdown.show{display:block}
+#menu-usuario-dropdown button{
+  display:flex;align-items:center;gap:8px;width:100%;background:none;border:none;
+  padding:12px 14px;font-size:13px;font-weight:800;color:var(--text,#0a1628);cursor:pointer;
+  text-align:left;transition:background-color .12s;
+}
+#menu-usuario-dropdown button+button{border-top:1.5px solid var(--card-border,#e2e8f0)}
+#menu-usuario-dropdown button:hover{background:var(--surface2,#f1f5f9)}
+body.dark #menu-usuario-dropdown{background:#1a2530}
 .btn-save{background:linear-gradient(180deg,#2568d6 0%,#123166 100%)!important;color:#fff;border-color:#0a2454}
 @keyframes piscarFaixaPendente{
   0%,100%{background:#dc2626}
@@ -276,6 +299,32 @@ textarea.hrs.falta,textarea.hrs.cedo,textarea.hrs.integracao,textarea.hrs.aguard
   white-space:pre-wrap;word-break:break-word;overflow-wrap:break-word;line-height:1.25
 }
 .hfield input:focus,.hfield textarea:focus{color:var(--accent)}
+
+/* Micro-interação de hover — todos os campos editáveis do formulário (cabeçalho,
+   equipe, horas, descrição da OSE) sobem levemente e ganham uma sombra suave ao passar
+   o mouse, com transição rápida. Dá uma resposta visual clara de "isto é clicável/
+   editável" sem exagerar. Fica dentro de um "@media(hover:hover)" pra não ativar em
+   celular (onde não existe hover de verdade — toque já dá seu próprio feedback nativo). */
+@media(hover:hover){
+  .hfield input,.hfield textarea,.hfield select,
+  select.cell-name,select.cell-func,select.cell-vehicle,
+  input.cell-name,input.cell-func,input.cell-vehicle,
+  textarea.hrs,.ose-desc{
+    transition:transform .14s ease,box-shadow .14s ease,background-color .14s ease;
+  }
+  .hfield input:hover,.hfield textarea:hover,.hfield select:hover,
+  select.cell-name:hover,select.cell-func:hover,select.cell-vehicle:hover,
+  input.cell-name:hover,input.cell-func:hover,input.cell-vehicle:hover,
+  textarea.hrs:hover,.ose-desc:hover{
+    transform:translateY(-2px);
+    box-shadow:0 4px 10px rgba(0,0,0,.18);
+  }
+  body.dark .hfield input:hover,body.dark .hfield textarea:hover,body.dark .hfield select:hover,
+  body.dark select.cell-name:hover,body.dark select.cell-func:hover,body.dark select.cell-vehicle:hover,
+  body.dark textarea.hrs:hover,body.dark .ose-desc:hover{
+    box-shadow:0 4px 12px rgba(0,0,0,.5);
+  }
+}
 
 /* ══════════════════════════════════════
    RDOs DO MESMO DIA (troca rápida)
@@ -953,6 +1002,17 @@ input.login-input,
   .topbar-title{display:none}
   .topbar-brand-tag{display:none}
   .hfield select{font-size:12px}
+  /* Toque confortável em mobile: campos da equipe e do cabeçalho ganham altura mínima
+     de ~40px (dedo não erra o alvo) e fonte de 16px nos campos de texto de verdade
+     (abaixo de 16px, o Safari do iPhone dá zoom sozinho ao focar — isso "quebra" a tela
+     visualmente até a pessoa dar zoom out de novo; com 16px isso nunca acontece). Nas
+     células de horas mantém fonte um pouco menor (são bem estreitas de propósito, pra
+     caber as 6 OSEs lado a lado) mas ainda confortável de tocar.
+  */
+  select.cell-name,select.cell-func,select.cell-vehicle{min-height:40px;font-size:15px;padding:6px 16px 6px 4px}
+  input.cell-name,input.cell-func,input.cell-vehicle{min-height:40px;font-size:15px;padding:6px 4px}
+  textarea.hrs{min-height:38px;font-size:14px;padding:6px 3px}
+  .hfield input,.hfield textarea,.hfield select{min-height:38px;font-size:15px}
   .btn{padding:6px 5px;font-size:17px;gap:1px;flex-direction:column;min-width:54px;line-height:1.1;flex-shrink:0}
   .btn span{display:block;font-size:7.5px;font-weight:800;white-space:nowrap;letter-spacing:.2px}
   .page{padding:8px 6px}
@@ -1628,8 +1688,14 @@ body.dark #workers-body tr:hover{background-color:rgba(58,110,232,.08)}
       <span class="topbar-brand-tag">Montagem e Manutenção Industrial</span>
     </div>
     <div class="topbar-title">RDO — Diário de Obra PRO<small>Relatório Diário de Campo</small></div>
-    <div id="usuario-logado-badge" style="margin-left:auto;background:rgba(255,255,255,.12);border:1.5px solid rgba(255,255,255,.3);border-radius:20px;padding:5px 12px;font-size:11px;font-weight:800;color:#fff;white-space:nowrap;display:none;align-items:center">
-      <span id="badge-conexao-dot" title="" style="display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;background:#9ca3af;box-shadow:0 0 4px #9ca3af;flex-shrink:0"></span><span id="badge-conexao-texto"></span>
+    <div class="user-menu-wrap" style="margin-left:auto;position:relative">
+      <button type="button" id="usuario-logado-badge" onclick="toggleMenuUsuario()" style="background:rgba(255,255,255,.12);border:1.5px solid rgba(255,255,255,.3);border-radius:20px;padding:5px 12px;font-size:11px;font-weight:800;color:#fff;white-space:nowrap;display:none;align-items:center;cursor:pointer;gap:0">
+        <span id="badge-conexao-dot" title="" style="display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;background:#9ca3af;box-shadow:0 0 4px #9ca3af;flex-shrink:0"></span><span id="badge-conexao-texto"></span><span style="margin-left:6px;font-size:9px;opacity:.8">▾</span>
+      </button>
+      <div id="menu-usuario-dropdown">
+        <button type="button" onclick="fecharMenuUsuario();sincronizarManualUsuario();">🔄 Sincronizar Dados</button>
+        <button type="button" onclick="fecharMenuUsuario();fazerLogout();" style="color:#dc2626">🚪 Encerrar Sessão</button>
+      </div>
     </div>
   </div>
   <div class="topbar-actions">
@@ -2389,6 +2455,43 @@ async function fazerLogout(){
   const supabaseClient=getSupabaseClient();
   try{ await supabaseClient?.auth.signOut(); }catch(e){}
   location.reload();
+}
+
+// ── Menu dropdown do usuário (header) ──────────────────────────────────
+function toggleMenuUsuario(){
+  document.getElementById('menu-usuario-dropdown')?.classList.toggle('show');
+}
+function fecharMenuUsuario(){
+  document.getElementById('menu-usuario-dropdown')?.classList.remove('show');
+}
+// Fecha o menu ao clicar em qualquer lugar fora dele — comportamento padrão de
+// dropdown, sem precisar de biblioteca nenhuma.
+document.addEventListener('click',e=>{
+  const wrap=document.querySelector('.user-menu-wrap');
+  const menu=document.getElementById('menu-usuario-dropdown');
+  if(!wrap||!menu||!menu.classList.contains('show')) return;
+  if(!wrap.contains(e.target)) fecharMenuUsuario();
+});
+
+// "Sincronizar Dados" do menu do usuário: reenvia pro admin qualquer RDO que ficou só
+// salvo neste aparelho (sem ter chegado na nuvem ainda) E atualiza as listas de nomes/
+// funções/veículos com o que tiver de mais recente no banco — um botão só pra "colocar
+// tudo em dia" manualmente, sem precisar esperar a sincronização automática.
+async function sincronizarManualUsuario(){
+  if(!navigator.onLine){
+    showToast('📵 Sem internet no momento — não dá pra sincronizar agora.','#dc2626');
+    return;
+  }
+  showToast('🔄 Sincronizando...','#7c3aed');
+  try{
+    await verificarEReenviarPendentes();
+    carregarListas();
+    atualizarBadgeConexao();
+    showToast('✓ Dados sincronizados!','#16a34a');
+  }catch(e){
+    console.error('sincronizarManualUsuario error:',e);
+    showToast('⚠️ Não deu pra sincronizar tudo — confira sua internet e tente de novo.','#d97706');
+  }
 }
 
 // Botão disponível na própria tela de login (antes de digitar e-mail/senha) — útil em
