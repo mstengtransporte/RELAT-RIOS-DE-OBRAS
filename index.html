@@ -4258,6 +4258,11 @@ function atualizarBannerObra(){
 
 // ── LISTAS SUSPENSAS ──
 let namesList = [];
+// Cache local nome → função, usado só pra formatar o texto visível dos dropdowns
+// ("Nome Completo (Função)") sem precisar consultar o Supabase de novo a cada
+// desenho da lista. Populado em lote no início (prefetchMapaFuncoes) e também
+// atualizado a cada consulta individual (dispararConsultaEscalaEFuncao).
+let mapaFuncaoPorNome = {};
 let funcsList = ['Mecânico','Soldador','Montador','Encanador','Instrumentista','Eletricista','Mont. Andaime','Mec. Montador','Eletric. Montador','1/2 Oficial Mecânica','Pintor','Ajudante','Operador','Supervisor','Encarregado'];
 // Lista de veículos — hoje preenchida manualmente pelo encarregado/admin, igual Nome e
 // Função. O CAMPO já nasce pronto pra, no futuro, ser preenchido AUTOMATICAMENTE puxando
@@ -4297,7 +4302,13 @@ function buildNameOptions(selected=''){
   // rolar a lista inteira só pra achar essa opção lá no fim.
   let opts=`<option value="">— Selecione —</option>`;
   opts+=`<option value="__custom__">🔍 Buscar / digitar nome...</option>`;
-  semDuplicatas(namesList).forEach(n=>{ opts+=`<option value="${n}" ${n===selected?'selected':''}>${n}</option>`; });
+  semDuplicatas(namesList).forEach(n=>{
+    // "Nome Completo (Função)" no texto exibido — se não souber a função ainda
+    // (cache local vazio pra esse nome), mostra só o nome mesmo, sem parênteses vazios.
+    const funcao=mapaFuncaoPorNome[n];
+    const rotulo=funcao?`${n} (${funcao})`:n;
+    opts+=`<option value="${n}" ${n===selected?'selected':''}>${rotulo}</option>`;
+  });
   return opts;
 }
 function buildFuncOptions(selected=''){
@@ -4603,6 +4614,7 @@ async function buscarFuncaoAutomatica(nome,i){
     if(error||!data||!data.funcao) return; // tabela/coluna ainda não existe, ou em branco pra esse nome — mantém editável, sem alterar nada
     const funcao=String(data.funcao).trim();
     if(!funcao) return;
+    mapaFuncaoPorNome[nome]=funcao;
     if(!funcsList.includes(funcao)){ funcsList.push(funcao); salvarListas(); }
     funcSel.innerHTML=buildFuncOptions(funcao);
     funcSel.value=funcao;
@@ -4814,6 +4826,41 @@ function carregarListas(){
   funcsList=semDuplicatas(funcsList);
   if(namesList.length!==nomesQtdAntes||vehiclesList.length!==veicQtdAntes||funcsList.length!==funcQtdAntes){
     salvarListas();
+  }
+  prefetchMapaFuncoes(); // não bloqueia — atualiza os dropdowns já abertos assim que a resposta chegar
+}
+
+// Busca de uma vez só (em lote) a função de TODOS os funcionários cadastrados no
+// Supabase, montando o cache local (mapaFuncaoPorNome) usado pra mostrar "Nome
+// (Função)" nos dropdowns — sem isso, cada nome só mostraria a função DEPOIS de já
+// ter sido selecionado uma vez (quando dispararConsultaEscalaEFuncao roda). Silenciosa
+// de propósito (sem toast): se a tabela/coluna ainda não existir, ou não tiver
+// internet, os dropdowns simplesmente continuam mostrando só o nome, sem erro nenhum
+// pra pessoa.
+async function prefetchMapaFuncoes(){
+  const supabaseClient=getSupabaseClient();
+  if(!supabaseClient) return;
+  try{
+    const{data,error}=await supabaseClient.from('funcionarios').select('nome,funcao');
+    if(error||!data) return;
+    let mudou=false;
+    data.forEach(row=>{
+      if(row.funcao && mapaFuncaoPorNome[row.nome]!==row.funcao){
+        mapaFuncaoPorNome[row.nome]=row.funcao;
+        mudou=true;
+      }
+    });
+    if(mudou){
+      // Atualiza os dropdowns de nome que já estiverem na tela, sem perder o valor
+      // selecionado em cada linha — só o texto exibido das opções muda.
+      document.querySelectorAll('select.cell-name').forEach(sel=>{
+        const atual=sel.value;
+        sel.innerHTML=buildNameOptions(atual);
+        sel.value=atual;
+      });
+    }
+  }catch(e){
+    console.error('prefetchMapaFuncoes error (tabela/coluna funcionarios.funcao pode ainda não existir):',e);
   }
 }
 
