@@ -1613,7 +1613,7 @@ body.dark #workers-body tr:hover{background-color:rgba(58,110,232,.08)}
     <button class="btn btn-save"    onclick="salvarRDO()" title="Salva neste aparelho E envia pro admin">💾 <span>Salvar e Enviar</span></button>
     <button class="btn" style="background:linear-gradient(180deg,#2568d6 0%,#123166 100%);color:#fff" onclick="verificarEReenviarPendentes()" title="Confere se algum RDO seu ficou só neste aparelho sem chegar no admin, e reenvia">🔄 <span>Reenviar</span></button>
     <button class="btn btn-new"     onclick="novoRDO()">📄 <span>Novo RDO</span></button>
-    <button class="btn btn-search"  onclick="abrirBuscaRDO()">🔍 <span>Buscar todos RDOs</span></button>
+    <button class="btn btn-search"  onclick="abrirBuscaRDO()">🔍 <span>Pesquisar RDOs</span></button>
     <button class="btn admin-only-btn" style="background:linear-gradient(180deg,#2568d6 0%,#123166 100%);color:#fff" onclick="abrirDashboardAoVivo()" title="Visão geral ao vivo — atualiza sozinho, mostra tudo que está acontecendo no sistema agora">📡 <span>Dashboard</span></button>
     <button class="btn admin-only-btn" style="background:linear-gradient(180deg,#2568d6 0%,#123166 100%);color:#fff" onclick="abrirPainelExecutivo()" title="Visão geral de todos os encarregados, ou individual de cada um">🎯 <span>Executivo</span></button>
     <button class="btn admin-only-btn" style="background:linear-gradient(180deg,#2568d6 0%,#123166 100%);color:#fff" onclick="abrirProjetos()" title="Total de horas de cada projeto, do início até a conclusão, em qualquer status">📁 <span>Horas/Projeto</span></button>
@@ -3925,6 +3925,28 @@ document.addEventListener('DOMContentLoaded',()=>{
   document.body.style.overflow='hidden';
   aplicarEmailLembrado();
   verificarSessaoEIniciar();
+
+  // RE-seleção do mesmo funcionário: o evento nativo "change" do <select> só dispara
+  // quando o valor escolhido MUDA de verdade — escolher de novo o mesmo nome que já
+  // estava ali (ex: reabriu a lista e confirmou o mesmo) não dispara nada sozinho. Este
+  // listener delegado (funciona pra qualquer linha, inclusive as criadas depois) guarda
+  // o valor no foco e compara no blur — se for o mesmo nome de antes, dispara a mesma
+  // consulta de novo (veículo + função), do mesmo jeito que uma troca de verdade faria.
+  const workersBody=document.getElementById('workers-body');
+  if(workersBody){
+    workersBody.addEventListener('focusin',e=>{
+      if(e.target.matches('select.cell-name')) e.target.dataset.antesDoFoco=e.target.value;
+    });
+    workersBody.addEventListener('focusout',e=>{
+      const sel=e.target;
+      if(!sel.matches||!sel.matches('select.cell-name')) return;
+      const antes=sel.dataset.antesDoFoco;
+      if(sel.value && sel.value===antes && sel.value!=='__custom__'){
+        const i=sel.id.replace('name-','');
+        dispararConsultaEscalaEFuncao(sel.value,i);
+      }
+    });
+  }
 });
 
 // ── Gera próximo número de RDO automaticamente ──
@@ -4231,7 +4253,7 @@ function onNameChange(sel,i){
         novaSel.innerHTML=buildNameOptions(n);
         novaSel.value=n;
         td.replaceChild(novaSel,inp);
-        buscarVeiculoAutomatico(n,i);
+        dispararConsultaEscalaEFuncao(n,i);
       } else {
         const novaSel=document.createElement('select');
         novaSel.className='cell-name';
@@ -4253,7 +4275,7 @@ function onNameChange(sel,i){
   }
   sel.dataset.prev=sel.value;
   recalcAll();
-  buscarVeiculoAutomatico(sel.value,i);
+  dispararConsultaEscalaEFuncao(sel.value,i);
 }
 
 function onFuncChange(sel,i){
@@ -4429,6 +4451,48 @@ async function carregarVeiculosDaEscala(){
       });
     }
   }catch(e){ console.error('carregarVeiculosDaEscala error:',e); }
+}
+
+// PREPARAÇÃO DA CONSULTA DE FUNÇÃO: busca a função/cargo do colaborador a partir de um
+// cadastro central (tabela "funcionarios", coluna "funcao") — pensada pra já funcionar
+// automaticamente assim que esse cadastro existir/for populado no banco, sem quebrar
+// nada enquanto isso não acontece. Se a tabela ainda não existir, a coluna ainda não
+// existir, ou vier em branco pra esse nome, a função simplesmente não faz nada — o
+// campo Função continua editável manualmente, do jeito que já era antes. Nunca mostra
+// erro pro usuário por causa disso (é uma tentativa "silenciosa" de preencher sozinho,
+// não uma etapa obrigatória).
+async function buscarFuncaoAutomatica(nome,i){
+  const funcSel=document.getElementById(`func-${i}`);
+  if(!funcSel||funcSel.tagName!=='SELECT') return; // se a célula virou <input> (edição manual em andamento), não mexe
+  if(!nome||nome==='__custom__') return;
+  const supabaseClient=getSupabaseClient();
+  if(!supabaseClient) return;
+  try{
+    const{data,error}=await supabaseClient
+      .from('funcionarios')
+      .select('funcao')
+      .ilike('nome',nome)
+      .maybeSingle();
+    if(error||!data||!data.funcao) return; // tabela/coluna ainda não existe, ou em branco pra esse nome — mantém editável, sem alterar nada
+    const funcao=String(data.funcao).trim();
+    if(!funcao) return;
+    if(!funcsList.includes(funcao)){ funcsList.push(funcao); salvarListas(); }
+    funcSel.innerHTML=buildFuncOptions(funcao);
+    funcSel.value=funcao;
+  }catch(e){
+    // Erro esperado enquanto a tabela/coluna "funcionarios.funcao" ainda não existir no
+    // banco — fica só no console, não interrompe nem avisa o usuário à toa.
+    console.error('buscarFuncaoAutomatica error (cadastro de função pode ainda não existir no banco):',e);
+  }
+}
+
+// Disparador único: toda vez que um funcionário é selecionado (ou RE-selecionado, veja
+// o listener de foco/blur mais abaixo) numa linha do RDO, busca AO MESMO TEMPO o
+// veículo dele na Escala do dia e a função dele no cadastro — os dois preenchimentos
+// automáticos partem sempre do mesmo gatilho, juntos.
+function dispararConsultaEscalaEFuncao(nome,i){
+  buscarVeiculoAutomatico(nome,i);
+  buscarFuncaoAutomatica(nome,i);
 }
 
 // Quando um funcionário é escolhido numa linha do RDO, busca automaticamente
@@ -5352,15 +5416,11 @@ async function salvarRDO(){
   try{
     const d=getFormData();
 
-    // VALIDAÇÃO COMPLETA: nunca deixa enviar um RDO pro admin com qualquer pendência —
-    // cabeçalho, equipe, veículo/status, horas, projeto/OS, status do projeto ou
-    // descrição. Cada campo com problema é destacado em vermelho na tela.
-    const faltando=validarRDOCompletoEDestacar(d);
-    if(faltando.length){
-      showToast(`⚠️ Faltam preencher: ${faltando.join(', ')}`,'#dc2626');
-      alert(`Não é possível enviar o RDO — faltam preencher/corrigir estes itens:\n\n${faltando.map(f=>'• '+f).join('\n')}\n\nOs campos com pendência foram destacados em vermelho na tela. Preencha e tente enviar de novo.`);
-      return;
-    }
+    // VALIDAÇÃO ÚNICA E UNIFICADA: nunca deixa enviar um RDO pro admin com qualquer
+    // pendência — cabeçalho, equipe, veículo/status, horas, projeto/OS, status do
+    // projeto ou descrição. Cada campo com problema é destacado em vermelho na tela
+    // (some assim que for preenchido). Mesma validação usada antes de Excel/PDF/WhatsApp.
+    if(!bloquearSeFormularioInvalido(d)) return;
 
     const key=chaveRDO(d.header.data);
 
@@ -6084,6 +6144,8 @@ function getNomeArquivoBackup(){
 function exportarPDF(){
   if(!travarAcao('exportarPDF',2000)) return;
   autoSilentSave();
+  // Mesma validação unificada dos outros pontos de entrada.
+  if(!bloquearSeFormularioInvalido()) return;
   // Geração via biblioteca externa (html2canvas) se mostrou pouco confiável em diversos
   // celulares (tela em branco, campos cortados). Por isso o botão PDF usa SEMPRE a
   // impressão nativa do navegador/celular — 100% confiável, mostra tudo corretamente,
@@ -6658,29 +6720,43 @@ function gerarPdfComJsPDF(){
   return doc;
 }
 
-function validarRDOAntesDeCompartilhar(h,oses){
-  const problemas=[];
-  if(!h.obra) problemas.push('Obra/Projeto');
-  if(!h.enc) problemas.push('Encarregado');
-  const temOSE=(oses||[]).some((o,idx)=>oseTemConteudo(idx+1));
-  if(!temOSE) problemas.push('nenhuma OSE preenchida');
-  return problemas;
+// Destaque de erro reativo: aplica a borda/anel vermelho no campo e registra um
+// listener que TIRA o destaque assim que a pessoa preencher aquele campo especificamente
+// — não é um temporizador (antes o aviso sumia sozinho depois de alguns segundos, mesmo
+// que o campo continuasse vazio; agora só some quando o problema é corrigido de verdade).
+// Funciona em <select>, <input>/<textarea> e nas divs "contenteditable" (campo de
+// Descrição da OSE, que não é um input comum).
+function destacarCampoInvalido(el){
+  if(!el) return;
+  el.classList.add('campo-invalido');
+  el.style.outline='3px solid #dc2626';
+  el.style.outlineOffset='2px';
+  el.style.boxShadow='0 0 0 2px rgba(220,38,38,.35)';
+  const limpar=()=>{
+    const valor=el.matches&&el.matches('[contenteditable]')?(el.innerText||'').trim():(el.value||'').trim();
+    if(!valor) return;
+    el.style.outline='';
+    el.style.outlineOffset='';
+    el.style.boxShadow='';
+    el.classList.remove('campo-invalido');
+    el.removeEventListener('input',limpar);
+    el.removeEventListener('change',limpar);
+  };
+  el.addEventListener('input',limpar);
+  el.addEventListener('change',limpar);
 }
 
-// Validação COMPLETA e rigorosa antes de "Salvar e Enviar" — cobre todo o formulário
-// (não só o cabeçalho): Obra, Disciplina, Data, Encarregado, Equipe, Veículo/Status de
-// cada funcionário, Horas lançadas, Projeto/OS, Status do Projeto e Descrição de cada
-// OSE ativa. Cada campo com pendência é destacado em vermelho na tela (o destaque some
-// sozinho depois de alguns segundos). Devolve a lista de problemas encontrados — lista
-// vazia significa "tudo certo, pode enviar".
-function validarRDOCompletoEDestacar(d){
+// VALIDAÇÃO ÚNICA E UNIFICADA do formulário inteiro — usada antes de QUALQUER ação que
+// transmita ou gere um documento a partir do RDO: Salvar/Enviar ao Supabase, Exportar
+// Excel, Exportar PDF e Compartilhar via WhatsApp. Cobre Obra, Disciplina, Data,
+// Encarregado, Equipe, Veículo/Status e Horas de cada funcionário, Projeto/OS, Status do
+// Projeto e Descrição de cada OSE ativa. Cada campo com pendência é destacado em
+// vermelho na tela (ver destacarCampoInvalido, acima). Devolve a lista de problemas
+// encontrados — lista vazia significa "tudo certo, pode prosseguir". Aceita opcionalmente
+// os dados já coletados (d); se não vier nada, coleta sozinha via getFormData().
+function validarFormularioRDO(d){
+  d=d||getFormData();
   const problemas=[];
-  function destacar(el){
-    if(!el) return;
-    el.style.outline='3px solid #dc2626';
-    el.style.outlineOffset='2px';
-    setTimeout(()=>{el.style.outline='';el.style.outlineOffset='';},6000);
-  }
 
   // ── Cabeçalho: Obra, Disciplina, Data, Dia da Semana, Encarregado ──
   const camposHeader=[
@@ -6691,7 +6767,7 @@ function validarRDOCompletoEDestacar(d){
     {id:'h-enc',rotulo:'Encarregado',valor:d.header.enc}
   ];
   camposHeader.forEach(c=>{
-    if(!c.valor){ problemas.push(c.rotulo); destacar(document.getElementById(c.id)); }
+    if(!c.valor){ problemas.push(c.rotulo); destacarCampoInvalido(document.getElementById(c.id)); }
   });
 
   // ── Equipe: precisa de pelo menos 1 funcionário selecionado ──
@@ -6704,14 +6780,14 @@ function validarRDOCompletoEDestacar(d){
   workersComNome.forEach(w=>{
     if(!w.vehicle){
       problemas.push(`Veículo/Status de ${w.name}`);
-      destacar(document.getElementById(`vehicle-${w.idx}`));
+      destacarCampoInvalido(document.getElementById(`vehicle-${w.idx}`));
     }
     const temHoras=(w.hrs||[]).some(v=>parseHrs(v)>0);
     // Quem está marcado com um status de ausência (Falta/Saiu mais cedo/Transferido)
     // não precisa ter horas lançadas — o próprio status já explica a ausência do dia.
     if(!temHoras && !STATUS_ABSENTEISMO_VEICULO.includes(w.vehicle)){
       problemas.push(`Horas de ${w.name}`);
-      for(let o=1;o<=NUM_OSE;o++) destacar(document.getElementById(`hrs-${w.idx}-${o}`));
+      for(let o=1;o<=NUM_OSE;o++) destacarCampoInvalido(document.getElementById(`hrs-${w.idx}-${o}`));
     }
   });
 
@@ -6719,7 +6795,7 @@ function validarRDOCompletoEDestacar(d){
   const osesComNome=(d.oses||[]).filter(o=>o.name);
   if(!osesComNome.length){
     problemas.push('Projeto/OS (nenhuma OSE preenchida)');
-    destacar(document.getElementById('ose-name-1'));
+    destacarCampoInvalido(document.getElementById('ose-name-1'));
   }
 
   // ── Pra cada OSE preenchida: Status do Projeto e Descrição ──
@@ -6728,16 +6804,28 @@ function validarRDOCompletoEDestacar(d){
     if(!o.name) return; // OSE em branco não precisa de status/descrição
     if(!o.status){
       problemas.push(`Status do Projeto da OSE ${n} (${o.name})`);
-      destacar(document.getElementById(`ose-status-${n}`));
+      destacarCampoInvalido(document.getElementById(`ose-status-${n}`));
     } else if(o.status!=='sem' && !(o.descText||'').trim()){
       // Qualquer status diferente de "Sem Atividade" precisa vir acompanhado de uma
       // descrição do que foi feito — sem isso o RDO não serve pra documentar nada.
       problemas.push(`Descrição da OSE ${n} (${o.name})`);
-      destacar(document.getElementById(`ose-desc-${n}`));
+      destacarCampoInvalido(document.getElementById(`ose-desc-${n}`));
     }
   });
 
   return problemas;
+}
+
+// Dispara a validação unificada e trata o bloqueio de forma padronizada — usada nos 4
+// pontos de entrada (Salvar/Enviar, Excel, PDF, WhatsApp). Devolve true se está tudo
+// certo (pode prosseguir) e false se bloqueou (mostra o alerta padrão e destaca os
+// campos, quem chamou só precisa dar "return" quando vier false).
+function bloquearSeFormularioInvalido(d){
+  const problemas=validarFormularioRDO(d);
+  if(!problemas.length) return true;
+  showToast('⚠️ Preencha todos os campos obrigatórios em destaque para prosseguir.','#dc2626');
+  alert(`Preencha todos os campos obrigatórios em destaque para prosseguir.\n\nPendências encontradas:\n${problemas.map(f=>'• '+f).join('\n')}`);
+  return false;
 }
 
 function pdfParaWhatsApp(){
@@ -6747,13 +6835,9 @@ function pdfParaWhatsApp(){
   const dia=document.getElementById('h-dia')?.value||'';
   const filename=getPdfFilename();
 
-  // Evita mandar um RDO incompleto por engano — avisa e pede confirmação, mas não trava
-  // (a pessoa pode ter um motivo válido pra compartilhar mesmo assim).
-  const problemas=validarRDOAntesDeCompartilhar(h,d.oses);
-  if(problemas.length){
-    const ok=confirm(`⚠️ Este RDO está sem preencher: ${problemas.join(', ')}.\n\nDeseja compartilhar mesmo assim?`);
-    if(!ok) return;
-  }
+  // Mesma validação unificada dos outros pontos de entrada — bloqueia de vez (sem opção
+  // de "compartilhar mesmo assim") se faltar qualquer coisa no formulário.
+  if(!bloquearSeFormularioInvalido(d)) return;
 
   // Mensagem padrão de identificação — vai JUNTO com o arquivo (como legenda, quando o
   // aparelho suporta compartilhar arquivo real) ou sozinha só no método antigo de reserva.
@@ -6852,6 +6936,8 @@ async function exportarXLSX(){
   if(!travarAcao('exportarXLSX')) return;
   if(typeof ExcelJS==='undefined'){ showToast('Biblioteca de Excel ainda carregando — espera 2 segundos e tenta de novo.','#d97706'); return; }
   const d=getFormData(); const h=d.header;
+  // Mesma validação unificada dos outros pontos de entrada.
+  if(!bloquearSeFormularioInvalido(d)) return;
   const dia=document.getElementById('h-dia').value;
   const sL={sem:'SEM ATIVIDADE',and:'EM ANDAMENTO',par:'PARALISADO',blq:'ABSENTEÍSMO',ext:'EXTRA ESCOPO / ADICIONAL',conc:'CONCLUÍDO'};
   const corFill={sem:'FFE8ECF4',and:'FF1A52C8',par:'FFE07010',blq:'FFCC2020',ext:'FF158038',conc:'FF6830CC'};
