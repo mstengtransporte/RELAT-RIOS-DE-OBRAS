@@ -1239,9 +1239,9 @@ input.login-input,
      sem empurrar a coluna "TOTAL H.H/DIA" pra fora da folha impressa.
      Ordem das colunas: 1=# 2=Nome 3=Função 4=Veículo 5-10=OSE01-06 11=Total 12=Excluir */
   table th:nth-child(1),table td:nth-child(1){width:3%!important}
-  table th:nth-child(2),table td:nth-child(2){width:18%!important}
-  table th:nth-child(3),table td:nth-child(3){width:11%!important}
-  table th:nth-child(4),table td:nth-child(4){width:11%!important}
+  table th:nth-child(2),table td:nth-child(2){width:16%!important}
+  table th:nth-child(3),table td:nth-child(3){width:10%!important}
+  table th:nth-child(4),table td:nth-child(4){width:14%!important}
   table th:nth-child(5),table td:nth-child(5),
   table th:nth-child(6),table td:nth-child(6),
   table th:nth-child(7),table td:nth-child(7),
@@ -1299,6 +1299,22 @@ input.login-input,
     word-break:break-word!important;
     overflow-wrap:break-word!important;
     line-height:1.25!important
+  }
+  /* Coluna Veículo/Status (4ª coluna) — só ela. Palavras ÚNICAS e compridas (ex:
+     "TRANSFERIDO", "EQUIPAMENTO") não têm espaço no meio pra quebrar, então o
+     word-break:break-word geral (usado em Nome/Função, que são compostos por várias
+     palavras curtas) acabava cortando essas palavras longas no meio de qualquer jeito
+     — a fonte reduzida (7.5pt em vez de 8pt) mais keep-all corrige isso especificamente
+     aqui, sem alterar Nome/Função (que já quebravam bem entre palavras). keep-all só
+     permite quebra em espaço/hífen — nunca no meio de uma palavra única; se ainda assim
+     uma palavra sozinha for mais larga que a coluna, overflow-wrap:break-word entra como
+     último recurso (raro, só em palavras absurdamente compridas), preservando o texto
+     visível em vez de cortar escondido. */
+  table td:nth-child(4) .cell-print-text{
+    font-size:7.5pt!important;
+    white-space:normal!important;
+    word-break:keep-all!important;
+    overflow-wrap:break-word!important
   }
   /* Células de horas — cores conforme OSE */
   textarea.hrs{
