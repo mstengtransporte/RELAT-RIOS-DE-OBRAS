@@ -1538,6 +1538,7 @@ input.login-input,
     gap:12px!important;
     flex-wrap:wrap!important;
     align-items:center!important;
+    justify-content:center!important;
     margin-top:6px!important;
     padding:6px 10px!important;
     border:1.5px solid #999!important;
@@ -1830,7 +1831,6 @@ body.dark #workers-body tr:hover{background-color:rgba(58,110,232,.08)}
     <div class="print-legend-item"><span class="print-legend-dot" style="background:#158038"></span>Extra Escopo / Adicional</div>
     <div class="print-legend-item"><span class="print-legend-dot" style="background:#e07010"></span>Paralisado</div>
     <div class="print-legend-item"><span class="print-legend-dot" style="background:#b91c1c"></span>Absenteísmo</div>
-    <div class="print-legend-item"><span class="print-legend-dot" style="background:#0891b2"></span>Integração / Outro</div>
     <div class="print-legend-item"><span class="print-legend-dot" style="background:#6830cc"></span>Concluído</div>
   </div>
 
@@ -7097,13 +7097,15 @@ function validarFormularioRDO(d){
     destacarCampoInvalido(document.getElementById('ose-name-1'));
   }
 
-  // ── Pra cada OSE preenchida: Status do Projeto (sempre obrigatório) e Descrição dos
-  // Serviços Realizados (sempre obrigatória, mesmo quando o status é "Sem Atividade") ──
+  // ── Pra cada OSE preenchida: Status do Projeto (obrigatório e precisa ser um status
+  // de verdade — "Sem Atividade" é só o valor inicial enquanto preenche, não pode ser
+  // o que fica quando envia) e Descrição dos Serviços Realizados (sempre obrigatória,
+  // mesmo quando o status escolhido for diferente de "Sem Atividade") ──
   (d.oses||[]).forEach((o,idx)=>{
     const n=idx+1;
     if(!o.name) return; // OSE em branco não precisa de status/descrição
-    if(!o.status){
-      problemas.push(`Status do Projeto da OSE ${n} (${o.name})`);
+    if(!o.status || o.status==='sem'){
+      problemas.push('Por favor, selecione um status válido para a obra/projeto (Em Andamento, Extra Escopo, Paralisado, Concluído, etc.) antes de enviar o RDO.');
       destacarCampoInvalido(document.getElementById(`ose-status-${n}`));
     }
     if(!(o.descText||'').trim()){
@@ -7112,7 +7114,7 @@ function validarFormularioRDO(d){
     }
   });
 
-  return problemas;
+  return [...new Set(problemas)];
 }
 
 // Modal de alerta de pendências — reestilizado a pedido, substitui o antigo
