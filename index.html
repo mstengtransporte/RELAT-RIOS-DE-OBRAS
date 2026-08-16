@@ -6687,12 +6687,39 @@ function gerarPdfComJsPDF(){
   const OSE_C=Array.from({length:6},(_,i)=>sColor(oseStatus[i+1]||'sem'));
 
   // Cabeçalho da tabela — largura total = CW (190mm)
-  // #=6, FUNC=36, FUNCAO=24, 6×OSE=16 cada (96), TOTAL=14  → total=6+36+24+96+14=176... precisa=190
-  // Ajuste: #=6, FUNC=42, FUNCAO=28, 6×OSE=15 (90), TOTAL=14 → 6+42+28+90+14=180
-  // Final: #=6, FUNC=43, FUNCAO=28, 6×OSE=15 (90), TOTAL=13 → 6+43+28+90+13=180... ainda 10 a menos
-  // Usar: #=6, FUNC=46, FUNCAO=30, 6×OSE=16 (96), TOTAL=12 → 6+46+30+96+12=190 ✓
-  const COL_NUM=6, COL_FUNC=46, COL_FN=30, COL_OSE=16, COL_TOT=12;
+  // Larguras recalculadas pra incluir a coluna VEÍCULO (que faltava nesta função — o
+  // botão de impressão normal já tinha, mas esta geração via jsPDF nunca teve) — e
+  // testadas de verdade com jsPDF (doc.getTextWidth) pros termos mais compridos do
+  // dia a dia ("INSTRUMENTISTA" cabe em 1 linha a 7pt com folga dentro de 26mm; mesmo
+  // teste pra "TRANSFERIDO"/"CALDEIREIRO" dentro de 24mm):
+  // #=6, FUNCIONÁRIO=31, FUNÇÃO=26, VEÍCULO=24, 6×OSE=15 (90), TOTAL=13 → soma=190 ✓
+  const COL_NUM=6, COL_FUNC=31, COL_FN=26, COL_VEIC=24, COL_OSE=15, COL_TOT=13;
   const TH=8, RH=6.5;
+  // Nenhuma palavra pode ultrapassar a borda da coluna nem ser cortada no meio — era o
+  // outro problema: o texto de Funcionário/Função era desenhado sem NENHUM limite de
+  // largura antes, então um nome comprido simplesmente vazava por cima da coluna vizinha.
+  // Esta versão tenta caber numa linha só (7pt, o tamanho normal); se mesmo assim uma
+  // palavra não couber (caso raro, além do que os testes acima cobrem), cai pra 2 linhas
+  // com fonte um pouco menor (6pt) — MAS a quebra continua acontecendo só em espaço entre
+  // palavras (é o que splitTextToSize faz), nunca no meio de uma palavra única. Ou seja:
+  // o texto às vezes ganha uma 2ª linha em vez de cortar — nunca perde informação
+  // escondida atrás da borda.
+  function desenharTextoEncaixado(texto,xEsq,yTopo,larguraCol,alinhamento){
+    texto=(texto||'').toString();
+    if(!texto) texto='—';
+    const larguraMax=larguraCol-3;
+    doc.setFont('helvetica','bold');
+    doc.setFontSize(7);
+    let linhas=doc.splitTextToSize(texto,larguraMax);
+    if(linhas.length>2){
+      doc.setFontSize(6);
+      linhas=doc.splitTextToSize(texto,larguraMax);
+    }
+    linhas=linhas.slice(0,2);
+    const cy=yTopo+RH/2+(linhas.length>1?-0.3:1.2);
+    const xTxt=alinhamento==='C'? xEsq+larguraCol/2: xEsq+1.5;
+    doc.text(linhas,xTxt,cy,{align:alinhamento==='C'?'center':'left'});
+  }
   // O cabeçalho SEMPRE identifica as colunas como "OSE 01"…"OSE 06" (igual à planilha e à
   // tela) — nunca é trocado pelo nome do projeto nem colorido por status. Quem informa o
   // nome/cor de cada OSE são os cards de descrição logo abaixo, que já trazem esse mesmo
@@ -6701,6 +6728,7 @@ function gerarPdfComJsPDF(){
     {l:'#',w:COL_NUM,oi:-1},
     {l:'FUNCIONÁRIO',w:COL_FUNC,oi:-1},
     {l:'FUNÇÃO',w:COL_FN,oi:-1},
+    {l:'VEÍCULO',w:COL_VEIC,oi:-1},
     ...Array.from({length:6},(_,i)=>({l:`OSE ${String(i+1).padStart(2,'0')}\nHRS`,w:COL_OSE,oi:-1})),
     {l:'TOTAL\nH.H/DIA',w:COL_TOT,oi:-1}
   ];
@@ -6739,17 +6767,24 @@ function gerarPdfComJsPDF(){
     newPage(RH+1);
     const bg=ri%2===0? C.white: C.light;
     x=M; sd(C.border); doc.setLineWidth(.2);
-    const nm=(w.name||'').replace('__custom__','').trim()||'—';
-    const fn=(w.func||'').trim()||'—';
-    [{v:String(ri+1),w:COL_NUM,a:'C'},{v:nm,w:TCOLS[1].w,a:'L'},{v:fn,w:COL_FN,a:'L'}]
-      .forEach(({v,w,a})=>{
-        sf(bg); sd(C.border); doc.setLineWidth(.2);
-        doc.rect(x,y,w,RH,'FD');
-        doc.setFont('helvetica','bold'); doc.setFontSize(8); st(C.black);
-        if(a==='C') doc.text(v.toUpperCase(),x+w/2,y+RH/2+1.2,{align:'center'});
-        else doc.text(v.toUpperCase(),x+1.5,y+RH/2+1.2);
-        x+=w;
-      });
+    const nm=(w.name||'').replace('__custom__','').trim().toUpperCase()||'—';
+    const fn=(w.func||'').trim().toUpperCase()||'—';
+    const vc=(w.vehicle||'').trim().toUpperCase()||'—';
+    // Número da linha (coluna #) é sempre curto, desenha direto sem o encaixe especial.
+    sf(bg); sd(C.border); doc.setLineWidth(.2);
+    doc.rect(x,y,COL_NUM,RH,'FD');
+    doc.setFont('helvetica','bold'); doc.setFontSize(8); st(C.black);
+    doc.text(String(ri+1),x+COL_NUM/2,y+RH/2+1.2,{align:'center'});
+    x+=COL_NUM;
+    // Funcionário, Função e Veículo passam pelo encaixe robusto — nunca cortam uma
+    // palavra no meio, e nunca vazam pra fora da borda da coluna.
+    [{v:nm,w:TCOLS[1].w},{v:fn,w:COL_FN},{v:vc,w:COL_VEIC}].forEach(({v,w})=>{
+      sf(bg); sd(C.border); doc.setLineWidth(.2);
+      doc.rect(x,y,w,RH,'FD');
+      st(C.black);
+      desenharTextoEncaixado(v,x,y,w,'L');
+      x+=w;
+    });
     (w.hrs||[]).forEach((hv,oi)=>{
       const v=parseHrs(hv||'');
       const statusColuna=oseStatus[oi+1]||'sem';
@@ -6798,10 +6833,10 @@ function gerarPdfComJsPDF(){
   const grand=colTots.reduce((s,v)=>s+v,0);
   x=M;
   sf(C.hdr); sd(C.border); doc.setLineWidth(.2);
-  doc.rect(M,y,COL_NUM+TCOLS[1].w+COL_FN,RH,'FD');
+  doc.rect(M,y,COL_NUM+TCOLS[1].w+COL_FN+COL_VEIC,RH,'FD');
   doc.setFont('helvetica','bold'); doc.setFontSize(8); st(C.white);
-  doc.text('TOTAL H.H',M+(COL_NUM+TCOLS[1].w+COL_FN)/2,y+RH/2+1.2,{align:'center'});
-  x=M+COL_NUM+TCOLS[1].w+COL_FN;
+  doc.text('TOTAL H.H',M+(COL_NUM+TCOLS[1].w+COL_FN+COL_VEIC)/2,y+RH/2+1.2,{align:'center'});
+  x=M+COL_NUM+TCOLS[1].w+COL_FN+COL_VEIC;
   colTots.forEach((tot,oi)=>{
     sf(OSE_C[oi]); sd(C.border); doc.setLineWidth(.2);
     doc.rect(x,y,COL_OSE,RH,'FD');
