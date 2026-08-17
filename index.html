@@ -4061,7 +4061,11 @@ function iniciarAppAposLogin(){
   atualizarBannerObra();
   ajustarTextareasAuto();
   initAutoSave();
-  atualizarAvisoRDOsPendentes(true); // esse sim é urgente — a pessoa precisa ver na hora se tem RDO pendente
+  // "Urgente" mas não precisa travar a primeira pintura da tela pra rodar: essa
+  // varredura passa por TUDO que está salvo no aparelho (fica mais pesada quanto
+  // mais RDO acumulado com os meses) — adiada pro próximo tick (0ms) só pra deixar
+  // o navegador desenhar a tela primeiro; continua aparecendo quase instantâneo.
+  setTimeout(()=>atualizarAvisoRDOsPendentes(true),0);
   // Reconfere a cada 60s — pega o caso de alguém deixar o app aberto sem mexer em nada,
   // mesmo assim continua avisando que tem RDO parado esperando ser enviado.
   clearInterval(window._intervalAvisoPendentes);
@@ -4079,6 +4083,7 @@ function iniciarAppAposLogin(){
     carregarFuncionariosDaEscala();
     carregarVeiculosDaEscala();
     reconciliarRDOsApagadosPeloAdmin();
+    recuperarFuncoesApagadasPorEngano(); // conserto de um bug já corrigido, ver comentário na função — roda 1 vez só (e é pesada: melhor aqui, junto das outras tarefas não-urgentes, do que competindo com o carregamento inicial)
   },150);
 }
 document.addEventListener('DOMContentLoaded',()=>{
@@ -4932,7 +4937,6 @@ function carregarListas(){
   if(namesList.length!==nomesQtdAntes||vehiclesList.length!==veicQtdAntes||funcsList.length!==funcQtdAntes){
     salvarListas();
   }
-  recuperarFuncoesApagadasPorEngano(); // conserto de um bug já corrigido, ver comentário na função — roda 1 vez só
   prefetchMapaFuncoes(); // não bloqueia — atualiza os dropdowns já abertos assim que a resposta chegar
 }
 
