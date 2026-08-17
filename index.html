@@ -4932,7 +4932,52 @@ function carregarListas(){
   if(namesList.length!==nomesQtdAntes||vehiclesList.length!==veicQtdAntes||funcsList.length!==funcQtdAntes){
     salvarListas();
   }
+  recuperarFuncoesApagadasPorEngano(); // conserto de um bug já corrigido, ver comentário na função — roda 1 vez só
   prefetchMapaFuncoes(); // não bloqueia — atualiza os dropdowns já abertos assim que a resposta chegar
+}
+
+// CONSERTO DE INCIDENTE (uma vez só, nunca mais depois): uma versão anterior desta
+// correção tentou "limpar" funcsList do mesmo jeito que nomes/veículos — e isso
+// apagou opções de função que já estavam cadastradas e em uso, porque nem toda
+// função do RDO corresponde a um funcionarios.funcao da Escala (muita função é
+// digitada livre, por linha, tipo "Ajudante"/"Soldador"). Essa lógica de apagar já
+// foi REMOVIDA do código (funcsList só cresce agora, nunca encolhe sozinha) — esta
+// função aqui só existe pra RECUPERAR o que já tinha sido apagado por engano antes
+// dessa remoção, puxando de volta do histórico de RDOs já salvos no Supabase (que
+// preservam intacto o funcs_list de cada RDO, e também o valor de função usado por
+// cada trabalhador em cada linha — nada foi perdido de verdade lá). Só ADICIONA de
+// volta, nunca remove nada — roda 1 vez por aparelho e nunca mais depois disso.
+async function recuperarFuncoesApagadasPorEngano(){
+  const chaveFeito='rdo-recuperacao-funcoes-v1';
+  if(localStorage.getItem(chaveFeito)) return; // já rodou neste aparelho, não repete
+  const supabaseClient=getSupabaseClient();
+  if(!supabaseClient) return; // tenta de novo na próxima vez que abrir com internet
+  try{
+    const funcoesRecuperadas=new Set();
+    const[{data:rdosData,error:erroRdos},{data:workersData,error:erroWorkers}]=await Promise.all([
+      supabaseClient.from('rdos').select('funcs_list').limit(5000),
+      supabaseClient.from('rdo_workers').select('funcao').not('funcao','is',null).limit(20000)
+    ]);
+    if(!erroRdos&&rdosData){ rdosData.forEach(r=>{ (r.funcs_list||[]).forEach(f=>{ if(f) funcoesRecuperadas.add(f); }); }); }
+    if(!erroWorkers&&workersData){ workersData.forEach(w=>{ if(w.funcao) funcoesRecuperadas.add(w.funcao); }); }
+    let mudou=false;
+    funcoesRecuperadas.forEach(f=>{
+      if(!funcsList.some(x=>normalizarParaComparar(x)===normalizarParaComparar(f))){ funcsList.push(f); mudou=true; }
+    });
+    if(mudou){
+      funcsList.sort();
+      salvarListas();
+      document.querySelectorAll('select.cell-func').forEach(sel=>{
+        const atual=sel.value;
+        sel.innerHTML=buildFuncOptions(atual);
+        sel.value=atual;
+      });
+      showToast(`✅ Lista de funções restaurada (${funcoesRecuperadas.size} função(ões) recuperada(s) do histórico).`,'#16a34a');
+    }
+    localStorage.setItem(chaveFeito,'1'); // só marca como feito se conseguiu consultar (sem erro de conexão) — se falhar, tenta de novo na próxima
+  }catch(e){
+    console.error('recuperarFuncoesApagadasPorEngano error:',e); // não marca como feito — tenta de novo na próxima vez
+  }
 }
 
 // Busca de uma vez só (em lote) a função de TODOS os funcionários cadastrados no
@@ -4961,34 +5006,15 @@ async function prefetchMapaFuncoes(){
       const aindaTemEssaFuncao=data.some(row=>row.nome===nome && row.funcao);
       if(!aindaTemEssaFuncao){ delete mapaFuncaoPorNome[nome]; mudou=true; }
     });
-
-    // Reconcilia funcsList (a lista de opções do dropdown de Função) com o
-    // conjunto de funções REALMENTE em uso agora por algum funcionário cadastrado
-    // — mesma lógica de nomes/veículos: acrescenta as novas, remove as que
-    // ninguém mais usa (foram trocadas/apagadas na Escala).
-    const funcoesEmUso=[...new Set(data.map(r=>r.funcao).filter(Boolean))];
-    let snapshotFuncoesAnterior=carregarUltimoSnapshotEscala('rdo-ultimo-snapshot-funcoes-escala');
-    if(snapshotFuncoesAnterior===null) snapshotFuncoesAnterior=funcsList.slice();
-    let funcsMudou=false;
-    funcoesEmUso.forEach(f=>{ if(!funcsList.some(x=>normalizarParaComparar(x)===normalizarParaComparar(f))){ funcsList.push(f); funcsMudou=true; } });
-    const funcoesRemovidas=snapshotFuncoesAnterior.filter(fAntiga=>
-      !funcoesEmUso.some(f=>normalizarParaComparar(f)===normalizarParaComparar(fAntiga))
-    );
-    if(funcoesRemovidas.length){
-      const antesQtd=funcsList.length;
-      funcsList=funcsList.filter(f=>!funcoesRemovidas.some(r=>normalizarParaComparar(r)===normalizarParaComparar(f)));
-      if(funcsList.length!==antesQtd) funcsMudou=true;
-    }
-    localStorage.setItem('rdo-ultimo-snapshot-funcoes-escala',JSON.stringify(funcoesEmUso));
-    if(funcsMudou){
-      funcsList.sort();
-      salvarListas();
-      document.querySelectorAll('select.cell-func').forEach(sel=>{
-        const atual=sel.value;
-        sel.innerHTML=buildFuncOptions(atual);
-        sel.value=atual;
-      });
-    }
+    // NÃO reconcilia funcsList aqui (revertido) — funcsList é a lista de OPÇÕES
+    // de função que aparecem pra digitar em qualquer linha do RDO, e nem toda
+    // função ali corresponde a um "funcionarios.funcao" da Escala (encarregado
+    // digita funções ad-hoc por linha, tipo "Ajudante", "Soldador" etc., que
+    // nunca precisaram estar cadastradas na Escala). Uma versão anterior desta
+    // função tentou limpar funcsList do mesmo jeito que nomes/veículos e isso
+    // apagou opções de função que já estavam cadastradas e em uso — funcsList
+    // só cresce por escolha da pessoa (ou pelo botão de gerenciar listas), nunca
+    // encolhe sozinha.
 
     if(mudou){
       // Atualiza os dropdowns de nome que já estiverem na tela, sem perder o valor
