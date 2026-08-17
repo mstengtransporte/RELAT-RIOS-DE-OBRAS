@@ -4593,14 +4593,19 @@ async function carregarFuncionariosDaEscala(){
     const{data,error}=await supabaseClient.from('funcionarios').select('nome').order('nome');
     if(error||!data) return;
     const nomesEscala=data.map(f=>f.nome).filter(Boolean);
-    const snapshotAnterior=carregarUltimoSnapshotEscala('rdo-ultimo-snapshot-nomes-escala');
+    let snapshotAnterior=carregarUltimoSnapshotEscala('rdo-ultimo-snapshot-nomes-escala');
+    // 1ª vez que essa reconciliação roda neste aparelho (nunca existiu snapshot
+    // salvo antes) — sem isso, um nome que JÁ estava fantasma antes dessa correção
+    // existir nunca seria limpo, porque não havia "antes" pra comparar e descobrir
+    // que ele sumiu. Bootstrap: assume que tudo que já está na lista veio da Escala.
+    if(snapshotAnterior===null) snapshotAnterior=namesList.slice();
     let mudou=false;
 
     // Acrescenta quem é novo na Escala e ainda não está no RDO.
     nomesEscala.forEach(n=>{ if(!namesList.some(x=>normalizarParaComparar(x)===normalizarParaComparar(n))){ namesList.push(n); mudou=true; } });
 
-    // Remove quem estava no snapshot anterior (veio da Escala numa sync passada)
-    // mas não está mais na lista atual da Escala — foi excluído de lá.
+    // Remove quem estava no snapshot anterior (veio da Escala numa sync passada,
+    // ou é o bootstrap acima) mas não está mais na lista atual da Escala.
     const removidosDaEscala=snapshotAnterior.filter(nomeAntigo=>
       !nomesEscala.some(n=>normalizarParaComparar(n)===normalizarParaComparar(nomeAntigo))
     );
@@ -4610,7 +4615,7 @@ async function carregarFuncionariosDaEscala(){
       if(namesList.length!==antesQtd) mudou=true;
     }
 
-    salvarUltimoSnapshotEscala(nomesEscala, carregarUltimoSnapshotEscala('rdo-ultimo-snapshot-veiculos-escala'));
+    salvarUltimoSnapshotEscala(nomesEscala, carregarUltimoSnapshotEscala('rdo-ultimo-snapshot-veiculos-escala')||[]);
 
     if(mudou){
       namesList.sort();
@@ -4633,7 +4638,8 @@ async function carregarVeiculosDaEscala(){
     const{data,error}=await supabaseClient.from('veiculos').select('nome').order('nome');
     if(error||!data) return;
     const veiculosEscala=data.map(v=>v.nome).filter(Boolean);
-    const snapshotAnterior=carregarUltimoSnapshotEscala('rdo-ultimo-snapshot-veiculos-escala');
+    let snapshotAnterior=carregarUltimoSnapshotEscala('rdo-ultimo-snapshot-veiculos-escala');
+    if(snapshotAnterior===null) snapshotAnterior=vehiclesList.slice();
     let mudou=false;
 
     veiculosEscala.forEach(n=>{ if(!vehiclesList.some(x=>normalizarParaComparar(x)===normalizarParaComparar(n))){ vehiclesList.push(n); mudou=true; } });
@@ -4647,7 +4653,7 @@ async function carregarVeiculosDaEscala(){
       if(vehiclesList.length!==antesQtd) mudou=true;
     }
 
-    salvarUltimoSnapshotEscala(carregarUltimoSnapshotEscala('rdo-ultimo-snapshot-nomes-escala'), veiculosEscala);
+    salvarUltimoSnapshotEscala(carregarUltimoSnapshotEscala('rdo-ultimo-snapshot-nomes-escala')||[], veiculosEscala);
 
     if(mudou){
       vehiclesList.sort();
@@ -4887,18 +4893,26 @@ function salvarListas(){
     localStorage.setItem('rdo-vehicles-list',JSON.stringify(vehiclesList));
   }catch(e){ console.error('salvarListas error:',e); }
 }
-// Guarda a última "foto" de quem veio da Escala (funcionários e veículos) — usada
-// só pra saber, na próxima sincronização, quem SUMIU de lá (foi excluído) e por
-// isso deve sair também do dropdown do RDO. Sem isso, um nome/veículo excluído na
-// Escala ficava "fantasma" pra sempre no RDO (nunca era removido, só adicionado).
-function salvarUltimoSnapshotEscala(nomes,veiculos){
+// Guarda a última "foto" de quem veio da Escala (funcionários, veículos e funções)
+// — usada só pra saber, na próxima sincronização, quem SUMIU de lá (foi excluído)
+// e por isso deve sair também do dropdown do RDO. Sem isso, um nome/veículo/função
+// excluído na Escala ficava "fantasma" pra sempre no RDO (nunca era removido, só
+// adicionado).
+function salvarUltimoSnapshotEscala(nomes,veiculos,funcoes){
   try{
     localStorage.setItem('rdo-ultimo-snapshot-nomes-escala',JSON.stringify(nomes));
     localStorage.setItem('rdo-ultimo-snapshot-veiculos-escala',JSON.stringify(veiculos));
+    if(funcoes!==undefined) localStorage.setItem('rdo-ultimo-snapshot-funcoes-escala',JSON.stringify(funcoes));
   }catch(e){ console.error('salvarUltimoSnapshotEscala error:',e); }
 }
+// Devolve null (não array vazio) quando a chave nunca existiu — diferencia "1ª vez
+// rodando essa reconciliação neste aparelho" de "já rodou antes e não achou nada".
+// Isso importa: sem essa distinção, um nome/veículo/função que JÁ estava fantasma
+// ANTES dessa correção existir nunca seria limpo (não tinha "antes" pra comparar).
 function carregarUltimoSnapshotEscala(chave){
-  try{ return JSON.parse(localStorage.getItem(chave)||'[]'); }catch(e){ return []; }
+  const bruto=localStorage.getItem(chave);
+  if(bruto===null) return null;
+  try{ return JSON.parse(bruto); }catch(e){ return null; }
 }
 function carregarListas(){
   const n=localStorage.getItem('rdo-names-list');
@@ -4941,6 +4955,41 @@ async function prefetchMapaFuncoes(){
         mudou=true;
       }
     });
+    // Some do mapa quem não tem mais função cadastrada (ou foi excluído) — senão
+    // o "Nome (Função)" antigo continua aparecendo pra sempre no dropdown.
+    Object.keys(mapaFuncaoPorNome).forEach(nome=>{
+      const aindaTemEssaFuncao=data.some(row=>row.nome===nome && row.funcao);
+      if(!aindaTemEssaFuncao){ delete mapaFuncaoPorNome[nome]; mudou=true; }
+    });
+
+    // Reconcilia funcsList (a lista de opções do dropdown de Função) com o
+    // conjunto de funções REALMENTE em uso agora por algum funcionário cadastrado
+    // — mesma lógica de nomes/veículos: acrescenta as novas, remove as que
+    // ninguém mais usa (foram trocadas/apagadas na Escala).
+    const funcoesEmUso=[...new Set(data.map(r=>r.funcao).filter(Boolean))];
+    let snapshotFuncoesAnterior=carregarUltimoSnapshotEscala('rdo-ultimo-snapshot-funcoes-escala');
+    if(snapshotFuncoesAnterior===null) snapshotFuncoesAnterior=funcsList.slice();
+    let funcsMudou=false;
+    funcoesEmUso.forEach(f=>{ if(!funcsList.some(x=>normalizarParaComparar(x)===normalizarParaComparar(f))){ funcsList.push(f); funcsMudou=true; } });
+    const funcoesRemovidas=snapshotFuncoesAnterior.filter(fAntiga=>
+      !funcoesEmUso.some(f=>normalizarParaComparar(f)===normalizarParaComparar(fAntiga))
+    );
+    if(funcoesRemovidas.length){
+      const antesQtd=funcsList.length;
+      funcsList=funcsList.filter(f=>!funcoesRemovidas.some(r=>normalizarParaComparar(r)===normalizarParaComparar(f)));
+      if(funcsList.length!==antesQtd) funcsMudou=true;
+    }
+    localStorage.setItem('rdo-ultimo-snapshot-funcoes-escala',JSON.stringify(funcoesEmUso));
+    if(funcsMudou){
+      funcsList.sort();
+      salvarListas();
+      document.querySelectorAll('select.cell-func').forEach(sel=>{
+        const atual=sel.value;
+        sel.innerHTML=buildFuncOptions(atual);
+        sel.value=atual;
+      });
+    }
+
     if(mudou){
       // Atualiza os dropdowns de nome que já estiverem na tela, sem perder o valor
       // selecionado em cada linha — só o texto exibido das opções muda.
