@@ -4664,14 +4664,18 @@ async function carregarVeiculosDaEscala(){
 // PREPARAÇÃO DA CONSULTA DE FUNÇÃO: busca a função/cargo do colaborador a partir de um
 // cadastro central (tabela "funcionarios", coluna "funcao") — pensada pra já funcionar
 // automaticamente assim que esse cadastro existir/for populado no banco, sem quebrar
-// nada enquanto isso não acontece. Se a tabela ainda não existir, a coluna ainda não
-// existir, ou vier em branco pra esse nome, a função simplesmente não faz nada — o
-// campo Função continua editável manualmente, do jeito que já era antes. Nunca mostra
-// erro pro usuário por causa disso (é uma tentativa "silenciosa" de preencher sozinho,
-// não uma etapa obrigatória).
+// nada enquanto isso não acontece. IMPORTANTE: sempre LIMPA o campo Função antes de
+// consultar — se não achar nada pra esse nome (ou o nome mudou pra outra pessoa sem
+// função cadastrada), o campo tem que ficar vazio, nunca continuar mostrando a função
+// de quem estava selecionado ali ANTES. Nunca mostra erro pro usuário por causa disso
+// (é uma tentativa "silenciosa" de preencher sozinho, não uma etapa obrigatória).
 async function buscarFuncaoAutomatica(nome,i){
   const funcSel=document.getElementById(`func-${i}`);
   if(!funcSel||funcSel.tagName!=='SELECT') return; // se a célula virou <input> (edição manual em andamento), não mexe
+  // Limpa ANTES de qualquer outra coisa — troca de nome (ou nome vazio/"__custom__")
+  // nunca deve deixar a função de quem estava ali antes grudada na linha.
+  funcSel.innerHTML=buildFuncOptions('');
+  funcSel.value='';
   if(!nome||nome==='__custom__') return;
   const supabaseClient=getSupabaseClient();
   if(!supabaseClient) return;
@@ -4681,9 +4685,13 @@ async function buscarFuncaoAutomatica(nome,i){
       .select('funcao')
       .ilike('nome',nome)
       .maybeSingle();
-    if(error||!data||!data.funcao) return; // tabela/coluna ainda não existe, ou em branco pra esse nome — mantém editável, sem alterar nada
+    if(error||!data||!data.funcao) return; // tabela/coluna ainda não existe, ou em branco pra esse nome — já está limpo, não faz mais nada
     const funcao=String(data.funcao).trim();
     if(!funcao) return;
+    // Se o nome mudou de novo enquanto essa consulta estava em andamento (troca
+    // rápida de funcionário na mesma linha), não aplica uma resposta desatualizada.
+    const nomeAtualDaLinha=document.getElementById(`name-${i}`)?.value;
+    if(nomeAtualDaLinha && normalizarParaComparar(nomeAtualDaLinha)!==normalizarParaComparar(nome)) return;
     mapaFuncaoPorNome[nome]=funcao;
     if(!funcsList.includes(funcao)){ funcsList.push(funcao); salvarListas(); }
     funcSel.innerHTML=buildFuncOptions(funcao);
