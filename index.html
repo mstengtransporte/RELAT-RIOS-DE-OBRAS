@@ -1005,6 +1005,25 @@ input.login-input,
 @media(min-width:500px){#toast{left:auto;right:20px;max-width:340px;margin:0}}
 #toast.show{opacity:1}
 
+/* Aviso amarelo persistente (mesma paleta do #aviso-operacional já usado no
+   topo do app) — pra avisos importantes que um toast rápido faria passar
+   despercebido, como a data do RDO não bater com a da Escala de Trabalho. */
+.aviso-data-divergente{
+  position:fixed;top:64px;left:50%;transform:translateX(-50%) translateY(-8px);
+  max-width:min(92vw,520px);
+  background:#fef3c7;color:#7c5a00;border:2px solid #d97706;border-radius:12px;
+  padding:12px 40px 12px 16px;box-shadow:0 6px 18px rgba(0,0,0,.22);
+  z-index:9999;opacity:0;pointer-events:none;transition:opacity .25s, transform .25s;
+  font-size:13px;font-weight:800;line-height:1.5;text-align:left;
+}
+.aviso-data-divergente.show{opacity:1;pointer-events:auto;transform:translateX(-50%) translateY(0);}
+.aviso-data-divergente .fechar-aviso-divergente{
+  position:absolute;top:4px;right:6px;background:none;border:none;
+  font-size:16px;font-weight:900;color:#7c5a00;cursor:pointer;padding:6px 9px;line-height:1;
+}
+body.dark .aviso-data-divergente{background:#3a2e05;color:#fbbf24;border-color:#d97706;}
+body.dark .aviso-data-divergente .fechar-aviso-divergente{color:#fbbf24;}
+
 /* ══════════════════════════════════════
    MOBILE
    ══════════════════════════════════════ */
@@ -2280,6 +2299,7 @@ body.dark #workers-body tr:hover{background-color:rgba(58,110,232,.08)}
 </div>
 
 <div id="toast"></div>
+<div id="avisoDataDivergente" class="aviso-data-divergente no-print"></div>
 
 <!-- PDF LOADING -->
 <div id="pdf-loading">
@@ -4808,7 +4828,9 @@ async function buscarVeiculoAutomatico(nome,i){
     const dataEscalaFmt=r.dataEscala?formatarDataBR(r.dataEscala):'';
     showToast(`🚚 Veículo preenchido: ${r.veiculo} (escala de ${dataEscalaFmt})`,'#1457c8');
   }else if(r.tipo==='sem-escala'){
-    showToast(`ℹ️ Sem escala encontrada pra ${nome} hoje — escolha o veículo manualmente.`,'#6b7fa0');
+    showToast(`ℹ️ Sem escala encontrada pra ${nome} nesta data — escolha o veículo manualmente.`,'#6b7fa0');
+    const dataFmt=data?formatarDataBR(data):data;
+    mostrarAvisoDataDivergente(`Nenhuma escala encontrada pra <strong>${nome}</strong> no dia <strong>${dataFmt}</strong> (a data deste RDO). Confira se a data do RDO está igual à data em que ele foi escalado no sistema de Escala — um dia diferente faz o veículo não ser encontrado automaticamente.`);
   }
 }
 
@@ -6203,6 +6225,18 @@ async function aplicarModeloNovoDia(d,proximoNRDO,manterStatus=true,dataAlvo=nul
       if(qtdLivre) partes.push(`${qtdLivre} sem escala hoje (livre pra preencher)`);
       if(partes.length) showToast(`🚚 Equipe carregada — ${partes.join(', ')}.`,'#1457c8');
       if(qtdErro) showToast(`⚠️ Não deu pra consultar a escala de ${qtdErro} funcionário(s) — confira o veículo deles manualmente.`,'#d97706');
+      // Aviso amarelo persistente, além do toast rápido acima — quando ninguém
+      // souber olhar o toast a tempo, pelo menos esse fica na tela. O motivo
+      // mais comum de "sem escala" em lote é a data do RDO não bater com a
+      // data em que a equipe foi realmente escalada.
+      if(qtdLivre){
+        const nomesSemEscala=linhasParaChecarEscala.filter((l,idx)=>resultados[idx].tipo==='sem-escala').map(l=>l.nome);
+        const dataRdoFmt=document.getElementById('h-data')?.value?formatarDataBR(document.getElementById('h-data').value):'';
+        const listaNomes=nomesSemEscala.length>5
+          ? nomesSemEscala.slice(0,5).join(', ')+` e mais ${nomesSemEscala.length-5}`
+          : nomesSemEscala.join(', ');
+        mostrarAvisoDataDivergente(`${qtdLivre} funcionário(s) sem escala encontrada no dia <strong>${dataRdoFmt}</strong> (a data deste RDO): ${listaNomes}. Confira se a data do RDO está igual à data em que eles foram escalados no sistema de Escala.`);
+      }
     }
   } else {
     buildWorkersTable(1);
@@ -10432,6 +10466,23 @@ function showToast(msg,color){
   const duracao=Math.min(7000,Math.max(3500,msg.length*55));
   t._timer=setTimeout(()=>t.classList.remove('show'),duracao);
 }
+
+// Aviso amarelo persistente — usado quando a Escala de Trabalho não acha
+// NADA pro funcionário na data do RDO. O motivo quase sempre é a data do
+// RDO estar diferente da data em que ele foi realmente escalado — um toast
+// rápido passa despercebido pra isso e ninguém (admin ou encarregado) nunca
+// fica sabendo. Fica na tela até a pessoa fechar ou até 9s (bem mais que o
+// toast normal), pra dar tempo real de notar.
+let avisoDataDivergenteTimeout;
+function mostrarAvisoDataDivergente(msg){
+  const el=document.getElementById('avisoDataDivergente');
+  if(!el) return;
+  el.innerHTML=`<button type="button" class="fechar-aviso-divergente" onclick="document.getElementById('avisoDataDivergente').classList.remove('show')" title="Fechar">✕</button>⚠️ ${msg}`;
+  el.classList.add('show');
+  clearTimeout(avisoDataDivergenteTimeout);
+  avisoDataDivergenteTimeout=setTimeout(()=>el.classList.remove('show'),9000);
+}
+
 
 // ════════════════════════════════════════════════════════════
 // BACKUP / RESTAURAÇÃO COMPLETA — protege contra perda de dados se o
