@@ -4579,9 +4579,13 @@ function aplicarStatusAbsenteismoNaLinha(i,valorVeiculo){
    INTEGRAÇÃO RDO ↔ ESCALA DE TRABALHO
    ============================================================ */
 
-// Busca os nomes de funcionários cadastrados na Escala de Trabalho
-// (tabela "funcionarios", mesmo banco Supabase) e junta na lista de
-// nomes do RDO — sem apagar nomes que só existem aqui no RDO.
+// Busca os nomes de funcionários cadastrados na Escala de Trabalho (tabela
+// "funcionarios", mesmo banco Supabase) e RECONCILIA com a lista de nomes do
+// RDO: acrescenta quem é novo lá, e REMOVE quem já existiu na Escala antes mas
+// foi excluído de lá (evita nome "fantasma"/duplicado sobrando pra sempre no
+// dropdown do RDO). Nomes que só existem no RDO (nunca vieram da Escala, ex:
+// digitados manualmente) NUNCA são removidos por essa reconciliação — só quem
+// já apareceu antes numa sincronização anterior e sumiu de lá.
 async function carregarFuncionariosDaEscala(){
   const supabaseClient=getSupabaseClient();
   if(!supabaseClient) return;
@@ -4589,8 +4593,25 @@ async function carregarFuncionariosDaEscala(){
     const{data,error}=await supabaseClient.from('funcionarios').select('nome').order('nome');
     if(error||!data) return;
     const nomesEscala=data.map(f=>f.nome).filter(Boolean);
+    const snapshotAnterior=carregarUltimoSnapshotEscala('rdo-ultimo-snapshot-nomes-escala');
     let mudou=false;
+
+    // Acrescenta quem é novo na Escala e ainda não está no RDO.
     nomesEscala.forEach(n=>{ if(!namesList.some(x=>normalizarParaComparar(x)===normalizarParaComparar(n))){ namesList.push(n); mudou=true; } });
+
+    // Remove quem estava no snapshot anterior (veio da Escala numa sync passada)
+    // mas não está mais na lista atual da Escala — foi excluído de lá.
+    const removidosDaEscala=snapshotAnterior.filter(nomeAntigo=>
+      !nomesEscala.some(n=>normalizarParaComparar(n)===normalizarParaComparar(nomeAntigo))
+    );
+    if(removidosDaEscala.length){
+      const antesQtd=namesList.length;
+      namesList=namesList.filter(n=>!removidosDaEscala.some(r=>normalizarParaComparar(r)===normalizarParaComparar(n)));
+      if(namesList.length!==antesQtd) mudou=true;
+    }
+
+    salvarUltimoSnapshotEscala(nomesEscala, carregarUltimoSnapshotEscala('rdo-ultimo-snapshot-veiculos-escala'));
+
     if(mudou){
       namesList.sort();
       salvarListas();
@@ -4604,9 +4625,7 @@ async function carregarFuncionariosDaEscala(){
   }catch(e){ console.error('carregarFuncionariosDaEscala error:',e); }
 }
 
-// Busca os veículos cadastrados na Escala de Trabalho (tabela "veiculos",
-// mesmo banco Supabase) e junta na lista de veículos do RDO — mesma lógica
-// da função acima, agora para a lista suspensa de veículos.
+// Mesma reconciliação acima, agora pra veículos (tabela "veiculos").
 async function carregarVeiculosDaEscala(){
   const supabaseClient=getSupabaseClient();
   if(!supabaseClient) return;
@@ -4614,8 +4633,22 @@ async function carregarVeiculosDaEscala(){
     const{data,error}=await supabaseClient.from('veiculos').select('nome').order('nome');
     if(error||!data) return;
     const veiculosEscala=data.map(v=>v.nome).filter(Boolean);
+    const snapshotAnterior=carregarUltimoSnapshotEscala('rdo-ultimo-snapshot-veiculos-escala');
     let mudou=false;
+
     veiculosEscala.forEach(n=>{ if(!vehiclesList.some(x=>normalizarParaComparar(x)===normalizarParaComparar(n))){ vehiclesList.push(n); mudou=true; } });
+
+    const removidosDaEscala=snapshotAnterior.filter(nomeAntigo=>
+      !veiculosEscala.some(n=>normalizarParaComparar(n)===normalizarParaComparar(nomeAntigo))
+    );
+    if(removidosDaEscala.length){
+      const antesQtd=vehiclesList.length;
+      vehiclesList=vehiclesList.filter(n=>!removidosDaEscala.some(r=>normalizarParaComparar(r)===normalizarParaComparar(n)));
+      if(vehiclesList.length!==antesQtd) mudou=true;
+    }
+
+    salvarUltimoSnapshotEscala(carregarUltimoSnapshotEscala('rdo-ultimo-snapshot-nomes-escala'), veiculosEscala);
+
     if(mudou){
       vehiclesList.sort();
       salvarListas();
@@ -4845,6 +4878,19 @@ function salvarListas(){
     localStorage.setItem('rdo-funcs-list',JSON.stringify(funcsList));
     localStorage.setItem('rdo-vehicles-list',JSON.stringify(vehiclesList));
   }catch(e){ console.error('salvarListas error:',e); }
+}
+// Guarda a última "foto" de quem veio da Escala (funcionários e veículos) — usada
+// só pra saber, na próxima sincronização, quem SUMIU de lá (foi excluído) e por
+// isso deve sair também do dropdown do RDO. Sem isso, um nome/veículo excluído na
+// Escala ficava "fantasma" pra sempre no RDO (nunca era removido, só adicionado).
+function salvarUltimoSnapshotEscala(nomes,veiculos){
+  try{
+    localStorage.setItem('rdo-ultimo-snapshot-nomes-escala',JSON.stringify(nomes));
+    localStorage.setItem('rdo-ultimo-snapshot-veiculos-escala',JSON.stringify(veiculos));
+  }catch(e){ console.error('salvarUltimoSnapshotEscala error:',e); }
+}
+function carregarUltimoSnapshotEscala(chave){
+  try{ return JSON.parse(localStorage.getItem(chave)||'[]'); }catch(e){ return []; }
 }
 function carregarListas(){
   const n=localStorage.getItem('rdo-names-list');
