@@ -3398,47 +3398,20 @@ async function _syncSalvarSupabaseReal(d,rdoKey){
     }
     const idAtualConfirmado=usuarioAtual.id;
     const h=d.header||{};
-    const{data:rdoRow,error:erroRdo}=await supabaseClient
-      .from('rdos')
-      .upsert({
-        rdo_key:rdoKey,
-        nrdo:h.nrdo||null,
-        data:h.data||null,
-        obra:h.obra||null,
-        disciplina:h.disc||null,
-        encarregado:h.enc||null,
-        names_list:d.namesList||[],
-        funcs_list:d.funcsList||[],
-        vehicles_list:d.vehiclesList||[],
-        row_counter:d.rowCounter||0,
-        criado_por:idAtualConfirmado
-      },{onConflict:'rdo_key'})
-      .select('id')
-      .single();
-    if(erroRdo||!rdoRow){
-      // Código 23505 = violação de índice/constraint único — é exatamente o que a trava
-      // de duplicidade (obra + nº do RDO) do banco dispara quando alguém tenta salvar
-      // um RDO repetido. Mostra uma mensagem clara em vez do erro técnico cru do Postgres.
-      if(erroRdo?.code==='23505'){
-        const msg='Já existe um RDO com esse número nesta obra. Confira o Nº do RDO (campo no topo) antes de salvar de novo.';
-        console.error('Supabase erro ao salvar RDO (duplicidade):',erroRdo.message);
-        return{sucesso:false,erro:msg};
-      }
-      const msg=erroRdo?.message||erroRdo?.hint||erroRdo?.code||'Erro desconhecido ao salvar o cabeçalho do RDO.';
-      console.error('Supabase erro ao salvar RDO:',msg);
-      return{sucesso:false,erro:msg};
-    }
-    const rdoId=rdoRow.id;
 
-    // CORREÇÃO (auditoria 2026-08-18): antes, OSEs e funcionários eram apagados
-    // (DELETE) e depois reinseridos em duas chamadas HTTP separadas. Se o app perdesse
-    // conexão ou um dos INSERTs falhasse DEPOIS do DELETE já ter sido confirmado no
-    // Supabase, o RDO ficava salvo na nuvem com a equipe/OSEs vazias — perda de dados
-    // silenciosa, sem qualquer jeito de perceber sem reabrir o RDO manualmente. Agora
-    // tudo roda dentro de uma única função no banco (salvar_rdo_detalhes, ver
-    // fix_salvar_rdo_detalhes_atomico.sql), que o Postgres executa como UMA transação:
-    // se qualquer parte falhar, TUDO é desfeito (inclusive o DELETE) e o erro volta
-    // pra cá, sem deixar o RDO pela metade.
+    // CORREÇÃO v3 (auditoria 2026-08-18 — fecha a causa raiz da duplicação): antes, o
+    // CABEÇALHO (tabela rdos) era salvo numa chamada separada, ANTES das OSEs/funcionários
+    // (que já viraram atômicas na v2). Isso significa que um erro nas OSEs/funcionários
+    // (como o bug de tipo bigint×uuid que já corrigimos) deixava uma linha "só cabeçalho"
+    // gravada de verdade no Supabase — e a sincronização que baixa RDOs da nuvem
+    // (buscarERestaurarDaNuvem) marca QUALQUER linha que já exista lá como "enviada",
+    // sem checar se tem conteúdo. Resultado prático: o rascunho incompleto reaparecia
+    // como se fosse um RDO válido e separado, e um novo número era sorteado pro que a
+    // pessoa estava tentando terminar — daí dois RDOs (dois números) pra mesma
+    // obra/data/encarregado. Agora cabeçalho + OSEs + funcionários entram numa ÚNICA
+    // função no banco (salvar_rdo_completo, ver fix_salvar_rdo_completo_atomico.sql):
+    // ou tudo é gravado, ou nada é — nunca mais existe linha "pela metade" no Supabase
+    // pra confundir a sincronização.
     const osesRows=(d.oses||[]).map((o,idx)=>({
       ose_numero:idx+1,nome:o.name||null,
       status:o.status||'sem',descricao:o.desc||null,responsavel:o.resp||null
@@ -3449,14 +3422,33 @@ async function _syncSalvarSupabaseReal(d,rdoKey){
         worker_index:idx,nome:w.name||null,funcao:w.func||null,veiculo:w.vehicle||null,hrs:w.hrs||[],hst:w.hst||[],
         status_dia:statusDiaPorRotulo(w.vehicle)
       }));
-    const{error:erroDetalhes}=await supabaseClient.rpc('salvar_rdo_detalhes',{
-      p_rdo_id:rdoId,
+    const{data:rpcResultado,error:erroRdo}=await supabaseClient.rpc('salvar_rdo_completo',{
+      p_rdo_key:rdoKey,
+      p_nrdo:h.nrdo||null,
+      p_data:h.data||null,
+      p_obra:h.obra||null,
+      p_disciplina:h.disc||null,
+      p_encarregado:h.enc||null,
+      p_names_list:d.namesList||[],
+      p_funcs_list:d.funcsList||[],
+      p_vehicles_list:d.vehiclesList||[],
+      p_row_counter:d.rowCounter||0,
+      p_criado_por:idAtualConfirmado,
       p_oses:osesRows,
       p_workers:workersRows
     });
-    if(erroDetalhes){
-      console.error('Supabase erro ao salvar OSEs/funcionários (RPC atômica):',erroDetalhes.message);
-      return{sucesso:false,erro:'Cabeçalho salvo, mas OSEs/funcionários não: '+erroDetalhes.message};
+    if(erroRdo||!rpcResultado){
+      // Código 23505 = violação de índice/constraint único — é exatamente o que a trava
+      // de duplicidade (obra + nº do RDO) do banco dispara quando alguém tenta salvar
+      // um RDO repetido. Mostra uma mensagem clara em vez do erro técnico cru do Postgres.
+      if(erroRdo?.code==='23505'){
+        const msg='Já existe um RDO com esse número nesta obra. Confira o Nº do RDO (campo no topo) antes de salvar de novo.';
+        console.error('Supabase erro ao salvar RDO (duplicidade):',erroRdo.message);
+        return{sucesso:false,erro:msg};
+      }
+      const msg=erroRdo?.message||erroRdo?.hint||erroRdo?.code||'Erro desconhecido ao salvar o RDO.';
+      console.error('Supabase erro ao salvar RDO (RPC atômica):',msg);
+      return{sucesso:false,erro:msg};
     }
     return{sucesso:true};
   }catch(e){
@@ -5808,6 +5800,39 @@ async function salvarRDO(){
 
     const key=chaveRDO(d.header.data);
 
+    // TRAVA CONTRA DUPLICADO ANTES DE ENVIAR (auditoria 2026-08-18): antes, esse aviso só
+    // aparecia DEPOIS, na tela "Buscar RDOs" — fácil de não ver a tempo. Agora checa direto
+    // na nuvem, ANTES da confirmação de envio, se já existe outro RDO enviado com a MESMA
+    // obra + data + encarregado + disciplina (só isso junto conta como duplicado de
+    // verdade — obra/data/encarregado repetidos com disciplina DIFERENTE é uso normal,
+    // cada disciplina tem seu próprio RDO). Se achar, obriga a pessoa a confirmar de
+    // propósito, mostrando o número do RDO já existente — não deixa passar batido.
+    const supabaseClientParaChecagem=getSupabaseClient();
+    if(supabaseClientParaChecagem && usuarioAtual && d.header.obra && d.header.data && d.header.enc){
+      try{
+        const{data:possiveisDuplicados}=await supabaseClientParaChecagem
+          .from('rdos')
+          .select('nrdo,rdo_key')
+          .eq('data',d.header.data)
+          .ilike('obra',(d.header.obra||'').trim())
+          .ilike('encarregado',(d.header.enc||'').trim())
+          .ilike('disciplina',(d.header.disc||'').trim())
+          .neq('rdo_key',key);
+        if(possiveisDuplicados && possiveisDuplicados.length){
+          const numeros=possiveisDuplicados.map(r=>r.nrdo||'(sem número)').join(', ');
+          const confirmarMesmoAssim=confirm(
+            `⚠️ ATENÇÃO — POSSÍVEL DUPLICADO\n\nJá existe RDO enviado com a MESMA obra, data, encarregado e disciplina: ${numeros}.\n\n` +
+            `Se você já preencheu esse RDO antes e está só terminando/reenviando, cancele aqui e abra o RDO ${numeros} em "Buscar RDOs" em vez de criar um novo.\n\n` +
+            `Enviar mesmo assim como um RDO SEPARADO?`
+          );
+          if(!confirmarMesmoAssim){
+            showToast('Envio cancelado — verifique se não é o mesmo RDO já enviado.','#d97706');
+            return;
+          }
+        }
+      }catch(e){ console.error('Checagem de duplicado antes de enviar:',e); } // se a checagem falhar, não bloqueia o envio por causa disso — só não avisa
+    }
+
     // CONFIRMAÇÃO EXPLÍCITA: nunca envia pro admin sem a pessoa confirmar de propósito —
     // clicar no botão sozinho não basta, precisa confirmar aqui também.
     const confirmar=confirm(`Salvar e enviar este RDO pro admin agora?\n\nObra: ${d.header.obra||'(não preenchida)'}\nNº RDO: ${d.header.nrdo||'(automático)'}\nData: ${formatarDataBR(d.header.data)||'-'}`);
@@ -5819,7 +5844,14 @@ async function salvarRDO(){
     // NÚMERO 100% AUTOMÁTICO: recalcula o próximo disponível (local + nuvem) e corrige
     // sozinho, sem perguntar — garante que nunca existe conflito de número entre
     // encarregados diferentes na mesma obra, mesmo sem ninguém perceber que ia colidir.
-    if(d.header.obra){
+    // CORREÇÃO (auditoria 2026-08-18): só recalcula na PRIMEIRA vez que este RDO é
+    // enviado (estaEnviado(key) ainda false). Antes, isso rodava em TODO clique de
+    // "Salvar e Enviar" — inclusive ao reabrir e reenviar um RDO que já tinha sido
+    // confirmado antes — o que podia trocar o número de um RDO já registrado sem
+    // nenhum motivo real (nenhuma colisão de verdade, só o cálculo rodando de novo).
+    // Depois do primeiro envio confirmado, o número fica fixo; só muda se a pessoa
+    // editar o campo manualmente.
+    if(d.header.obra && !estaEnviado(key)){
       const numeroCorreto=await resolverNumeroSemConflito(d.header.obra,key);
       if(numeroCorreto&&numeroCorreto!==d.header.nrdo){
         d.header.nrdo=numeroCorreto;
@@ -8065,6 +8097,17 @@ function buscarRDOs(){
     const chave=`${(r.obra||'').trim().toUpperCase()}|${(r.nrdo||'').trim().toUpperCase()}|${r.data}`;
     contagem[chave]=(contagem[chave]||0)+1;
   });
+  // CORREÇÃO (auditoria 2026-08-18): a checagem acima só pega duplicado quando o
+  // NÚMERO também bate. O caso real que aconteceu (falha no meio do envio seguida de
+  // reenvio) gera dois RDOs pra mesma obra+data+encarregado só que com NÚMEROS
+  // DIFERENTES — esse padrão passava batido antes. Contagem separada, sem o número,
+  // pra pegar esse caso também (aviso mais brando, cor diferente, já que aqui não dá
+  // pra saber de cara qual dos dois está certo).
+  const contagemSemNumero={};
+  resultados.forEach(r=>{
+    const chave=`${(r.obra||'').trim().toUpperCase()}|${(r.enc||'').trim().toUpperCase()}|${r.data}`;
+    contagemSemNumero[chave]=(contagemSemNumero[chave]||0)+1;
+  });
   resultDiv.innerHTML=resultados.map(r=>{
     let diaStr='';
     if(r.data){
@@ -8075,8 +8118,11 @@ function buscarRDOs(){
     const isCurrent=localStorage.getItem('rdo-last-key')===r.key;
     const chave=`${(r.obra||'').trim().toUpperCase()}|${(r.nrdo||'').trim().toUpperCase()}|${r.data}`;
     const possivelDuplicado=r.nrdo&&contagem[chave]>1;
-    return `<div class="rdo-result-item" style="${isCurrent?'border-color:#16a34a;':''}${possivelDuplicado?'border-color:#d97706;background:rgba(217,119,6,.08);':''}">
+    const chaveSemNumero=`${(r.obra||'').trim().toUpperCase()}|${(r.enc||'').trim().toUpperCase()}|${r.data}`;
+    const possivelDuplicadoSemNumero=!possivelDuplicado&&r.enc&&contagemSemNumero[chaveSemNumero]>1;
+    return `<div class="rdo-result-item" style="${isCurrent?'border-color:#16a34a;':''}${possivelDuplicado?'border-color:#d97706;background:rgba(217,119,6,.08);':''}${possivelDuplicadoSemNumero?'border-color:#d97706;background:rgba(217,119,6,.04);':''}">
       ${possivelDuplicado?'<div style="font-size:10px;font-weight:900;color:#d97706;margin-bottom:2px">⚠️ POSSÍVEL DUPLICADO — mesma obra, número e data de outro RDO</div>':''}
+      ${possivelDuplicadoSemNumero?'<div style="font-size:10px;font-weight:900;color:#d97706;margin-bottom:2px">⚠️ Existe outro RDO da mesma obra/data/encarregado com número diferente — confira se não é duplicado antes de manter os dois</div>':''}
       <div class="rdo-result-main">
         <span class="rdo-result-date">📅 ${dataFmt}${diaStr} ${isCurrent?'<span style="background:#16a34a;color:#fff;font-size:9px;padding:1px 5px;border-radius:8px;margin-left:4px">ABERTO</span>':''}</span>
         <span class="rdo-result-info">${r.obra||'—'} ${r.nrdo?'| '+r.nrdo:''} ${r.enc?'| '+r.enc:''}</span>
