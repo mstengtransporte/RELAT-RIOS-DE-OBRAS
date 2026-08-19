@@ -3715,6 +3715,14 @@ function atualizarAvisoRDOsPendentes(forcar=false){
   // quem está REALMENTE PRONTO (passaria na validação de envio) mas não foi mandado —
   // um RDO ainda sendo preenchido (ex: só a Obra escolhida, faltando Encarregado) é
   // trabalho normal em andamento, não um esquecimento, e não deveria alarmar ninguém.
+  //
+  // TRAVA DE SEGURANÇA (computador compartilhado, 2026-08-18): também só conta RDO cujo
+  // campo Encarregado bate com quem está logado agora (Admin Mestre vê todos, como já
+  // é padrão no resto do sistema) — sem isso, o rascunho esquecido de OUTRO encarregado
+  // no mesmo aparelho ficava piscando "pendente" pra qualquer um que logasse depois,
+  // e essa pessoa podia acabar abrindo e enviando o RDO de quem não é ela.
+  const ehAdminPend=usuarioAtual&&usuarioAtual.papel==='admin_mestre';
+  const meuNomeNormalizadoPend=usuarioAtual?normalizarObra(usuarioAtual.nome):null;
   const idsCompletosPendentes=new Set();
   const idsIncompletos=new Set();
   for(let i=0;i<localStorage.length;i++){
@@ -3725,6 +3733,7 @@ function atualizarAvisoRDOsPendentes(forcar=false){
       const d=JSON.parse(localStorage.getItem(k));
       const h=d?.header;
       if(!h?.obra||!h.obra.trim()) continue; // sem Obra nenhuma ainda — nem rascunho de verdade é, ignora
+      if(!ehAdminPend&&meuNomeNormalizadoPend&&normalizarObra(h.enc)!==meuNomeNormalizadoPend) continue; // rascunho de outro encarregado
       const id=extrairIdDaChave(k)||k; // agrupa pelo id fixo; sem id (RDO bem antigo), usa a própria chave
       if(rdoEstaCompleto(h)) idsCompletosPendentes.add(id);
       else idsIncompletos.add(id);
@@ -3757,6 +3766,10 @@ function atualizarAvisoRDOsPendentes(forcar=false){
 function abrirListaPendentes(){
   autoSilentSave();
   const pendentesPorId={};
+  // TRAVA DE SEGURANÇA (computador compartilhado, 2026-08-18): mesma regra das outras
+  // telas — encarregado só vê/abre os PRÓPRIOS RDOs pendentes; Admin Mestre vê todos.
+  const ehAdminList=usuarioAtual&&usuarioAtual.papel==='admin_mestre';
+  const meuNomeNormalizadoList=usuarioAtual?normalizarObra(usuarioAtual.nome):null;
   for(let i=0;i<localStorage.length;i++){
     const k=localStorage.key(i);
     if(!k||!k.startsWith('rdo-')||CHAVES_META_BACKUP.includes(k)) continue;
@@ -3764,6 +3777,7 @@ function abrirListaPendentes(){
     try{
       const d=JSON.parse(localStorage.getItem(k));
       const h=d?.header;
+      if(!ehAdminList&&meuNomeNormalizadoList&&normalizarObra(h?.enc)!==meuNomeNormalizadoList) continue;
       if(h?.obra&&h.obra.trim()){
         const id=extrairIdDaChave(k)||k;
         if(!pendentesPorId[id]) pendentesPorId[id]={id,key:k,data:h.data||'',obra:h.obra,disc:h.disc||'',enc:h.enc||'',nrdo:h.nrdo||'',todasChaves:[]};
@@ -3949,11 +3963,29 @@ async function verificarEReenviarPendentes(){
     try{ enviados=JSON.parse(localStorage.getItem(CHAVE_ENVIADOS)||'[]'); }catch(e){}
     if(!enviados.length){ showToast('Nenhum RDO marcado como enviado neste aparelho.','#6b7fa0'); return; }
 
+    // TRAVA DE SEGURANÇA (computador compartilhado, 2026-08-18): CHAVE_ENVIADOS é do
+    // APARELHO, não da conta — pode ter RDO de OUTRO encarregado que usou este mesmo
+    // navegador antes. A consulta abaixo só traz RDOs do usuário logado agora
+    // (criado_por), então um RDO de outra pessoa nunca ia bater e entraria como
+    // "pendente" — e reenviar aqui GRAVARIA ESSE RDO COM criado_por DO USUÁRIO ATUAL,
+    // trocando o dono dele no banco sem querer. Filtra ANTES: só mexe em RDO cujo
+    // campo Encarregado bate com quem está logado agora (Admin Mestre continua
+    // reconciliando tudo, como já é padrão no resto do sistema).
+    const ehAdminVerif=usuarioAtual.papel==='admin_mestre';
+    const meuNomeNormalizadoVerif=normalizarObra(usuarioAtual.nome);
+    const enviados_meus=ehAdminVerif?enviados:enviados.filter(key=>{
+      try{
+        const d=JSON.parse(localStorage.getItem(key));
+        return normalizarObra(d?.header?.enc)===meuNomeNormalizadoVerif;
+      }catch(e){ return false; }
+    });
+    if(!enviados_meus.length){ showToast('Nenhum RDO seu marcado como enviado neste aparelho.','#6b7fa0'); return; }
+
     const{data,error}=await supabaseClient.from('rdos').select('rdo_key').eq('criado_por',usuarioAtual.id);
     if(error){ showToast('Erro ao consultar a nuvem: '+error.message,'#dc2626'); return; }
     const existentesNaNuvem=new Set((data||[]).map(r=>r.rdo_key));
 
-    const pendentes=enviados.filter(key=>!existentesNaNuvem.has(key)&&localStorage.getItem(key));
+    const pendentes=enviados_meus.filter(key=>!existentesNaNuvem.has(key)&&localStorage.getItem(key));
     if(!pendentes.length){ showToast('✓ Tudo certo — todos os seus RDOs enviados já estão na nuvem.','#16a34a'); return; }
 
     const nomes=pendentes.map(key=>{
@@ -3982,6 +4014,16 @@ async function verificarEReenviarPendentes(){
   }
 }
 
+// CORREÇÃO (pedido do usuário 2026-08-18 — "aviso piscando dizendo que não foi enviado
+// mesmo já tendo sido"): esta função rodava a CADA abertura do app e, se por qualquer
+// motivo a consulta à nuvem não trouxesse de volta um RDO que na verdade ainda existe lá
+// (uma falha de rede momentânea, uma reautenticação em andamento, qualquer soluço), ela
+// já desmarcava esse RDO como "enviado" e apagava a cópia local NA HORA — fazendo um RDO
+// genuinamente já enviado voltar a piscar como pendente, sem nenhum motivo real. Agora
+// só age depois de confirmar a AUSÊNCIA duas vezes seguidas (guardado em
+// CHAVE_SUSPEITOS_ADMIN) — uma falha isolada não derruba mais nada; só some de vez
+// quando a segunda checagem, numa execução separada, confirma de novo que sumiu.
+const CHAVE_SUSPEITOS_ADMIN='rdo-suspeitos-apagados-admin';
 async function reconciliarRDOsApagadosPeloAdmin(){
   const supabaseClient=getSupabaseClient();
   if(!supabaseClient||!usuarioAtual) return;
@@ -3989,17 +4031,45 @@ async function reconciliarRDOsApagadosPeloAdmin(){
     let enviados=[];
     try{ enviados=JSON.parse(localStorage.getItem(CHAVE_ENVIADOS)||'[]'); }catch(e){}
     if(!enviados.length) return;
+    // TRAVA DE SEGURANÇA (computador compartilhado, 2026-08-18): a consulta abaixo só
+    // traz RDOs do usuário logado AGORA (criado_por=id de quem está logado). Se
+    // CHAVE_ENVIADOS tiver chaves de OUTRO encarregado que usou este mesmo aparelho
+    // antes, elas nunca vão bater nessa consulta — não porque foram apagadas pelo
+    // admin, mas porque pertencem a outra conta. Sem filtrar isso ANTES de comparar, o
+    // RDO já enviado do encarregado anterior seria apagado daqui como se tivesse sido
+    // excluído — quando na verdade só não é "meu". Ignora de vez qualquer chave cujo
+    // Encarregado salvo não bate com quem está logado (Admin Mestre continua vendo/
+    // reconciliando tudo, sem esse filtro).
+    const ehAdminRec=usuarioAtual.papel==='admin_mestre';
+    const meuNomeNormalizadoRec=normalizarObra(usuarioAtual.nome);
+    const enviadosMeus=ehAdminRec?enviados:enviados.filter(key=>{
+      try{
+        const d=JSON.parse(localStorage.getItem(key));
+        return normalizarObra(d?.header?.enc)===meuNomeNormalizadoRec;
+      }catch(e){ return false; } // não deu pra ler o conteúdo — mais seguro não mexer
+    });
+    if(!enviadosMeus.length) return;
     const{data,error}=await supabaseClient.from('rdos').select('rdo_key').eq('criado_por',usuarioAtual.id);
-    if(error||!data) return;
+    if(error||!data) return; // consulta falhou — não assume nada, tenta de novo na próxima
     const existentesNaNuvem=new Set(data.map(r=>r.rdo_key));
+    let suspeitos=[];
+    try{ suspeitos=JSON.parse(localStorage.getItem(CHAVE_SUSPEITOS_ADMIN)||'[]'); }catch(e){}
+    const suspeitosDeAgora=[];
     let removidos=0;
-    enviados.forEach(key=>{
+    enviadosMeus.forEach(key=>{
       if(!existentesNaNuvem.has(key)){
-        localStorage.removeItem(key);
-        desmarcarComoEnviado(key);
-        removidos++;
+        if(suspeitos.includes(key)){
+          // 2ª vez seguida que não acha — agora sim trata como apagado de verdade
+          localStorage.removeItem(key);
+          desmarcarComoEnviado(key);
+          removidos++;
+        }else{
+          // 1ª vez que não achou — só marca como suspeito, ainda não mexe em nada
+          suspeitosDeAgora.push(key);
+        }
       }
     });
+    localStorage.setItem(CHAVE_SUSPEITOS_ADMIN,JSON.stringify(suspeitosDeAgora));
     if(removidos>0){
       showToast(`🔄 ${removidos} RDO(s) removido(s) deste aparelho — foram excluídos pelo admin.`,'#d97706');
       renderizarRdosDoDia();renderizarObrasParadas();
@@ -4103,7 +4173,38 @@ function iniciarAppAposLogin(){
     reconciliarRDOsApagadosPeloAdmin();
     recuperarFuncoesApagadasPorEngano(); // conserto de um bug já corrigido, ver comentário na função — roda 1 vez só (e é pesada: melhor aqui, junto das outras tarefas não-urgentes, do que competindo com o carregamento inicial)
   },150);
+  // ATUALIZAÇÃO AUTOMÁTICA DA ESCALA (pedido do usuário 2026-08-18): antes, se o
+  // funcionário fosse escalado DEPOIS que a linha já estava aberta no RDO com o nome
+  // selecionado, o veículo só era buscado de novo se a pessoa trocasse o nome e
+  // voltasse pro mesmo (forçando o gatilho de re-seleção). Agora reconsulta sozinho, em
+  // segundo plano, a cada 25s — mas SÓ preenche linhas cujo veículo ainda está EM
+  // BRANCO; nunca sobrescreve um veículo que já apareceu (seja vindo da Escala antes,
+  // seja escolhido manualmente por você), pra nunca trocar por baixo dos panos algo que
+  // já foi decidido.
+  clearInterval(window._intervalAtualizarVeiculosEscala);
+  window._intervalAtualizarVeiculosEscala=setInterval(atualizarVeiculosVaziosAutomaticamente,25000);
 }
+// Roda em segundo plano: reconsulta a Escala só pras linhas com nome preenchido e
+// veículo ainda vazio. Não mexe em nada que já tenha um veículo definido, não mostra
+// toast (silenciosa, pra não interromper quem está digitando), e não roda se estiver
+// offline ou sem o Supabase disponível.
+async function atualizarVeiculosVaziosAutomaticamente(){
+  if(!navigator.onLine) return;
+  const supabaseClient=getSupabaseClient();
+  if(!supabaseClient) return;
+  const selects=document.querySelectorAll('select.cell-name');
+  for(const sel of selects){
+    const i=Number(sel.id.replace('name-',''));
+    if(!i && i!==0) continue;
+    const nome=sel.value;
+    if(!nome||nome==='__custom__') continue;
+    const vehicleSel=document.getElementById(`vehicle-${i}`);
+    if(!vehicleSel||vehicleSel.value) continue; // já tem veículo (automático ou manual) — não mexe
+    if(document.activeElement===sel||document.activeElement===vehicleSel) continue; // pessoa mexendo nessa linha agora — espera a próxima rodada
+    await buscarVeiculoAutomaticoSilencioso(nome,i);
+  }
+}
+
 document.addEventListener('DOMContentLoaded',()=>{
   // Trava a rolagem da página enquanto a tela de login estiver visível — a
   // página de trás (escondida atrás dela) pode ser mais alta que a tela, e
@@ -4261,12 +4362,19 @@ function renderizarRdosDoDia(){
 
   const keys=getAllRDOKeys();
   const doDia=[];
+  // TRAVA DE SEGURANÇA (computador compartilhado, 2026-08-18): mesma regra do resto do
+  // sistema — encarregado só vê RDOs do dia com o PRÓPRIO nome no campo Encarregado;
+  // Admin Mestre continua vendo todos. Sem isso, essa barra mostrava (e deixava abrir)
+  // rascunhos de OUTRO encarregado que usou o mesmo aparelho antes, no mesmo dia.
+  const ehAdminDia=usuarioAtual&&usuarioAtual.papel==='admin_mestre';
+  const meuNomeNormalizadoDia=usuarioAtual?normalizarObra(usuarioAtual.nome):null;
   keys.forEach(k=>{
     try{
       const d=JSON.parse(localStorage.getItem(k));
       // Só conta como "outro RDO do dia" quem já tem Obra escolhida — um rascunho ainda
       // sem Obra definida (ex: RDO que acabou de começar, autosalvo de segurança ao clicar
       // em Buscar/Novo) não deve aparecer como se fosse um RDO separado e confundir.
+      if(!ehAdminDia&&meuNomeNormalizadoDia&&normalizarObra(d?.header?.enc)!==meuNomeNormalizadoDia) return;
       if(d?.header?.data===dataAtual && (d?.header?.obra||'').trim()) doDia.push({key:k,header:d.header});
     }catch(e){}
   });
@@ -5972,17 +6080,20 @@ function restoreRow(w,i){
 }
 
 // Abre sempre com a data de hoje — nunca restaura sozinho um rascunho de DIA ANTERIOR
-// (mesmo que exista salvo no aparelho). CORREÇÃO (2026-08-18): mas se já existir um
-// rascunho de HOJE mesmo (a pessoa começou a preencher, saiu sem terminar, e voltou a
-// abrir o app no mesmo dia), reaproveita ELE em vez de criar outro do zero — criar um
-// novo toda hora que o app é reaberto no mesmo dia foi exatamente o que gerava "rascunho
-// duplicado do que já estava sendo preenchido" reportado antes. Só nasce um rascunho
-// genuinamente novo quando não existe NENHUM ainda pra hoje. Se houver mais de um pra
-// hoje (caso raro e legítimo — duas obras diferentes no mesmo dia), não escolhe sozinho
-// qual reabrir — começa em branco mesmo, e os existentes continuam acessíveis normalmente
-// pela barra "RDOs salvos hoje"/"Buscar RDOs", sem risco de reaproveitar o errado.
+// (mesmo que exista salvo no aparelho). Reaproveita um rascunho de HOJE já existente em
+// vez de criar outro do zero — criar um novo toda hora que o app é reaberto no mesmo dia
+// gerava "rascunho duplicado do que já estava sendo preenchido".
+// CORREÇÃO DE SEGURANÇA (computador compartilhado, pedido do usuário 2026-08-18): só
+// reaproveita um rascunho de hoje se o campo Encarregado dele bater com quem está
+// LOGADO AGORA. Sem essa trava, um encarregado terminando a sessão sem enviar (ou só
+// fechando o app) e outro encarregado entrando depois no MESMO computador no MESMO dia
+// faria os dados do primeiro (obra, equipe, horas) aparecerem sozinhos pré-preenchidos
+// pro segundo — que podia nem perceber e enviar o RDO errado sem querer. Admin Mestre
+// não tem esse filtro (já enxerga tudo normalmente em outras telas do sistema).
 function iniciarRDOEmBrancoNoBoot(){
   const hoje=hojeLocal();
+  const ehAdmin=usuarioAtual&&usuarioAtual.papel==='admin_mestre';
+  const meuNomeNormalizado=usuarioAtual?normalizarObra(usuarioAtual.nome):null;
   const candidatosHoje=[];
   for(let i=0;i<localStorage.length;i++){
     const k=localStorage.key(i);
@@ -5991,7 +6102,9 @@ function iniciarRDOEmBrancoNoBoot(){
     if(!idDaChave) continue; // formato antigo sem id — não reaproveita, mais seguro deixar como está
     try{
       const d=JSON.parse(localStorage.getItem(k));
-      if((d?.header?.obra||'').trim()) candidatosHoje.push({key:k,id:idDaChave,dados:d});
+      if(!(d?.header?.obra||'').trim()) continue;
+      if(!ehAdmin&&meuNomeNormalizado&&normalizarObra(d.header.enc)!==meuNomeNormalizado) continue; // rascunho de OUTRO encarregado — nunca reaproveita
+      candidatosHoje.push({key:k,id:idDaChave,dados:d});
     }catch(e){}
   }
   if(candidatosHoje.length===1){
