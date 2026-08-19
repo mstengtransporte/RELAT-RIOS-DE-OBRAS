@@ -4066,7 +4066,14 @@ function iniciarAppAposLogin(){
   });
   buildWorkersTable(1);
   buildOSECards();
-  carregarRDO();
+  // CORREÇÃO (pedido do usuário 2026-08-18): antes, o app SEMPRE reabria sozinho o
+  // último RDO deixado salvo — inclusive a DATA dele, sobrescrevendo a data de hoje
+  // que acabou de ser setada acima. Agora o app sempre abre uma tela EM BRANCO, com a
+  // data de hoje e um número sugerido automaticamente — nunca reabre um rascunho
+  // sozinho. Pra continuar de propósito um RDO anterior, o encarregado usa o botão
+  // "➕ Novo RDO" → "A partir do último RDO" (novoRDOComNomes, já existente),
+  // ou abre um específico em "🔍 Buscar RDOs"/pela barra "RDOs salvos hoje".
+  iniciarRDOEmBrancoNoBoot();
   recalcAll();
   updateDiaSemana();
   atualizarBannerObra();
@@ -4264,12 +4271,18 @@ function renderizarRdosDoDia(){
     }catch(e){}
   });
 
-  if(doDia.length<2){ barra.style.display='none'; return; }
+  // CORREÇÃO (2026-08-18): baixei o limite de 2 pra 1 — agora que o boot sempre abre uma
+  // tela em branco (não reabre mais o rascunho sozinho), um único rascunho do dia com
+  // Obra já preenchida e ainda não enviado precisa continuar visível aqui, senão fica
+  // sem nenhum jeito óbvio de voltar pra ele. (O botão "Salvar e Enviar" piscando/o
+  // painel de "RDOs pendentes" já cobre isso pra QUALQUER data, não só hoje — esta
+  // barra aqui é só o atalho rápido pro dia que está na tela agora.)
+  if(doDia.length<1){ barra.style.display='none'; return; }
 
   const chaveAtiva=localStorage.getItem('rdo-last-key');
   doDia.sort((a,b)=>(a.header.nrdo||'').localeCompare(b.header.nrdo||''));
   const rotuloBarra=document.getElementById('rdos-do-dia-label');
-  if(rotuloBarra) rotuloBarra.textContent=`📋 ${doDia.length} RDOs salvos hoje — toque pra trocar:`;
+  if(rotuloBarra) rotuloBarra.textContent=doDia.length===1?`📋 Já existe 1 RDO salvo hoje — toque pra abrir:`:`📋 ${doDia.length} RDOs salvos hoje — toque pra trocar:`;
   const esc=s=>{const d=document.createElement('div');d.textContent=s||'';return d.innerHTML;};
   lista.innerHTML=doDia.map(r=>{
     // Sempre mostra o nome da obra preenchida no diário + o Nº do RDO como diferenciador —
@@ -5956,6 +5969,18 @@ function restoreRow(w,i){
   if(STATUS_ABSENTEISMO_VEICULO.includes(w.vehicle)){
     aplicarStatusAbsenteismoNaLinha(i,w.vehicle);
   }
+}
+
+// Abre sempre uma tela EM BRANCO no boot do app — nunca restaura sozinho o rascunho
+// anterior (mesmo que exista salvo no aparelho). A data de hoje já foi setada antes
+// desta função ser chamada (iniciarAppAposLogin); aqui só garante número sugerido e
+// uma identidade própria (rdoAtualId) pro RDO novo que está começando agora. Rascunhos
+// não-enviados de dias anteriores continuam salvos e acessíveis — nunca são apagados —
+// só não abrem mais sozinhos.
+function iniciarRDOEmBrancoNoBoot(){
+  document.getElementById('h-nrdo').value=gerarProximoNRDO(document.getElementById('h-obra')?.value||'');
+  nrdoEditadoManualmente=false;
+  rdoAtualId=gerarRdoId();
 }
 
 function carregarRDO(){
