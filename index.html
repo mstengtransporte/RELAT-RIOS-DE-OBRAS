@@ -5971,13 +5971,35 @@ function restoreRow(w,i){
   }
 }
 
-// Abre sempre uma tela EM BRANCO no boot do app — nunca restaura sozinho o rascunho
-// anterior (mesmo que exista salvo no aparelho). A data de hoje já foi setada antes
-// desta função ser chamada (iniciarAppAposLogin); aqui só garante número sugerido e
-// uma identidade própria (rdoAtualId) pro RDO novo que está começando agora. Rascunhos
-// não-enviados de dias anteriores continuam salvos e acessíveis — nunca são apagados —
-// só não abrem mais sozinhos.
+// Abre sempre com a data de hoje — nunca restaura sozinho um rascunho de DIA ANTERIOR
+// (mesmo que exista salvo no aparelho). CORREÇÃO (2026-08-18): mas se já existir um
+// rascunho de HOJE mesmo (a pessoa começou a preencher, saiu sem terminar, e voltou a
+// abrir o app no mesmo dia), reaproveita ELE em vez de criar outro do zero — criar um
+// novo toda hora que o app é reaberto no mesmo dia foi exatamente o que gerava "rascunho
+// duplicado do que já estava sendo preenchido" reportado antes. Só nasce um rascunho
+// genuinamente novo quando não existe NENHUM ainda pra hoje. Se houver mais de um pra
+// hoje (caso raro e legítimo — duas obras diferentes no mesmo dia), não escolhe sozinho
+// qual reabrir — começa em branco mesmo, e os existentes continuam acessíveis normalmente
+// pela barra "RDOs salvos hoje"/"Buscar RDOs", sem risco de reaproveitar o errado.
 function iniciarRDOEmBrancoNoBoot(){
+  const hoje=hojeLocal();
+  const candidatosHoje=[];
+  for(let i=0;i<localStorage.length;i++){
+    const k=localStorage.key(i);
+    if(!k||!k.startsWith(`rdo-${hoje}__`)) continue;
+    const idDaChave=extrairIdDaChave(k);
+    if(!idDaChave) continue; // formato antigo sem id — não reaproveita, mais seguro deixar como está
+    try{
+      const d=JSON.parse(localStorage.getItem(k));
+      if((d?.header?.obra||'').trim()) candidatosHoje.push({key:k,id:idDaChave,dados:d});
+    }catch(e){}
+  }
+  if(candidatosHoje.length===1){
+    rdoAtualId=candidatosHoje[0].id;
+    localStorage.setItem('rdo-last-key',candidatosHoje[0].key);
+    restaurarEstadoCompleto(candidatosHoje[0].dados);
+    return;
+  }
   document.getElementById('h-nrdo').value=gerarProximoNRDO(document.getElementById('h-obra')?.value||'');
   nrdoEditadoManualmente=false;
   rdoAtualId=gerarRdoId();
