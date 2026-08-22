@@ -4118,7 +4118,13 @@ let listModalTemp = [];
 // nas pontas — "João Silva", "joão silva " e "JOÃO SILVA" contam como o
 // MESMO nome pra fins de duplicata, mesmo que a grafia salva seja diferente.
 function normalizarParaComparar(s){
-  return (s||'').trim().toLowerCase().replace(/\s+/g,' ');
+  // .normalize('NFC') junta letra+acento numa forma única — sem isso,
+  // "Ã" digitado/importado de formas diferentes (mesmo parecendo
+  // idêntico na tela) podia ser tratado como "diferente" numa
+  // comparação de texto simples, fazendo buscas por nome falharem
+  // silenciosamente. Corrige pra ESTA função e pra tudo que já usa ela
+  // (duplicata de nome, busca de veículo, agora também busca de função).
+  return (s||'').normalize('NFC').trim().toLowerCase().replace(/\s+/g,' ');
 }
 // Tira duplicatas de uma lista de nomes/veículos, mantendo a PRIMEIRA
 // grafia encontrada de cada um (não mistura maiúsculas no meio do nome).
@@ -4457,23 +4463,32 @@ async function buscarVeiculoAutomatico(nome,i){
   // Só preenche se o campo Função ainda estiver vazio, pra nunca
   // sobrescrever uma escolha manual que a pessoa já tenha feito.
   const funcSel=document.getElementById(`func-${i}`);
-  if(funcSel && nome && nome!=='__custom__' && !funcSel.value){
+  if(funcSel && nome && nome!=='__custom__'){
     try{
       const supabaseClientFunc=getSupabaseClient();
       if(supabaseClientFunc){
-        const{data:dadosFunc,error:erroFunc}=await supabaseClientFunc
-          .from('funcionarios').select('funcao').ilike('nome',nome.trim()).limit(1).maybeSingle();
+        // Busca a lista INTEIRA (nome+função) e compara usando a mesma
+        // função "tolerante" já usada no resto do sistema (normalizarParaComparar)
+        // — evita depender de comparação exata de texto no próprio banco,
+        // que pode falhar silenciosamente com acento/caixa diferentes
+        // (ex: "Ã" pode estar salvo de duas formas diferentes por baixo,
+        // mesmo parecendo idêntico na tela).
+        const{data:todosFunc,error:erroFunc}=await supabaseClientFunc
+          .from('funcionarios').select('nome,funcao');
         if(erroFunc){
           console.error('busca de função error:',erroFunc);
-        }else if(dadosFunc && dadosFunc.funcao && dadosFunc.funcao.trim()){
-          const funcaoConhecida=dadosFunc.funcao.trim();
-          funcaoPorFuncionario[normalizarParaComparar(nome)]=funcaoConhecida; // guarda no cache pra próxima vez
-          if(!funcsList.some(x=>normalizarParaComparar(x)===normalizarParaComparar(funcaoConhecida))){
-            funcsList.push(funcaoConhecida);
-            salvarListas();
+        }else if(todosFunc){
+          const encontrado=todosFunc.find(f=>f.nome && normalizarParaComparar(f.nome)===normalizarParaComparar(nome));
+          if(encontrado && encontrado.funcao && encontrado.funcao.trim()){
+            const funcaoConhecida=encontrado.funcao.trim();
+            funcaoPorFuncionario[normalizarParaComparar(nome)]=funcaoConhecida;
+            if(!funcsList.some(x=>normalizarParaComparar(x)===normalizarParaComparar(funcaoConhecida))){
+              funcsList.push(funcaoConhecida);
+              salvarListas();
+            }
+            funcSel.innerHTML=buildFuncOptions(funcaoConhecida);
+            funcSel.value=funcaoConhecida;
           }
-          funcSel.innerHTML=buildFuncOptions(funcaoConhecida);
-          funcSel.value=funcaoConhecida;
         }
       }
     }catch(e){ console.error('buscarFuncaoAutomatica error:',e); }
@@ -9962,6 +9977,6 @@ window.addEventListener('beforeinstallprompt',(e)=>{
   };
 });
 </script>
-<div class="no-print" style="position:fixed;bottom:2px;right:4px;font-size:8px;color:rgba(120,120,120,.4);font-family:monospace;pointer-events:none;z-index:5">v2026.08.14-funcao-busca-ao-vivo</div>
+<div class="no-print" style="position:fixed;bottom:2px;right:4px;font-size:8px;color:rgba(120,120,120,.4);font-family:monospace;pointer-events:none;z-index:5">v2026.08.14-funcao-normalizada</div>
 </body>
 </html>
