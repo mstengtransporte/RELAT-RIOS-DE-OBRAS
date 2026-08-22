@@ -1706,7 +1706,7 @@ body.dark #workers-body tr:hover{background-color:rgba(58,110,232,.08)}
      fontes) — os dois sistemas usam a mesma "moldura" de login, só
      o papel de parede muda entre eles. -->
 <div id="login-overlay" style="position:fixed;inset:0;z-index:99999;background:#0b1220 url('login-fundo-rdo.jpg') center center / cover no-repeat;color-scheme:dark">
-  <div style="position:absolute;bottom:6px;right:8px;font-size:9px;color:rgba(255,255,255,.35);font-family:monospace;pointer-events:none">v2026.08.22-check-ignora-rascunho</div>
+  <div style="position:absolute;bottom:6px;right:8px;font-size:9px;color:rgba(255,255,255,.35);font-family:monospace;pointer-events:none">v2026.08.22-trava-horario-edicao</div>
   <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:calc(100% - 32px);max-width:380px;background:rgb(10,17,32);border:1px solid rgba(255,255,255,.14);border-radius:18px;padding:32px 28px;box-shadow:0 20px 60px rgba(0,0,0,.6);text-transform:none;font-weight:400">
     <h1 style="font-size:20px;margin:0 0 4px;color:#fff;text-align:center;font-weight:700">RDO <span style="color:#3ea6ff">Master Energy</span></h1>
     <p style="margin:0 0 24px;text-align:center;color:#9ca3af;font-size:13px;letter-spacing:.5px;font-weight:600">DIÁRIO DE OBRA PRO</p>
@@ -3677,10 +3677,24 @@ function extrairIdDaChave(key){
 // localmente (que inclui rascunhos ainda não enviados). A Busca usa isso pra
 // mostrar só o que já foi enviado de verdade.
 const CHAVE_ENVIADOS='rdo-enviados';
+// Guarda TAMBÉM o momento exato (timestamp) em que cada RDO foi enviado pela
+// PRIMEIRA vez — usado pra calcular a trava de horário de edição (encarregado só
+// pode editar até 23:59 do MESMO DIA em que enviou; depois disso, só o Admin
+// Mestre). Fica num mapa {chave: timestampMs} separado, só com a data do
+// PRIMEIRO envio — reenviar o mesmo RDO de novo (ex: depois de corrigir algo
+// ainda dentro do prazo) não empurra esse prazo pra frente.
+const CHAVE_ENVIADOS_EM='rdo-enviados-em';
 function marcarComoEnviado(key){
   try{
     const lista=JSON.parse(localStorage.getItem(CHAVE_ENVIADOS)||'[]');
     if(!lista.includes(key)){ lista.push(key); localStorage.setItem(CHAVE_ENVIADOS,JSON.stringify(lista)); }
+  }catch(e){}
+  try{
+    const mapaEnviadosEm=JSON.parse(localStorage.getItem(CHAVE_ENVIADOS_EM)||'{}');
+    if(!mapaEnviadosEm[key]){ // só grava na 1ª vez — reenvio não empurra o prazo
+      mapaEnviadosEm[key]=Date.now();
+      localStorage.setItem(CHAVE_ENVIADOS_EM,JSON.stringify(mapaEnviadosEm));
+    }
   }catch(e){}
 }
 function desmarcarComoEnviado(key){
@@ -3688,9 +3702,36 @@ function desmarcarComoEnviado(key){
     const lista=JSON.parse(localStorage.getItem(CHAVE_ENVIADOS)||'[]').filter(k=>k!==key);
     localStorage.setItem(CHAVE_ENVIADOS,JSON.stringify(lista));
   }catch(e){}
+  try{
+    const mapaEnviadosEm=JSON.parse(localStorage.getItem(CHAVE_ENVIADOS_EM)||'{}');
+    if(key in mapaEnviadosEm){ delete mapaEnviadosEm[key]; localStorage.setItem(CHAVE_ENVIADOS_EM,JSON.stringify(mapaEnviadosEm)); }
+  }catch(e){}
 }
 function estaEnviado(key){
   try{ return JSON.parse(localStorage.getItem(CHAVE_ENVIADOS)||'[]').includes(key); }catch(e){ return false; }
+}
+
+// TRAVA DE HORÁRIO PRA EDIÇÃO: um RDO já enviado só pode ser editado pelo
+// encarregado que o criou até 23:59:59 do MESMO DIA em que foi enviado
+// (não a data do RDO — a data real de quando apertou "Salvar e Enviar").
+// Depois desse horário, só o Admin Mestre pode editar. Se por algum motivo não
+// existir timestamp de envio salvo (RDO antigo, de antes dessa trava existir),
+// não bloqueia — sem dado suficiente pra aplicar a regra, mais seguro liberar
+// do que travar edição de algo legítimo sem explicação.
+function prazoEdicaoExpirado(key){
+  let mapaEnviadosEm={};
+  try{ mapaEnviadosEm=JSON.parse(localStorage.getItem(CHAVE_ENVIADOS_EM)||'{}'); }catch(e){}
+  const enviadoEm=mapaEnviadosEm[key];
+  if(!enviadoEm) return false; // sem timestamp registrado — não bloqueia
+  const dataEnvio=new Date(enviadoEm);
+  const fimDoDia=new Date(dataEnvio.getFullYear(),dataEnvio.getMonth(),dataEnvio.getDate(),23,59,59,999);
+  return Date.now()>fimDoDia.getTime();
+}
+// true se quem está logado agora PODE editar este RDO já enviado — Admin Mestre
+// sempre pode; encarregado só até o prazo (23:59 do dia do envio).
+function podeEditarRDOEnviado(key){
+  if(usuarioAtual&&usuarioAtual.papel==='admin_mestre') return true;
+  return !prazoEdicaoExpirado(key);
 }
 
 // Confere se existe algum RDO com conteúdo real preenchido (Obra escolhida) que ainda
@@ -5985,6 +6026,20 @@ async function salvarRDO(){
     if(!bloquearSeFormularioInvalido(d)) return;
 
     const key=chaveRDO(d.header.data);
+
+    // TRAVA DE HORÁRIO (defesa extra): se este RDO já era enviado antes de a tela ser
+    // carregada e o prazo de edição (23:59 do dia do envio) venceu enquanto a pessoa
+    // mexia na tela, bloqueia o salvamento aqui também — mesma regra já aplicada ao
+    // ABRIR o RDO em abrirRDOSalvo(), só que reforçada no momento de salvar, cobrindo o
+    // caso de a tela ter ficado aberta atravessando a meia-noite.
+    if(estaEnviado(key) && !podeEditarRDOEnviado(key)){
+      abrirModalPendenciasRDO([
+        'Prazo de edição encerrado — este RDO já foi enviado e o prazo (até 23:59 do dia do envio) já passou.',
+        'A partir de agora, só o Admin Mestre pode editar e reenviar este RDO.'
+      ]);
+      showToast('🔒 Prazo de edição encerrado — só o Admin Mestre pode salvar este RDO agora.','#dc2626');
+      return;
+    }
 
     // TRAVA CONTRA DUPLICADO ANTES DE ENVIAR — bloqueio DE VERDADE, sem opção de burlar.
     // Checa direto na nuvem, ANTES da confirmação de envio, se já existe outro RDO
@@ -8383,6 +8438,15 @@ function buscarRDOs(){
 function abrirRDOSalvo(key){
   const raw=localStorage.getItem(key);
   if(!raw){showToast('RDO não encontrado.','#dc2626');return;}
+  // TRAVA DE HORÁRIO: um RDO já enviado só pode ser reaberto pra EDITAR pelo
+  // encarregado até 23:59 do mesmo dia em que foi enviado — depois disso, só o
+  // Admin Mestre. Continua dando pra abrir pra CONSULTA (é só um alert bloqueando
+  // a edição de verdade, mas nesse app abrir = carregar pra editar, então a
+  // forma mais clara e segura é impedir de abrir mesmo, com aviso explicando).
+  if(estaEnviado(key) && !podeEditarRDOEnviado(key)){
+    alert('🔒 PRAZO DE EDIÇÃO ENCERRADO\n\nEste RDO já foi enviado e o prazo pra edição (até 23:59 do dia do envio) já passou.\n\nA partir de agora, só o Admin Mestre pode editar este RDO. Se precisar de alguma correção, fale com o admin.');
+    return;
+  }
   try{
     autoSilentSave(); // salva atual antes de trocar
     localStorage.setItem('rdo-last-key',key);
@@ -11024,7 +11088,7 @@ window.addEventListener('beforeinstallprompt',(e)=>{
   };
 });
 </script>
-<div class="no-print" style="position:fixed;bottom:2px;right:4px;font-size:8px;color:rgba(120,120,120,.4);font-family:monospace;pointer-events:none;z-index:5">v2026.08.22-check-ignora-rascunho</div>
+<div class="no-print" style="position:fixed;bottom:2px;right:4px;font-size:8px;color:rgba(120,120,120,.4);font-family:monospace;pointer-events:none;z-index:5">v2026.08.22-trava-horario-edicao</div>
 
 <!-- MODAL DE ALERTA DE PENDÊNCIAS — substitui o toast/alert escuro de antes. Aparece
      sempre que a validação unificada (validarFormularioRDO) bloqueia uma tentativa de
