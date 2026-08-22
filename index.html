@@ -4486,63 +4486,45 @@ async function carregarVeiculosDaEscala(){
 // Se a Escala mostrar que o funcionário está de folga/férias/atestado/
 // falta/afastado/aguardando, marca isso sozinho nas células de hora da
 // linha, em vez de tentar buscar um veículo que não existe nesse caso.
+// Busca só a função de um funcionário no banco (sem mexer em tela) —
+// função auxiliar reaproveitada dentro de buscarVeiculoAutomatico, pra
+// função e veículo sempre serem buscados e aplicados JUNTOS, nunca um
+// sem o outro.
+async function buscarFuncaoDoFuncionario(nome){
+  try{
+    const supabaseClientFunc=getSupabaseClient();
+    if(!supabaseClientFunc) return null;
+    const{data:todosFunc,error:erroFunc}=await supabaseClientFunc.from('funcionarios').select('nome,funcao');
+    if(erroFunc||!todosFunc||todosFunc.length===0) return null;
+    const nomeParecido=acharNomeParecido(nome, todosFunc.map(f=>f.nome).filter(Boolean));
+    const encontrado=todosFunc.find(f=>f.nome===nomeParecido);
+    if(!encontrado||!encontrado.funcao||!encontrado.funcao.trim()) return null;
+    return encontrado.funcao.trim();
+  }catch(e){ console.error('[busca função] erro:',e); return null; }
+}
+// Aplica a função encontrada no campo certo — usa a grafia que já existe
+// na lista (se houver alguma parecida), pra nunca tentar selecionar um
+// valor que não bate com nenhuma opção do <select> (isso já causou o
+// campo ficar em branco silenciosamente antes).
+function aplicarFuncaoNaLinha(i,funcaoConhecida){
+  const funcSel=document.getElementById(`func-${i}`);
+  if(!funcSel) return;
+  if(!funcaoConhecida){ funcSel.innerHTML=buildFuncOptions(''); funcSel.value=''; return; }
+  const jaExisteComOutraGrafia=funcsList.find(x=>normalizarParaComparar(x)===normalizarParaComparar(funcaoConhecida));
+  const funcaoParaUsar=jaExisteComOutraGrafia||funcaoConhecida;
+  if(!jaExisteComOutraGrafia){ funcsList.push(funcaoConhecida); salvarListas(); }
+  funcSel.innerHTML=buildFuncOptions(funcaoParaUsar);
+  funcSel.value=funcaoParaUsar;
+}
+
 async function buscarVeiculoAutomatico(nome,i){
   const vehicleSel=document.getElementById(`vehicle-${i}`);
-  // Preenche a função automaticamente, buscando direto no banco (não
-  // depende mais só do cache carregado lá no início — evita o problema
-  // de a pessoa escolher o nome antes desse carregamento terminar).
-  // Só preenche se o campo Função ainda estiver vazio, pra nunca
-  // sobrescrever uma escolha manual que a pessoa já tenha feito.
   const funcSel=document.getElementById(`func-${i}`);
-  if(funcSel && nome && nome!=='__custom__'){
-    try{
-      const supabaseClientFunc=getSupabaseClient();
-      if(!supabaseClientFunc){
-        console.warn('[busca função] sem cliente Supabase, abortando');
-      }else{
-        const{data:todosFunc,error:erroFunc}=await supabaseClientFunc
-          .from('funcionarios').select('nome,funcao');
-        if(erroFunc){
-          console.error('[busca função] erro ao consultar banco:',erroFunc);
-          showToast(`❌ Erro ao buscar função: ${erroFunc.message||erroFunc}`,'#dc2626');
-        }else if(!todosFunc||todosFunc.length===0){
-          console.warn('[busca função] a tabela funcionarios voltou vazia');
-        }else{
-          const nomeParecido=acharNomeParecido(nome, todosFunc.map(f=>f.nome).filter(Boolean));
-          console.log('[busca função] procurando:',nome,'| achou parecido:',nomeParecido);
-          const encontrado=todosFunc.find(f=>f.nome===nomeParecido);
-          if(!encontrado){
-            console.warn('[busca função] nenhum nome parecido o suficiente foi encontrado na tabela');
-          }else if(!encontrado.funcao||!encontrado.funcao.trim()){
-            console.warn('[busca função] encontrou a pessoa ("'+encontrado.nome+'"), mas o campo função dela está vazio no banco');
-          }else{
-            const funcaoConhecida=encontrado.funcao.trim();
-            funcaoPorFuncionario[normalizarParaComparar(nome)]=funcaoConhecida;
-            // Se já existir uma versão dessa função na lista (mesmo com
-            // maiúscula/minúscula diferente, tipo "Encanador" x "ENCANADOR"),
-            // usa exatamente a grafia que JÁ ESTÁ na lista — porque o campo
-            // <select> só aceita um valor que bata LETRA POR LETRA com uma
-            // das opções existentes. Foi exatamente isso que estava
-            // quebrando: o banco tinha "ENCANADOR", a lista só tinha
-            // "Encanador", e o navegador não achava a opção, ficando em
-            // branco sem avisar nada.
-            const jaExisteComOutraGrafia=funcsList.find(x=>normalizarParaComparar(x)===normalizarParaComparar(funcaoConhecida));
-            const funcaoParaUsar=jaExisteComOutraGrafia||funcaoConhecida;
-            if(!jaExisteComOutraGrafia){
-              funcsList.push(funcaoConhecida);
-              salvarListas();
-            }
-            funcSel.innerHTML=buildFuncOptions(funcaoParaUsar);
-            funcSel.value=funcaoParaUsar;
-            console.log('[busca função] preenchido com sucesso:',funcaoParaUsar);
-          }
-        }
-      }
-    }catch(e){
-      console.error('[busca função] erro inesperado:',e);
-      showToast(`❌ Erro inesperado ao buscar função: ${e.message||e}`,'#dc2626');
-    }
-  }
+  // Limpa os DOIS campos (função e veículo) JUNTOS, sempre, antes de
+  // qualquer busca — nunca deixa a função "grudada" de quem estava
+  // selecionado antes na mesma linha (esse era o bug real: só o
+  // veículo limpava, a função ficava presa da pessoa anterior).
+  if(funcSel){ funcSel.innerHTML=buildFuncOptions(''); funcSel.value=''; }
   // SEMPRE limpa qualquer marcação automática de ausência que tenha ficado
   // de um funcionário anterior nessa mesma linha, antes de qualquer outra
   // coisa — inclusive se o nome for limpo (voltar pra "— Selecione —"),
@@ -4593,6 +4575,10 @@ async function buscarVeiculoAutomatico(nome,i){
       // trava, sempre.
       aplicarStatusAbsenteismoNaLinha(i,rotulo);
       showToast(`⚠️ ${nome} está marcado como ${rotulo} na escala de ${dataEscalaFmt} — confira se ele deveria estar no RDO hoje.`,'#d97706');
+      // Mesmo sem veículo (pessoa em falta/férias/etc), a função dela
+      // continua sendo buscada e preenchida junto — função e veículo
+      // sempre atualizam em conjunto, nunca um sozinho.
+      aplicarFuncaoNaLinha(i, await buscarFuncaoDoFuncionario(nome));
     }else if(linha&&linha.encontrado&&linha.veiculo){
       if(!vehiclesList.some(x=>normalizarParaComparar(x)===normalizarParaComparar(linha.veiculo))){ vehiclesList.push(linha.veiculo); salvarListas(); }
       if(vehicleSel){
@@ -4601,15 +4587,22 @@ async function buscarVeiculoAutomatico(nome,i){
         const dataEscalaFmt=linha.data_escala?formatarDataBR(linha.data_escala):'';
         showToast(`🚚 Veículo preenchido: ${linha.veiculo} (escala de ${dataEscalaFmt})`,'#1457c8');
       }
+      // Função busca e preenche JUNTO com o veículo, sempre — os dois
+      // campos ficam sincronizados, nunca um atualizado sem o outro.
+      aplicarFuncaoNaLinha(i, await buscarFuncaoDoFuncionario(nome));
     }else{
       // Não achou escala pra esse funcionário em nenhum dos últimos 5 dias
-      // antes do RDO — LIMPA o campo (não pode ficar o veículo de quem
-      // estava selecionado antes) e deixa livre pra escolha manual normal.
+      // antes do RDO — LIMPA o veículo (não pode ficar o de quem estava
+      // selecionado antes) e deixa livre pra escolha manual normal.
       if(vehicleSel){
         vehicleSel.innerHTML=buildVehicleOptions('');
         vehicleSel.value='';
       }
       showToast(`ℹ️ Sem escala encontrada pra ${nome} nos últimos dias — escolha o veículo manualmente.`,'#6b7fa0');
+      // Mesmo sem escala (sem veículo), a função pode existir no cadastro
+      // — busca e preenche se achar; se não achar nada em lugar nenhum,
+      // já está limpa desde o início da função, pronta pra digitação manual.
+      aplicarFuncaoNaLinha(i, await buscarFuncaoDoFuncionario(nome));
     }
   }catch(e){
     console.error('buscarVeiculoAutomatico error:',e);
@@ -10027,6 +10020,6 @@ window.addEventListener('beforeinstallprompt',(e)=>{
   };
 });
 </script>
-<div class="no-print" style="position:fixed;bottom:2px;right:4px;font-size:8px;color:rgba(120,120,120,.4);font-family:monospace;pointer-events:none;z-index:5">v2026.08.14-funcao-corrigida-de-vez</div>
+<div class="no-print" style="position:fixed;bottom:2px;right:4px;font-size:8px;color:rgba(120,120,120,.4);font-family:monospace;pointer-events:none;z-index:5">v2026.08.14-tudo-sincronizado</div>
 </body>
 </html>
