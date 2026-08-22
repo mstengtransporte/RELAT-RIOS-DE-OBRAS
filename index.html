@@ -1706,7 +1706,7 @@ body.dark #workers-body tr:hover{background-color:rgba(58,110,232,.08)}
      fontes) — os dois sistemas usam a mesma "moldura" de login, só
      o papel de parede muda entre eles. -->
 <div id="login-overlay" style="position:fixed;inset:0;z-index:99999;background:#0b1220 url('login-fundo-rdo.jpg') center center / cover no-repeat;color-scheme:dark">
-  <div style="position:absolute;bottom:6px;right:8px;font-size:9px;color:rgba(255,255,255,.35);font-family:monospace;pointer-events:none">v2026.08.22-reset-tela-pos-envio-v2</div>
+  <div style="position:absolute;bottom:6px;right:8px;font-size:9px;color:rgba(255,255,255,.35);font-family:monospace;pointer-events:none">v2026.08.22-duplicado-bloqueio-total</div>
   <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:calc(100% - 32px);max-width:380px;background:rgb(10,17,32);border:1px solid rgba(255,255,255,.14);border-radius:18px;padding:32px 28px;box-shadow:0 20px 60px rgba(0,0,0,.6);text-transform:none;font-weight:400">
     <h1 style="font-size:20px;margin:0 0 4px;color:#fff;text-align:center;font-weight:700">RDO <span style="color:#3ea6ff">Master Energy</span></h1>
     <p style="margin:0 0 24px;text-align:center;color:#9ca3af;font-size:13px;letter-spacing:.5px;font-weight:600">DIÁRIO DE OBRA PRO</p>
@@ -5985,13 +5985,14 @@ async function salvarRDO(){
 
     const key=chaveRDO(d.header.data);
 
-    // TRAVA CONTRA DUPLICADO ANTES DE ENVIAR (auditoria 2026-08-18): antes, esse aviso só
-    // aparecia DEPOIS, na tela "Buscar RDOs" — fácil de não ver a tempo. Agora checa direto
-    // na nuvem, ANTES da confirmação de envio, se já existe outro RDO enviado com a MESMA
-    // obra + data + encarregado + disciplina (só isso junto conta como duplicado de
-    // verdade — obra/data/encarregado repetidos com disciplina DIFERENTE é uso normal,
-    // cada disciplina tem seu próprio RDO). Se achar, obriga a pessoa a confirmar de
-    // propósito, mostrando o número do RDO já existente — não deixa passar batido.
+    // TRAVA CONTRA DUPLICADO ANTES DE ENVIAR — bloqueio DE VERDADE, sem opção de burlar.
+    // Checa direto na nuvem, ANTES da confirmação de envio, se já existe outro RDO
+    // enviado com a MESMA obra + data + encarregado + disciplina (só isso junto conta
+    // como duplicado de verdade — obra/data/encarregado repetidos com disciplina
+    // DIFERENTE é uso normal, cada disciplina tem seu próprio RDO, e a numeração
+    // continua a MESMA sequência da obra independente da disciplina). Se achar,
+    // BLOQUEIA o envio (nunca deixa "enviar mesmo assim") e mostra o número do RDO já
+    // existente, pra pessoa ir editar aquele em vez de criar um novo igual.
     const supabaseClientParaChecagem=getSupabaseClient();
     if(supabaseClientParaChecagem && usuarioAtual && d.header.obra && d.header.data && d.header.enc){
       try{
@@ -6005,15 +6006,12 @@ async function salvarRDO(){
           .neq('rdo_key',key);
         if(possiveisDuplicados && possiveisDuplicados.length){
           const numeros=possiveisDuplicados.map(r=>r.nrdo||'(sem número)').join(', ');
-          const confirmarMesmoAssim=confirm(
-            `⚠️ ATENÇÃO — POSSÍVEL DUPLICADO\n\nJá existe RDO enviado com a MESMA obra, data, encarregado e disciplina: ${numeros}.\n\n` +
-            `Se você já preencheu esse RDO antes e está só terminando/reenviando, cancele aqui e abra o RDO ${numeros} em "Buscar RDOs" em vez de criar um novo.\n\n` +
-            `Enviar mesmo assim como um RDO SEPARADO?`
-          );
-          if(!confirmarMesmoAssim){
-            showToast('Envio cancelado — verifique se não é o mesmo RDO já enviado.','#d97706');
-            return;
-          }
+          abrirModalPendenciasRDO([
+            `Já existe um RDO enviado com a MESMA obra, data, encarregado e disciplina — Nº ${numeros}.`,
+            `Envio bloqueado pra nunca duplicar um RDO. Abra o RDO ${numeros} em "Pesquisar RDOs" e edite ele em vez de criar um novo.`
+          ]);
+          showToast('❌ Envio bloqueado — RDO duplicado. Abra o RDO já existente em "Pesquisar RDOs".','#dc2626');
+          return;
         }
       }catch(e){ console.error('Checagem de duplicado antes de enviar:',e); } // se a checagem falhar, não bloqueia o envio por causa disso — só não avisa
     }
@@ -8312,6 +8310,11 @@ function buscarRDOs(){
       // salvo neste mesmo aparelho (ex: computador compartilhado). O admin continua
       // vendo todos, normalmente.
       if(!ehAdmin&&meuNomeNormalizado&&normalizarObra(h.enc)!==meuNomeNormalizado) return;
+      // Nunca lista RDO sem Obra/Projeto preenchido: a validação de envio (bloquearSeFormularioInvalido)
+      // já exige esse campo pra deixar enviar, então um RDO "enviado" sem obra só existiria por
+      // dado antigo (de antes dessa regra) ou por ter sido editado depois de marcado como
+      // enviado — de qualquer forma, não é um RDO válido pra aparecer/abrir na busca.
+      if(!(h.obra||'').trim()) return;
       const data=h.data||'';
       // Filtro por data
       if(de&&data&&data<de)return;
@@ -10623,11 +10626,11 @@ function executarCheckIntegridade(){
 
       // OSE colorida (com status) mas sem nome preenchido
       if(o.status&&o.status!=='sem'&&!(o.name||'').trim()){
-        problemas.push({grave:false,titulo:`${dataFmt} — ${oseLbl} sem nome de projeto`,detalhe:`Status "${STATUS_LABEL_PROJETO[o.status]||o.status}" definido, mas o campo de nome está vazio. Isso impede o agrupamento correto nos painéis de controle.`});
+        problemas.push({grave:false,titulo:`${dataFmt} — ${oseLbl} sem nome de projeto`,detalhe:`Status "${STATUS_LABEL_PROJETO[o.status]||o.status}" definido, mas o campo de nome está vazio. Isso impede o agrupamento correto nos painéis de controle.`,acaoTipo:'abrir',acaoChave:k});
       }
       // OSE com horas lançadas mas status "Sem Atividade" (inconsistente)
       if((!o.status||o.status==='sem')&&horasNaOse>0){
-        problemas.push({grave:true,titulo:`${dataFmt} — ${oseLbl} com horas mas sem status`,detalhe:`Tem ${fmt(horasNaOse)}h lançadas nessa OSE, mas o status está "Sem Atividade" — essas horas não aparecem em nenhum painel de controle (Extra Escopo/Andamento/Horas por Projeto).`});
+        problemas.push({grave:true,titulo:`${dataFmt} — ${oseLbl} com horas mas sem status`,detalhe:`Tem ${fmt(horasNaOse)}h lançadas nessa OSE, mas o status está "Sem Atividade" — essas horas não aparecem em nenhum painel de controle (Extra Escopo/Andamento/Horas por Projeto).`,acaoTipo:'abrir',acaoChave:k});
       }
     });
 
@@ -10637,7 +10640,7 @@ function executarCheckIntegridade(){
       const nomeVazio=!(w.name||'').trim()||w.name==='__custom__';
       const totalLinha=(w.hrs||[]).reduce((s,v)=>s+parseHrs(v||''),0);
       if(nomeVazio&&totalLinha>0){
-        problemas.push({grave:true,titulo:`${dataFmt} — linha sem funcionário com horas lançadas`,detalhe:`Tem ${fmt(totalLinha)}h lançadas numa linha sem funcionário selecionado. Essas horas não contam pra ninguém.`});
+        problemas.push({grave:true,titulo:`${dataFmt} — linha sem funcionário com horas lançadas`,detalhe:`Tem ${fmt(totalLinha)}h lançadas numa linha sem funcionário selecionado. Essas horas não contam pra ninguém.`,acaoTipo:'abrir',acaoChave:k});
       }
       // Mesmo nome de funcionário aparecendo mais de uma vez no MESMO RDO — pode ser
       // realmente duas pessoas com nome igual, ou uma linha duplicada por engano. De
@@ -10651,19 +10654,19 @@ function executarCheckIntegridade(){
       (w.hrs||[]).forEach((v,oi)=>{
         const n=parseHrs(v||'');
         if(n>24){
-          problemas.push({grave:false,titulo:`${dataFmt} — ${(w.name||'funcionário').toUpperCase()} com ${fmt(n)}h na OSE ${String(oi+1).padStart(2,'0')}`,detalhe:'Mais de 24h numa única célula — confira se não foi digitado errado.'});
+          problemas.push({grave:false,titulo:`${dataFmt} — ${(w.name||'funcionário').toUpperCase()} com ${fmt(n)}h na OSE ${String(oi+1).padStart(2,'0')}`,detalhe:'Mais de 24h numa única célula — confira se não foi digitado errado.',acaoTipo:'abrir',acaoChave:k});
         }
         // Texto digitado com "-" na frente de um número (ex: "-5") é tratado como 0 na
         // conta (hora negativa não existe), mas o "-" continua visível na tela — avisa
         // aqui pra não passar despercebido, já que a célula parece preenchida mas não soma.
         if(/^-\s*\d/.test((v||'').toString().trim())){
-          problemas.push({grave:true,titulo:`${dataFmt} — ${(w.name||'funcionário').toUpperCase()} com valor negativo na OSE ${String(oi+1).padStart(2,'0')}`,detalhe:`Foi digitado "${v}" — hora negativa não existe, então isso conta como 0h no total, mas o texto ainda aparece na célula. Corrija a digitação.`});
+          problemas.push({grave:true,titulo:`${dataFmt} — ${(w.name||'funcionário').toUpperCase()} com valor negativo na OSE ${String(oi+1).padStart(2,'0')}`,detalhe:`Foi digitado "${v}" — hora negativa não existe, então isso conta como 0h no total, mas o texto ainda aparece na célula. Corrija a digitação.`,acaoTipo:'abrir',acaoChave:k});
         }
       });
     });
     Object.entries(nomesDoRDO).forEach(([nome,qtd])=>{
       if(qtd>1){
-        problemas.push({grave:false,titulo:`${dataFmt} — "${nome}" aparece ${qtd} vezes nesse RDO`,detalhe:'Mesmo nome lançado em mais de uma linha no mesmo dia. Se forem pessoas diferentes com nome igual, tudo bem — mas se for engano (linha duplicada), as horas estão sendo contadas a mais.'});
+        problemas.push({grave:false,titulo:`${dataFmt} — "${nome}" aparece ${qtd} vezes nesse RDO`,detalhe:'Mesmo nome lançado em mais de uma linha no mesmo dia. Se forem pessoas diferentes com nome igual, tudo bem — mas se for engano (linha duplicada), as horas estão sendo contadas a mais.',acaoTipo:'abrir',acaoChave:k});
       }
     });
   }
@@ -10697,6 +10700,9 @@ function executarCheckIntegridade(){
     if(p.acaoTipo==='apagar'){
       return `<button type="button" onclick="apagarArquivoCorrompido('${(p.acaoChave||'').replace(/'/g,"\\'")}')" style="display:block;margin-top:8px;background:#dc2626;color:#fff;border:2px solid #7f1d1d;padding:7px 12px;font-size:11px;font-weight:900;cursor:pointer;text-transform:uppercase">🗑️ Apagar arquivo corrompido</button>`;
     }
+    if(p.acaoTipo==='abrir'){
+      return `<button type="button" onclick="abrirRDODoCheck('${(p.acaoChave||'').replace(/'/g,"\\'")}')" style="display:block;margin-top:8px;background:#1457c8;color:#fff;border:2px solid #123166;padding:7px 12px;font-size:11px;font-weight:900;cursor:pointer;text-transform:uppercase">📂 Abrir RDO e corrigir</button>`;
+    }
     return '';
   }
   wrap.innerHTML=problemas
@@ -10713,6 +10719,20 @@ function resolverDuplicataNRDO(obra){
   if(campoObra) campoObra.value=obra||'';
   abrirBuscaRDO();
   showToast('🔍 Compare as datas/números e exclua a cópia errada.','#d97706');
+}
+
+// Atalho direto a partir do Check de Integridade pra qualquer pendência ligada a UM RDO
+// específico (OSE sem nome, horas sem status, linha órfã, hora >24h, valor negativo,
+// nome duplicado) — antes esses tipos de pendência não tinham NENHUM botão de ação, só
+// ficavam listados sem jeito de resolver a partir dali, o que parecia um bug ("clico e
+// não some"). Fecha o Check e abre o RDO exato pra editar e corrigir o campo indicado.
+// Depois de corrigir e salvar, é só clicar em "🔍 Verificar de Novo" no painel do Check
+// pra confirmar que a pendência sumiu.
+function abrirRDODoCheck(chave){
+  if(!chave){ showToast('Não foi possível identificar esse RDO.','#dc2626'); return; }
+  document.getElementById('check-modal')?.classList.remove('show');
+  abrirRDOSalvo(chave);
+  showToast('✏️ Corrija o campo indicado e clique em "Salvar e Enviar" pra atualizar.','#1457c8');
 }
 
 // Apaga DE VERDADE o arquivo corrompido identificado pelo Check de Integridade — um JSON
@@ -10995,7 +11015,7 @@ window.addEventListener('beforeinstallprompt',(e)=>{
   };
 });
 </script>
-<div class="no-print" style="position:fixed;bottom:2px;right:4px;font-size:8px;color:rgba(120,120,120,.4);font-family:monospace;pointer-events:none;z-index:5">v2026.08.22-reset-tela-pos-envio-v2</div>
+<div class="no-print" style="position:fixed;bottom:2px;right:4px;font-size:8px;color:rgba(120,120,120,.4);font-family:monospace;pointer-events:none;z-index:5">v2026.08.22-duplicado-bloqueio-total</div>
 
 <!-- MODAL DE ALERTA DE PENDÊNCIAS — substitui o toast/alert escuro de antes. Aparece
      sempre que a validação unificada (validarFormularioRDO) bloqueia uma tentativa de
