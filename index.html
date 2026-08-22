@@ -1706,7 +1706,7 @@ body.dark #workers-body tr:hover{background-color:rgba(58,110,232,.08)}
      fontes) — os dois sistemas usam a mesma "moldura" de login, só
      o papel de parede muda entre eles. -->
 <div id="login-overlay" style="position:fixed;inset:0;z-index:99999;background:#0b1220 url('login-fundo-rdo.jpg') center center / cover no-repeat;color-scheme:dark">
-  <div style="position:absolute;bottom:6px;right:8px;font-size:9px;color:rgba(255,255,255,.35);font-family:monospace;pointer-events:none">v2026.08.22-trava-horario-edicao</div>
+  <div style="position:absolute;bottom:6px;right:8px;font-size:9px;color:rgba(255,255,255,.35);font-family:monospace;pointer-events:none">v2026.08.22-sessao-auth-reforcada</div>
   <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:calc(100% - 32px);max-width:380px;background:rgb(10,17,32);border:1px solid rgba(255,255,255,.14);border-radius:18px;padding:32px 28px;box-shadow:0 20px 60px rgba(0,0,0,.6);text-transform:none;font-weight:400">
     <h1 style="font-size:20px;margin:0 0 4px;color:#fff;text-align:center;font-weight:700">RDO <span style="color:#3ea6ff">Master Energy</span></h1>
     <p style="margin:0 0 24px;text-align:center;color:#9ca3af;font-size:13px;letter-spacing:.5px;font-weight:600">DIÁRIO DE OBRA PRO</p>
@@ -2348,7 +2348,34 @@ function getSupabaseClient(){
   if(_supabaseClientCache) return _supabaseClientCache;
   try{
     if(window.supabase&&window.supabase.createClient){
-      _supabaseClientCache=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
+      // Configuração EXPLÍCITA de sessão (antes ficava só no padrão implícito da
+      // biblioteca) — pra garantir, sem depender de nenhum comportamento "escondido"
+      // da versão da lib, que a sessão fica salva no armazenamento do aparelho E se
+      // renova sozinha sem precisar pedir senha de novo toda hora:
+      //  - persistSession: grava a sessão no localStorage (sobrevive fechar o app/aba)
+      //  - autoRefreshToken: renova o token de acesso sozinho, em segundo plano, antes
+      //    de expirar (o token de acesso dura só ~1h — sem isso, expiraria e pediria
+      //    login de novo com muito mais frequência)
+      //  - storageKey própria: evita qualquer colisão com outro app que porventura
+      //    use o mesmo domínio/subpasta de armazenamento
+      //  - detectSessionInUrl: false (não usamos login por link mágico/OAuth aqui,
+      //    só email+senha, então não precisa varrer a URL a cada carregamento)
+      _supabaseClientCache=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY,{
+        auth:{
+          persistSession:true,
+          autoRefreshToken:true,
+          detectSessionInUrl:false,
+          storageKey:'rdo-master-energy-auth',
+          storage:window.localStorage
+        }
+      });
+      // Log de diagnóstico: se a sessão cair sozinha de novo, isso aqui mostra no
+      // console (F12 no navegador) o motivo exato (token expirado sem conseguir
+      // renovar, revogado, etc.) — antes esse tipo de falha ficava muda, sem pista
+      // nenhuma de por que pediu login de novo.
+      _supabaseClientCache.auth.onAuthStateChange((evento,sessao)=>{
+        console.log('[RDO][auth]',evento,sessao?`expira em ${sessao.expires_at?new Date(sessao.expires_at*1000).toLocaleString('pt-BR'):'?'}`:'(sem sessão)');
+      });
     }
   }catch(e){console.error('Supabase init error:',e);}
   return _supabaseClientCache;
@@ -10868,7 +10895,7 @@ function mostrarAvisoDataDivergente(msg){
 // celular quebrar, resetar ou trocar de dono (hoje tudo fica só no
 // localStorage deste aparelho, sem nenhuma cópia em outro lugar).
 // ════════════════════════════════════════════════════════════
-const CHAVES_META_BACKUP=['rdo-names-list','rdo-funcs-list','rdo-vehicles-list','rdo-theme','rdo-frases','rdo-last-key','rdo-clientes-cache','rdo-ultimo-usuario-id','rdo-enviados'];
+const CHAVES_META_BACKUP=['rdo-names-list','rdo-funcs-list','rdo-vehicles-list','rdo-theme','rdo-frases','rdo-last-key','rdo-clientes-cache','rdo-ultimo-usuario-id','rdo-enviados','rdo-enviados-em','rdo-email-lembrado','rdo-ultimo-backup','rdo-ultimo-snapshot-nomes-escala','rdo-ultimo-snapshot-veiculos-escala','rdo-ultimo-snapshot-funcoes-escala','rdo-suspeitos-apagados-admin'];
 
 function coletarTodosOsDadosParaBackup(){
   autoSilentSave(); // trava de segurança: o backup tem que sempre incluir a última edição feita na tela
@@ -11088,7 +11115,7 @@ window.addEventListener('beforeinstallprompt',(e)=>{
   };
 });
 </script>
-<div class="no-print" style="position:fixed;bottom:2px;right:4px;font-size:8px;color:rgba(120,120,120,.4);font-family:monospace;pointer-events:none;z-index:5">v2026.08.22-trava-horario-edicao</div>
+<div class="no-print" style="position:fixed;bottom:2px;right:4px;font-size:8px;color:rgba(120,120,120,.4);font-family:monospace;pointer-events:none;z-index:5">v2026.08.22-sessao-auth-reforcada</div>
 
 <!-- MODAL DE ALERTA DE PENDÊNCIAS — substitui o toast/alert escuro de antes. Aparece
      sempre que a validação unificada (validarFormularioRDO) bloqueia uma tentativa de
