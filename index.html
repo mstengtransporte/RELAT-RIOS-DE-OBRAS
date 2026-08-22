@@ -4,16 +4,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>RDO — Master Energy</title>
-<!-- PWA: permite "Instalar app" / "Adicionar à tela inicial" no celular e no computador —
-     ícone oficial novo (raio + "M" azul sobre fundo azul-marinho escuro, com "RDO" escrito) -->
+<!-- PWA: permite "Instalar app" / "Adicionar à tela inicial" no celular e no computador -->
 <link rel="manifest" href="./manifest.json">
-<meta name="theme-color" content="#010d24">
-<link rel="icon" type="image/x-icon" href="./favicon.ico">
-<link rel="icon" type="image/png" sizes="16x16" href="./favicon-16.png">
-<link rel="icon" type="image/png" sizes="32x32" href="./favicon-32.png">
+<meta name="theme-color" content="#1457c8">
 <link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png">
-<link rel="icon" type="image/png" sizes="512x512" href="./icon-512.png">
-<link rel="apple-touch-icon" href="./apple-touch-icon.png">
+<link rel="apple-touch-icon" href="./icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="RDO Master Energy">
@@ -156,13 +151,12 @@ textarea.hrs.falta,textarea.hrs.cedo,textarea.hrs.integracao,textarea.hrs.aguard
 .btn{
   padding:6px 10px;border:1.5px solid rgba(255,255,255,.15);cursor:pointer;
   font-size:10px;font-weight:900;display:inline-flex;align-items:center;gap:4px;
-  transition:transform .14s ease,box-shadow .14s ease,filter .12s;white-space:nowrap;letter-spacing:.3px;
+  transition:all .12s;white-space:nowrap;letter-spacing:.3px;
   -webkit-appearance:none;touch-action:manipulation;
-  border-radius:3px;text-transform:uppercase;flex-shrink:0;
-  box-shadow:2px 2px 0 rgba(0,0,0,.85)
+  border-radius:3px;text-transform:uppercase;flex-shrink:0
 }
 .btn:disabled{opacity:.35;cursor:not-allowed}
-.btn:hover{filter:brightness(1.15);transform:translate(-2px,-2px);box-shadow:4px 4px 0 rgba(0,0,0,.85)}
+.btn:hover{filter:brightness(1.2);transform:translateY(-1px);box-shadow:0 3px 10px rgba(0,0,0,.35)}
 #login-overlay button{transition:transform .1s ease,filter .1s ease,opacity .1s ease}
 /* Papel de parede de verdade: cobre 100% da tela, sem sobrar faixa vazia
    em lugar nenhum — nem no celular, nem no computador. A caixa de login
@@ -171,25 +165,8 @@ textarea.hrs.falta,textarea.hrs.cedo,textarea.hrs.integracao,textarea.hrs.aguard
 #login-overlay{background:#0b1220 url('login-fundo-rdo.jpg') center center / cover no-repeat!important;}
 #login-overlay button:active{transform:scale(.96);filter:brightness(.8)}
 #login-overlay button:disabled{opacity:.6;transform:none}
-.btn:active{transform:translate(0,0);box-shadow:1px 1px 0 rgba(0,0,0,.85);filter:brightness(.9)}
-
-/* Menu dropdown do usuário logado — abre pra baixo, alinhado à direita do botão. */
-.user-menu-wrap{display:flex}
-#menu-usuario-dropdown{
-  display:none;position:absolute;top:calc(100% + 8px);right:0;min-width:190px;
-  background:var(--surface,#fff);border:2px solid #000;border-radius:8px;
-  box-shadow:4px 4px 0 rgba(0,0,0,.85);overflow:hidden;z-index:500;
-}
-#menu-usuario-dropdown.show{display:block}
-#menu-usuario-dropdown button{
-  display:flex;align-items:center;gap:8px;width:100%;background:none;border:none;
-  padding:12px 14px;font-size:13px;font-weight:800;color:var(--text,#0a1628);cursor:pointer;
-  text-align:left;transition:background-color .12s;
-}
-#menu-usuario-dropdown button+button{border-top:1.5px solid var(--card-border,#e2e8f0)}
-#menu-usuario-dropdown button:hover{background:var(--surface2,#f1f5f9)}
-body.dark #menu-usuario-dropdown{background:#1a2530}
-.btn-save{background:linear-gradient(180deg,#1fa35a 0%,#0d5f34 100%)!important;color:#fff;border-color:#0a3d21}
+.btn:active{transform:translateY(0);filter:brightness(.9)}
+.btn-save{background:linear-gradient(180deg,#2568d6 0%,#123166 100%)!important;color:#fff;border-color:#0a2454}
 @keyframes piscarFaixaPendente{
   0%,100%{background:#dc2626}
   50%{background:#f59e0b}
@@ -222,7 +199,7 @@ body.dark #menu-usuario-dropdown{background:#1a2530}
    ══════════════════════════════════════ */
 .rdo-banner{
   background:var(--hbg);
-  padding:10px 22px;
+  padding:14px 22px;
   display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;
   border-bottom:4px solid var(--accent);
   position:relative;overflow:hidden
@@ -262,7 +239,7 @@ body.dark #menu-usuario-dropdown{background:#1a2530}
 /* ══════════════════════════════════════
    PAGE
    ══════════════════════════════════════ */
-.page{max-width:1460px;margin:0 auto;padding:8px 14px 14px}
+.page{max-width:1460px;margin:0 auto;padding:14px}
 
 /* ══════════════════════════════════════
    SEÇÃO: CABEÇALHO RDO
@@ -270,7 +247,7 @@ body.dark #menu-usuario-dropdown{background:#1a2530}
 .rdo-header{
   background:var(--surface);
   border:2.5px solid #000;
-  margin-bottom:8px;
+  margin-bottom:12px;
   box-shadow:4px 4px 0 #000
 }
 .rdo-header-bar{
@@ -294,49 +271,11 @@ body.dark #menu-usuario-dropdown{background:#1a2530}
   min-height:26px;text-transform:uppercase;box-sizing:border-box
 }
 .hfield select{text-overflow:ellipsis;overflow:hidden;white-space:nowrap}
-.hfield-readonly-wrap{
-  background:transparent;
-  font-size:13px;font-weight:900;color:var(--text);width:100%;max-width:100%;
-  min-height:26px;text-transform:uppercase;box-sizing:border-box;
-  padding:2px 0;cursor:not-allowed;opacity:.85;
-  /* Isto aqui é o que realmente resolve a quebra de linha — um <input readonly> ou
-     <select> NUNCA quebra texto em duas linhas, não importa o CSS (é assim que o
-     navegador desenha esses elementos por baixo dos panos). Uma div comum já
-     quebra normalmente, então nomes compostos longos ficam 100% visíveis, uma
-     parte embaixo da outra quando não cabe numa linha só. */
-  white-space:normal;word-break:break-word;overflow-wrap:break-word;line-height:1.25;
-}
 .hfield textarea{
   font-family:inherit;resize:none;overflow:hidden;box-sizing:border-box;
   white-space:pre-wrap;word-break:break-word;overflow-wrap:break-word;line-height:1.25
 }
 .hfield input:focus,.hfield textarea:focus{color:var(--accent)}
-
-/* Micro-interação de hover — todos os campos editáveis do formulário (cabeçalho,
-   equipe, horas, descrição da OSE) sobem levemente e ganham uma sombra suave ao passar
-   o mouse, com transição rápida. Dá uma resposta visual clara de "isto é clicável/
-   editável" sem exagerar. Fica dentro de um "@media(hover:hover)" pra não ativar em
-   celular (onde não existe hover de verdade — toque já dá seu próprio feedback nativo). */
-@media(hover:hover){
-  .hfield input,.hfield textarea,.hfield select,
-  select.cell-name,select.cell-func,select.cell-vehicle,
-  input.cell-name,input.cell-func,input.cell-vehicle,
-  textarea.hrs,.ose-desc{
-    transition:transform .14s ease,box-shadow .14s ease,background-color .14s ease;
-  }
-  .hfield input:hover,.hfield textarea:hover,.hfield select:hover,
-  select.cell-name:hover,select.cell-func:hover,select.cell-vehicle:hover,
-  input.cell-name:hover,input.cell-func:hover,input.cell-vehicle:hover,
-  textarea.hrs:hover,.ose-desc:hover{
-    transform:translateY(-2px);
-    box-shadow:0 4px 10px rgba(0,0,0,.18);
-  }
-  body.dark .hfield input:hover,body.dark .hfield textarea:hover,body.dark .hfield select:hover,
-  body.dark select.cell-name:hover,body.dark select.cell-func:hover,body.dark select.cell-vehicle:hover,
-  body.dark textarea.hrs:hover,body.dark .ose-desc:hover{
-    box-shadow:0 4px 12px rgba(0,0,0,.5);
-  }
-}
 
 /* ══════════════════════════════════════
    RDOs DO MESMO DIA (troca rápida)
@@ -397,19 +336,19 @@ body.dark .obra-parada-pill{background:rgba(217,119,6,.2);color:#fbbf24;border-c
    ══════════════════════════════════════ */
 .legend-bar{
   background:var(--surface);border:2.5px solid #000;
-  padding:8px 14px;margin-bottom:8px;
+  padding:12px 16px;margin-bottom:12px;
   box-shadow:4px 4px 0 #000
 }
 .print-legend{display:none} /* só aparece na impressão/PDF — ver @media print */
 .legend-bar-title{
   font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:2px;
-  color:var(--text3);margin-bottom:6px;
+  color:var(--text3);margin-bottom:10px;
   display:flex;align-items:center;gap:8px
 }
 .legend-bar-title::before,.legend-bar-title::after{content:'';flex:1;height:1px;background:var(--border2)}
 .legend-items{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
 .badge{
-  padding:5px 12px;font-size:11px;font-weight:900;white-space:nowrap;
+  padding:7px 14px;font-size:11px;font-weight:900;white-space:nowrap;
   letter-spacing:.3px;display:inline-flex;align-items:center;gap:5px;
   border:2px solid transparent;line-height:1;
   box-shadow:2px 2px 0 rgba(0,0,0,.25)
@@ -476,7 +415,7 @@ body.dark .obra-parada-pill{background:rgba(217,119,6,.2);color:#fbbf24;border-c
    ══════════════════════════════════════ */
 .section-title{
   font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:2px;color:var(--text2);
-  margin-bottom:6px;display:flex;align-items:center;gap:8px
+  margin-bottom:8px;display:flex;align-items:center;gap:8px
 }
 .section-title::before{content:'';display:block;width:4px;height:16px;background:var(--accent);flex-shrink:0}
 
@@ -899,30 +838,6 @@ input.login-input,
 #projetos-modal{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:9997;display:none;align-items:center;justify-content:center;padding:14px;backdrop-filter:blur(6px)}
 #projetos-modal.show{display:flex}
 #check-modal{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:9997;display:none;align-items:center;justify-content:center;padding:14px;backdrop-filter:blur(6px)}
-
-/* Modal de alerta de pendências — reestilizado a pedido: fundo CLARO (não escuro feito
-   os toasts), com uma faixa de destaque âmbar/vermelha no topo, texto escuro bem
-   legível, e um botão de confirmação grande. z-index mais alto que os outros modais,
-   pra aparecer por cima mesmo se disparado durante uma exportação com outro painel
-   aberto. */
-#modal-pendencias-rdo{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:99999;display:none;align-items:center;justify-content:center;padding:16px}
-#modal-pendencias-rdo.show{display:flex}
-.pendencias-caixa{
-  background:#fffbeb;color:#1f2937;width:100%;max-width:440px;border-radius:12px;
-  border-top:6px solid #f59e0b;box-shadow:0 20px 60px rgba(0,0,0,.4);overflow:hidden;
-  animation:pendenciasEntrar .18s ease-out;
-}
-@keyframes pendenciasEntrar{from{transform:translateY(-14px);opacity:0}to{transform:translateY(0);opacity:1}}
-.pendencias-titulo{font-size:19px;font-weight:900;color:#92400e;padding:22px 24px 0;line-height:1.3}
-.pendencias-msg{font-size:14px;color:#1f2937;line-height:1.55;padding:10px 24px 0;margin:0}
-.pendencias-lista{margin:14px 24px 0;padding:12px 14px;background:#fff7ed;border:1.5px solid #fde68a;border-radius:8px;list-style:disc;padding-left:32px;font-size:12.5px;color:#57534e;line-height:1.7;max-height:180px;overflow-y:auto}
-.pendencias-rodape{padding:20px 24px 24px}
-.pendencias-btn{
-  width:100%;background:#f59e0b;color:#fff;border:none;border-radius:9px;padding:13px;
-  font-size:14.5px;font-weight:900;cursor:pointer;box-shadow:0 3px 0 #b45309;
-}
-.pendencias-btn:hover{background:#d97706}
-.pendencias-btn:active{transform:translateY(2px);box-shadow:none}
 #check-modal.show{display:flex}
 .check-item{border-left:4px solid #d97706;background:#fffbeb;padding:8px 10px;margin-bottom:6px;font-size:11.5px}
 .check-item.grave{border-left-color:#dc2626;background:#fef2f2}
@@ -937,19 +852,19 @@ input.login-input,
 .pj-total{font-size:20px;font-weight:900;color:#6830cc;white-space:nowrap}
 .an-projeto{border:2px solid #0e3a9a;background:#eef4ff;margin-bottom:8px}
 .an-projeto-header{background:#1a52c8;color:#fff;padding:7px 10px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;gap:8px}
-.an-projeto-header b{font-size:13px;word-break:break-word}
+.an-projeto-header b{font-size:12px}
 .an-projeto-header .tot{font-size:14px;font-weight:900;white-space:nowrap}
-.an-projeto-dias{padding:10px 12px;display:none}
+.an-projeto-dias{padding:8px 10px;display:none}
 .an-projeto.aberto .an-projeto-dias{display:block}
-.an-dia{border-top:1px dashed #b0c4e8;padding:9px 0;font-size:12.5px;line-height:1.5;word-break:break-word;overflow-wrap:anywhere}
+.an-dia{border-top:1px dashed #b0c4e8;padding:6px 0;font-size:11px}
 .an-dia:first-child{border-top:none}
 .ee-projeto{border:2px solid #0d5228;background:#eafbf1;margin-bottom:8px}
 .ee-projeto-header{background:#158038;color:#fff;padding:7px 10px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;gap:8px}
-.ee-projeto-header b{font-size:13px;word-break:break-word}
+.ee-projeto-header b{font-size:12px}
 .ee-projeto-header .tot{font-size:14px;font-weight:900;white-space:nowrap}
-.ee-projeto-dias{padding:10px 12px;display:none}
+.ee-projeto-dias{padding:8px 10px;display:none}
 .ee-projeto.aberto .ee-projeto-dias{display:block}
-.ee-dia{border-top:1px dashed #a8dabf;padding:9px 0;font-size:12.5px;line-height:1.5;word-break:break-word;overflow-wrap:anywhere}
+.ee-dia{border-top:1px dashed #a8dabf;padding:6px 0;font-size:11px}
 .ee-dia:first-child{border-top:none}
 .ee-card{background:var(--surface2);border:2px solid #000;padding:8px 10px;text-align:center}
 .ee-card .v{font-size:22px;font-weight:900;color:#158038}
@@ -977,6 +892,11 @@ input.login-input,
 .multipdf-footer{display:flex;gap:8px;padding:12px 16px;border-top:2px solid #000;flex-shrink:0;flex-wrap:wrap}
 .multipdf-footer button{flex:1;padding:10px;border:2px solid #000;font-size:12px;font-weight:900;cursor:pointer}
 .multipdf-gerar{background:#7c3aed;color:#fff}
+.novo-rdo-dia-btn{
+  flex:1;background:var(--surface2);color:var(--text2);border:2px solid var(--border2);
+  padding:9px 8px;font-size:11.5px;font-weight:900;cursor:pointer;text-align:center;line-height:1.4
+}
+.novo-rdo-dia-btn.ativo{background:#1457c8;color:#fff;border-color:#0a3a94}
 .absenteismo-periodo-btn{
   background:var(--surface2);color:var(--text2);border:2px solid var(--border2);
   padding:8px 12px;font-size:11.5px;font-weight:800;cursor:pointer;border-radius:6px
@@ -1005,25 +925,6 @@ input.login-input,
 @media(min-width:500px){#toast{left:auto;right:20px;max-width:340px;margin:0}}
 #toast.show{opacity:1}
 
-/* Aviso amarelo persistente (mesma paleta do #aviso-operacional já usado no
-   topo do app) — pra avisos importantes que um toast rápido faria passar
-   despercebido, como a data do RDO não bater com a da Escala de Trabalho. */
-.aviso-data-divergente{
-  position:fixed;top:64px;left:50%;transform:translateX(-50%) translateY(-8px);
-  max-width:min(92vw,520px);
-  background:#fef3c7;color:#7c5a00;border:2px solid #d97706;border-radius:12px;
-  padding:12px 40px 12px 16px;box-shadow:0 6px 18px rgba(0,0,0,.22);
-  z-index:9999;opacity:0;pointer-events:none;transition:opacity .25s, transform .25s;
-  font-size:13px;font-weight:800;line-height:1.5;text-align:left;
-}
-.aviso-data-divergente.show{opacity:1;pointer-events:auto;transform:translateX(-50%) translateY(0);}
-.aviso-data-divergente .fechar-aviso-divergente{
-  position:absolute;top:4px;right:6px;background:none;border:none;
-  font-size:16px;font-weight:900;color:#7c5a00;cursor:pointer;padding:6px 9px;line-height:1;
-}
-body.dark .aviso-data-divergente{background:#3a2e05;color:#fbbf24;border-color:#d97706;}
-body.dark .aviso-data-divergente .fechar-aviso-divergente{color:#fbbf24;}
-
 /* ══════════════════════════════════════
    MOBILE
    ══════════════════════════════════════ */
@@ -1033,22 +934,10 @@ body.dark .aviso-data-divergente .fechar-aviso-divergente{color:#fbbf24;}
   .topbar-title{display:none}
   .topbar-brand-tag{display:none}
   .hfield select{font-size:12px}
-  /* Toque confortável em mobile: campos da equipe e do cabeçalho ganham altura mínima
-     de ~40px (dedo não erra o alvo) e fonte de 16px nos campos de texto de verdade
-     (abaixo de 16px, o Safari do iPhone dá zoom sozinho ao focar — isso "quebra" a tela
-     visualmente até a pessoa dar zoom out de novo; com 16px isso nunca acontece). Nas
-     células de horas mantém fonte um pouco menor (são bem estreitas de propósito, pra
-     caber as 6 OSEs lado a lado) mas ainda confortável de tocar.
-  */
-  select.cell-name,select.cell-func,select.cell-vehicle{min-height:40px;font-size:15px;padding:6px 16px 6px 4px}
-  input.cell-name,input.cell-func,input.cell-vehicle{min-height:40px;font-size:15px;padding:6px 4px}
-  textarea.hrs{min-height:38px;font-size:14px;padding:6px 3px}
-  .hfield input,.hfield textarea,.hfield select{min-height:38px;font-size:15px}
   .btn{padding:6px 5px;font-size:17px;gap:1px;flex-direction:column;min-width:54px;line-height:1.1;flex-shrink:0}
   .btn span{display:block;font-size:7.5px;font-weight:800;white-space:nowrap;letter-spacing:.2px}
   .page{padding:8px 6px}
   .rdo-banner{padding:10px 12px}
-  #ee-resumo, #an-resumo{grid-template-columns:repeat(2,1fr)!important}
   .banner-logo{height:36px}
   .banner-title h1{font-size:14px}
   .rdo-header-grid{grid-template-columns:1fr 1fr}
@@ -1063,6 +952,9 @@ body.dark .aviso-data-divergente .fechar-aviso-divergente{color:#fbbf24;}
   .rdos-do-dia-bar{padding:8px 10px;gap:6px}
   .rdos-do-dia-label{font-size:9px;width:100%}
   .rdo-do-dia-pill,.rdo-do-dia-pill-novo{font-size:10px;padding:6px 9px}
+
+  /* Modal "Novo RDO": botões de dia empilham em vez de espremer lado a lado */
+  .novo-rdo-dia-btn{font-size:11px;padding:10px 6px;min-height:44px}
 
   /* Card de OSE: o seletor de status não pode dominar o card inteiro numa tela estreita */
   .ose-status-sel{min-width:0;flex:1;padding:8px 6px;font-size:11px}
@@ -1100,6 +992,7 @@ body.dark .aviso-data-divergente .fechar-aviso-divergente{color:#fbbf24;}
 }
 @media(max-width:380px){
   .summary-grid{grid-template-columns:repeat(2,1fr)}
+  .novo-rdo-dia-btn{font-size:10px}
   .multipdf-footer button{min-width:100%}
   .btn{min-width:48px;font-size:15px;padding:5px 4px}
   .btn span{font-size:7px}
@@ -1112,16 +1005,6 @@ body.dark .aviso-data-divergente .fechar-aviso-divergente{color:#fbbf24;}
    ══════════════════════════════════════ */
 @media(min-width:601px) and (max-width:1024px){
   .rdo-header-grid{grid-template-columns:repeat(3,1fr)}
-}
-
-/* Extra Escopo e Em Andamento: min-width de 850px só a partir daqui pra cima —
-   em telas menores que isso (a maioria dos encarregados usa o app no celular)
-   o modal fica em width:90vw (responsivo), senão 850px fixos estourariam a
-   tela e forçariam rolagem horizontal num celular comum. */
-@media(min-width:900px){
-  #extra-escopo-modal .multipdf-box, #andamento-modal .multipdf-box{
-    min-width:850px;
-  }
 }
 
 /* Celular deitado (paisagem) — tela baixa e larga: os modais não podem ficar mais
@@ -1246,42 +1129,28 @@ body.dark .aviso-data-divergente .fechar-aviso-divergente{color:#fbbf24;}
     break-inside:avoid!important
   }
   .table-scroll{ overflow:visible!important }
-  /* CORREÇÃO GLOBAL — vale pra TODA a tabela do PDF (cabeçalho e todas as colunas do
-     corpo), não só uma coluna isolada: NENHUMA palavra única (ex: "ELETRICISTA",
-     "TRANSFERIDO", "ENCARREGADO") pode ser cortada no meio. A quebra de linha só
-     acontece nos espaços entre palavras — se uma palavra sozinha não couber, ela
-     simplesmente ultrapassa um pouco a coluna em vez de ser dividida escondida (o
-     rebalanceamento de largura abaixo, mais a fonte/padding reduzidos, já cobre os
-     nomes/termos padrão do dia a dia; overflow raro é sempre preferível a texto cortado
-     sem avisar). "!important" em tudo porque table-layout:fixed do navegador tenta
-     forçar quebra sozinho pra manter a largura da coluna — sem isso ele ignoraria. */
-  table, table *{
-    word-break:normal!important;
-    overflow-wrap:normal!important;
-    hyphens:none!important;
-  }
   table{
     width:100%!important;
     min-width:unset!important;
     max-width:100%!important;
     table-layout:fixed!important;
     border-collapse:collapse!important;
-    font-size:7.5pt!important
+    font-size:8pt!important
   }
   /* Larguras em % (não em px) — garante que a tabela sempre caiba na largura da página,
      sem empurrar a coluna "TOTAL H.H/DIA" pra fora da folha impressa.
      Ordem das colunas: 1=# 2=Nome 3=Função 4=Veículo 5-10=OSE01-06 11=Total 12=Excluir */
   table th:nth-child(1),table td:nth-child(1){width:3%!important}
   table th:nth-child(2),table td:nth-child(2){width:18%!important}
-  table th:nth-child(3),table td:nth-child(3){width:12%!important}
-  table th:nth-child(4),table td:nth-child(4){width:13%!important}
+  table th:nth-child(3),table td:nth-child(3){width:11%!important}
+  table th:nth-child(4),table td:nth-child(4){width:11%!important}
   table th:nth-child(5),table td:nth-child(5),
   table th:nth-child(6),table td:nth-child(6),
   table th:nth-child(7),table td:nth-child(7),
   table th:nth-child(8),table td:nth-child(8),
   table th:nth-child(9),table td:nth-child(9),
   table th:nth-child(10),table td:nth-child(10){width:7%!important}
-  table th:nth-child(11),table td:nth-child(11){width:12%!important}
+  table th:nth-child(11),table td:nth-child(11){width:15%!important}
   table th:nth-child(12),table td:nth-child(12){display:none!important} /* coluna do botão excluir */
   thead tr{
     background:#0a1e42!important;
@@ -1290,19 +1159,19 @@ body.dark .aviso-data-divergente .fechar-aviso-divergente{color:#fbbf24;}
   }
   thead th{
     color:#fff!important;
-    font-size:6.5pt!important;
+    font-size:7pt!important;
     font-weight:900!important;
-    padding:4px 2px!important;
+    padding:4px 4px!important;
     border-right:1px solid rgba(255,255,255,.3)!important;
     -webkit-print-color-adjust:exact!important;
     print-color-adjust:exact!important
   }
   tbody tr:nth-child(even){ background:#f4f6fb!important;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important }
   tbody td{
-    padding:3px 2px!important;
+    padding:3px 4px!important;
     border-right:1px solid #000!important;
     border-bottom:1px solid #aaa!important;
-    font-size:7.5pt!important;
+    font-size:8pt!important;
     font-weight:900!important
   }
   /* Selects de nome/função/veículo → texto puro */
@@ -1324,14 +1193,13 @@ body.dark .aviso-data-divergente .fechar-aviso-divergente{color:#fbbf24;}
      nome comprido de funcionário nunca fique cortado. */
   .cell-print-text{
     display:block!important;
-    font-size:7.5pt!important;
+    font-size:8pt!important;
     font-weight:900!important;
     color:#000!important;
     text-transform:uppercase!important;
-    white-space:normal!important;
-    word-break:normal!important;
-    overflow-wrap:normal!important;
-    hyphens:none!important;
+    white-space:pre-wrap!important;
+    word-break:break-word!important;
+    overflow-wrap:break-word!important;
     line-height:1.25!important
   }
   /* Células de horas — cores conforme OSE */
@@ -1557,7 +1425,6 @@ body.dark .aviso-data-divergente .fechar-aviso-divergente{color:#fbbf24;}
     gap:12px!important;
     flex-wrap:wrap!important;
     align-items:center!important;
-    justify-content:center!important;
     margin-top:6px!important;
     padding:6px 10px!important;
     border:1.5px solid #999!important;
@@ -1600,7 +1467,7 @@ body.dark .aviso-data-divergente .fechar-aviso-divergente{color:#fbbf24;}
 /* Transição suave em tudo que é clicável/interativo — sem exagero de
    duração (150-180ms), sem animar propriedades pesadas (layout). */
 .btn, button, select, input, .ose-card, .sum-item, .rdo-do-dia-pill,
-.rdo-do-dia-pill-novo, .novo-rdo-radio,
+.rdo-do-dia-pill-novo, .novo-rdo-dia-btn, .novo-rdo-radio,
 .absenteismo-periodo-btn, .multipdf-cancel, .multipdf-gerar,
 .vehicle-select, .login-input{
   transition:transform .16s var(--ease),box-shadow .16s var(--ease),
@@ -1696,7 +1563,7 @@ body.dark #workers-body tr:hover{background-color:rgba(58,110,232,.08)}
      fontes) — os dois sistemas usam a mesma "moldura" de login, só
      o papel de parede muda entre eles. -->
 <div id="login-overlay" style="position:fixed;inset:0;z-index:99999;background:#0b1220 url('login-fundo-rdo.jpg') center center / cover no-repeat;color-scheme:dark">
-  <div style="position:absolute;bottom:6px;right:8px;font-size:9px;color:rgba(255,255,255,.35);font-family:monospace;pointer-events:none">v2026.08.17-aviso-data-divergente</div>
+  <div style="position:absolute;bottom:6px;right:8px;font-size:9px;color:rgba(255,255,255,.35);font-family:monospace;pointer-events:none">v2026.08.09-mesmo-tamanho-exato</div>
   <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:calc(100% - 32px);max-width:380px;background:rgb(10,17,32);border:1px solid rgba(255,255,255,.14);border-radius:18px;padding:32px 28px;box-shadow:0 20px 60px rgba(0,0,0,.6);text-transform:none;font-weight:400">
     <h1 style="font-size:20px;margin:0 0 4px;color:#fff;text-align:center;font-weight:700">RDO <span style="color:#3ea6ff">Master Energy</span></h1>
     <p style="margin:0 0 24px;text-align:center;color:#9ca3af;font-size:13px;letter-spacing:.5px;font-weight:600">DIÁRIO DE OBRA PRO</p>
@@ -1735,39 +1602,27 @@ body.dark #workers-body tr:hover{background-color:rgba(58,110,232,.08)}
       <span class="topbar-brand-tag">Montagem e Manutenção Industrial</span>
     </div>
     <div class="topbar-title">RDO — Diário de Obra PRO<small>Relatório Diário de Campo</small></div>
-    <div class="user-menu-wrap" style="margin-left:auto;position:relative">
-      <button type="button" id="usuario-logado-badge" onclick="toggleMenuUsuario()" style="background:rgba(255,255,255,.12);border:1.5px solid rgba(255,255,255,.3);border-radius:20px;padding:5px 12px;font-size:11px;font-weight:800;color:#fff;white-space:nowrap;display:none;align-items:center;cursor:pointer;gap:0">
-        <span id="badge-conexao-dot" title="" style="display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;background:#9ca3af;box-shadow:0 0 4px #9ca3af;flex-shrink:0"></span><span id="badge-conexao-texto"></span><span style="margin-left:6px;font-size:9px;opacity:.8">▾</span>
-      </button>
-      <div id="menu-usuario-dropdown">
-        <button type="button" onclick="fecharMenuUsuario();sincronizarManualUsuario();">🔄 Sincronizar Dados</button>
-        <button type="button" onclick="fecharMenuUsuario();fazerLogout();" style="color:#dc2626">🚪 Encerrar Sessão</button>
-      </div>
-    </div>
+    <div id="usuario-logado-badge" style="margin-left:auto;background:rgba(255,255,255,.12);border:1.5px solid rgba(255,255,255,.3);border-radius:20px;padding:5px 12px;font-size:11px;font-weight:800;color:#fff;white-space:nowrap;display:none"></div>
   </div>
   <div class="topbar-actions">
     <button class="btn btn-theme"   onclick="toggleTheme()">🌙 <span id="theme-label">Escuro</span></button>
     <button class="btn btn-save"    onclick="salvarRDO()" title="Salva neste aparelho E envia pro admin">💾 <span>Salvar e Enviar</span></button>
     <button class="btn" style="background:linear-gradient(180deg,#2568d6 0%,#123166 100%);color:#fff" onclick="verificarEReenviarPendentes()" title="Confere se algum RDO seu ficou só neste aparelho sem chegar no admin, e reenvia">🔄 <span>Reenviar</span></button>
-    <button class="btn btn-new"     onclick="novoRDO()">📄 <span>Novo RDO</span></button>
-    <button class="btn btn-search"  onclick="abrirBuscaRDO()">🔍 <span>Pesquisar RDOs</span></button>
-    <button class="btn" id="btn-desfazer" style="background:linear-gradient(180deg,#2568d6 0%,#123166 100%);color:#fff" onclick="desfazerUltimaAcao()" title="Desfazer: volta ao estado de antes da última ação (excluir funcionário, criar novo RDO)">↩️ <span>Desfazer</span></button>
-    <button class="btn" style="background:linear-gradient(180deg,#2568d6 0%,#123166 100%);color:#fff" onclick="abrirGrafico()">📊 <span>H.H</span></button>
-    <button class="btn" style="background:linear-gradient(180deg,#2568d6 0%,#123166 100%);color:#fff" onclick="abrirFrases()">💬 <span>Frases</span></button>
-    <button class="btn admin-only-btn" id="btn-rel-periodo" style="background:linear-gradient(180deg,#2568d6 0%,#123166 100%);color:#fff" onclick="abrirMultiPDF()">📑 <span>Rel.Período</span></button>
-
-    <!-- A partir daqui: ordem fixa pedida — Excel, PDF, PDF+WhatsApp, Clientes, Check,
-         Backup, Dashboard, Executivo, Horas/Projeto — antes do bloco dos 4 botões
-         coloridos (Extra Escopo/Andamento/Absenteísmo/Sair), que fecha a lista. -->
-    <button class="btn btn-xlsx"    onclick="exportarXLSX()">📗 <span>Excel</span></button>
-    <button class="btn btn-pdf"     onclick="exportarPDF()" title="Abre a tela de impressão para salvar como PDF">🖨️ <span>PDF</span></button>
-    <button class="btn btn-wpp-pdf" onclick="pdfParaWhatsApp()" title="Gera o PDF e já abre o compartilhamento (WhatsApp, Drive etc.)">📎 <span>PDF+WPP</span></button>
-    <button class="btn admin-only-btn" style="background:linear-gradient(180deg,#2568d6 0%,#123166 100%);color:#fff" onclick="abrirGerenciarClientes()" title="Adicionar/remover clientes da lista de Obra/Projeto">👥 <span>Clientes</span></button>
-    <button class="btn admin-only-btn" style="background:linear-gradient(180deg,#2568d6 0%,#123166 100%);color:#fff" onclick="abrirCheckIntegridade()" title="Verifica inconsistências que podem causar erro na contagem de horas">🩺 <span>Check</span></button>
-    <button class="btn admin-only-btn" style="background:linear-gradient(180deg,#2568d6 0%,#123166 100%);color:#fff" onclick="abrirBackup()">🗄️ <span>Backup</span></button>
+    <button class="btn btn-new"     onclick="novoRDO()">📄 <span>Novo</span></button>
+    <button class="btn btn-search"  onclick="abrirBuscaRDO()">🔍 <span>Buscar</span></button>
     <button class="btn admin-only-btn" style="background:linear-gradient(180deg,#2568d6 0%,#123166 100%);color:#fff" onclick="abrirDashboardAoVivo()" title="Visão geral ao vivo — atualiza sozinho, mostra tudo que está acontecendo no sistema agora">📡 <span>Dashboard</span></button>
     <button class="btn admin-only-btn" style="background:linear-gradient(180deg,#2568d6 0%,#123166 100%);color:#fff" onclick="abrirPainelExecutivo()" title="Visão geral de todos os encarregados, ou individual de cada um">🎯 <span>Executivo</span></button>
     <button class="btn admin-only-btn" style="background:linear-gradient(180deg,#2568d6 0%,#123166 100%);color:#fff" onclick="abrirProjetos()" title="Total de horas de cada projeto, do início até a conclusão, em qualquer status">📁 <span>Horas/Projeto</span></button>
+    <button class="btn admin-only-btn" style="background:linear-gradient(180deg,#2568d6 0%,#123166 100%);color:#fff" onclick="abrirGerenciarClientes()" title="Adicionar/remover clientes da lista de Obra/Projeto">👥 <span>Clientes</span></button>
+    <button class="btn" id="btn-desfazer" style="background:linear-gradient(180deg,#2568d6 0%,#123166 100%);color:#fff" onclick="desfazerUltimaAcao()" title="Desfazer: volta ao estado de antes da última ação (excluir funcionário, criar novo RDO)">↩️ <span>Desfazer</span></button>
+    <button class="btn btn-wpp-pdf" onclick="pdfParaWhatsApp()" title="Gera o PDF e já abre o compartilhamento (WhatsApp, Drive etc.)">📎 <span>PDF+WPP</span></button>
+    <button class="btn" style="background:linear-gradient(180deg,#2568d6 0%,#123166 100%);color:#fff" onclick="abrirGrafico()">📊 <span>H.H</span></button>
+    <button class="btn" style="background:linear-gradient(180deg,#2568d6 0%,#123166 100%);color:#fff" onclick="abrirFrases()">💬 <span>Frases</span></button>
+    <button class="btn admin-only-btn" id="btn-rel-periodo" style="background:linear-gradient(180deg,#2568d6 0%,#123166 100%);color:#fff" onclick="abrirMultiPDF()">📑 <span>Rel.Período</span></button>
+    <button class="btn admin-only-btn" style="background:linear-gradient(180deg,#2568d6 0%,#123166 100%);color:#fff" onclick="abrirBackup()">🗄️ <span>Backup</span></button>
+    <button class="btn admin-only-btn" style="background:linear-gradient(180deg,#2568d6 0%,#123166 100%);color:#fff" onclick="abrirCheckIntegridade()" title="Verifica inconsistências que podem causar erro na contagem de horas">🩺 <span>Check</span></button>
+    <button class="btn btn-pdf"     onclick="exportarPDF()" title="Abre a tela de impressão para salvar como PDF">🖨️ <span>PDF</span></button>
+    <button class="btn btn-xlsx"    onclick="exportarXLSX()">📗 <span>Excel</span></button>
 
     <span class="topbar-divider"></span>
     <!-- Bloco separado de propósito — os ÚNICOS 4 botões com cor "de
@@ -1782,9 +1637,6 @@ body.dark #workers-body tr:hover{background-color:rgba(58,110,232,.08)}
     <button class="btn" style="background:#dc2626;color:#fff" onclick="fazerLogout()" title="Sair da conta">🚪 <span>Sair</span></button>
   </div>
   <div id="aviso-rdo-pendente" onclick="abrirListaPendentes()" style="cursor:pointer"></div>
-</div>
-<div id="aviso-operacional" class="no-print" style="background:#fef3c7;color:#7c5a00;border-bottom:2px solid #d97706;padding:7px 14px;font-size:12px;font-weight:800;text-align:center">
-  ⚠️ Atenção: O RDO só será transmitido ao sistema após clicar em "Salvar e Enviar".
 </div>
 
 <div class="page" id="rdo-page">
@@ -1818,8 +1670,8 @@ body.dark #workers-body tr:hover{background-color:rgba(58,110,232,.08)}
         <div style="flex:1;padding:5px 14px;border-right:2px solid #000;display:flex;flex-direction:column;gap:2px"><label style="font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.8px;color:var(--text3)">Data</label><input type="date" id="h-data" style="background:transparent;border:none;border-bottom:2px solid #000;padding:2px 0;font-size:15px;font-weight:900;color:var(--text);width:100%;outline:none;min-height:28px"></div>
         <div style="flex:1;padding:5px 14px;display:flex;flex-direction:column;gap:2px"><label style="font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.8px;color:var(--text3)">Dia da Semana</label><input type="text" id="h-dia" readonly style="background:transparent;border:none;border-bottom:2px solid #000;padding:2px 0;font-size:15px;font-weight:900;color:var(--text);width:100%;outline:none;min-height:28px"></div>
       </div>
-      <div class="hfield"><label>Obra / Projeto (Cliente)</label><select id="h-obra" onchange="onMudarClienteSelecionado();ajustarFontePorTextoSelect(this)" onblur="revalidarNRDOSeNovo()" style="text-transform:uppercase"><option value="">Selecione...</option></select></div>
-      <div class="hfield"><label>Disciplina</label><select id="h-disc" onchange="atualizarBannerObra();ajustarFontePorTextoSelect(this)" style="text-transform:uppercase">
+      <div class="hfield"><label>Obra / Projeto (Cliente)</label><select id="h-obra" onchange="onMudarClienteSelecionado()" onblur="revalidarNRDOSeNovo()" style="text-transform:uppercase"><option value="">Selecione...</option></select></div>
+      <div class="hfield"><label>Disciplina</label><select id="h-disc" onchange="atualizarBannerObra()" style="text-transform:uppercase">
         <option value="">— Selecione —</option>
         <option value="MECÂNICA">MECÂNICA</option>
         <option value="ELÉTRICA">ELÉTRICA</option>
@@ -1829,7 +1681,7 @@ body.dark #workers-body tr:hover{background-color:rgba(58,110,232,.08)}
         <option value="PINTURA">PINTURA</option>
         <option value="TÉC. SEGURANÇA">TÉC. SEGURANÇA</option>
       </select></div>
-      <div class="hfield" style="border-right:none"><label>Encarregado <span style="font-weight:400;font-size:9px;opacity:.7">(automático)</span></label><div id="h-enc" class="hfield-readonly-wrap" tabindex="-1"></div></div>
+      <div class="hfield" style="border-right:none"><label>Encarregado <span style="font-weight:400;font-size:9px;opacity:.7">(automático)</span></label><input type="text" id="h-enc" readonly style="cursor:not-allowed;opacity:.85"></div>
     </div>
   </div>
 
@@ -1854,6 +1706,7 @@ body.dark #workers-body tr:hover{background-color:rgba(58,110,232,.08)}
     <div class="print-legend-item"><span class="print-legend-dot" style="background:#158038"></span>Extra Escopo / Adicional</div>
     <div class="print-legend-item"><span class="print-legend-dot" style="background:#e07010"></span>Paralisado</div>
     <div class="print-legend-item"><span class="print-legend-dot" style="background:#b91c1c"></span>Absenteísmo</div>
+    <div class="print-legend-item"><span class="print-legend-dot" style="background:#0891b2"></span>Integração / Outro</div>
     <div class="print-legend-item"><span class="print-legend-dot" style="background:#6830cc"></span>Concluído</div>
   </div>
 
@@ -2117,6 +1970,17 @@ body.dark #workers-body tr:hover{background-color:rgba(58,110,232,.08)}
       <div id="novo-rdo-aviso" style="font-size:12px;color:var(--text2);line-height:1.5">
         Como você quer começar o novo RDO?
       </div>
+      <div>
+        <label>Qual dia?</label>
+        <div style="display:flex;gap:8px">
+          <button type="button" id="btn-novo-dia-seguinte" class="novo-rdo-dia-btn" onclick="selecionarDiaNovoRDO('seguinte')">
+            📅 PRÓXIMO DIA<br><span style="font-size:10px;font-weight:600;opacity:.85">Segue pro dia depois de hoje</span>
+          </button>
+          <button type="button" id="btn-novo-dia-mesmo" class="novo-rdo-dia-btn ativo" onclick="selecionarDiaNovoRDO('mesmo')">
+            📌 MESMO DIA<br><span style="font-size:10px;font-weight:600;opacity:.85">Outra obra/equipe, data igual</span>
+          </button>
+        </div>
+      </div>
       <label style="display:flex;align-items:center;gap:8px;font-size:11px;font-weight:800;color:var(--text2);cursor:pointer;background:var(--surface2);padding:9px 10px;border:2px solid var(--border2)">
         <input type="checkbox" id="chk-manter-descricoes" style="width:16px;height:16px;cursor:pointer;accent-color:var(--accent)">
         Manter também as descrições de serviço das OSEs (se desmarcado, elas começam em branco — vale só para "A partir do último RDO")
@@ -2125,11 +1989,19 @@ body.dark #workers-body tr:hover{background-color:rgba(58,110,232,.08)}
         <label>O que você quer fazer?</label>
         <label class="novo-rdo-radio">
           <input type="radio" name="novo-rdo-tipo" value="zero">
-          <span class="novo-rdo-radio-txt">🧹 NOVO RDO DO ZERO<br><small>Tudo em branco — nada é aproveitado do RDO anterior.</small></span>
+          <span class="novo-rdo-radio-txt">🧹 GERAR NOVO RDO DO ZERO?<br><small>Tudo em branco — nada é aproveitado do RDO anterior.</small></span>
         </label>
         <label class="novo-rdo-radio">
           <input type="radio" name="novo-rdo-tipo" value="ultimo" checked>
-          <span class="novo-rdo-radio-txt">📋 NOVO RDO A PARTIR DO ÚLTIMO RDO GERADO<br><small>Busca o último RDO que você criou e traz obra, disciplina, encarregado, funcionários e nomes das OSEs. Horas e status voltam zerados.</small></span>
+          <span class="novo-rdo-radio-txt">📋 NOVO RDO A PARTIR DO ÚLTIMO RDO GERADO?<br><small>Mantém obra, disciplina, encarregado, funcionários e nomes das OSEs. Horas e status voltam zerados.</small></span>
+        </label>
+        <label class="novo-rdo-radio">
+          <input type="radio" name="novo-rdo-tipo" value="nova-obra">
+          <span class="novo-rdo-radio-txt">🏗️ GERAR NOVO RDO PARA NOVA OBRA?<br><small>Tudo em branco, pronto pra preencher os dados de uma obra que ainda não existe no sistema.</small></span>
+        </label>
+        <label class="novo-rdo-radio">
+          <input type="radio" name="novo-rdo-tipo" value="duplicar">
+          <span class="novo-rdo-radio-txt">🔁 DUPLICAR O ÚLTIMO RDO (com tudo preenchido)?<br><small>Copia TUDO igual — horas, status, descrições das OSEs, responsáveis. Só o número e a data mudam. Ideal pra ajustar só o que for diferente.</small></span>
         </label>
       </div>
     </div>
@@ -2143,21 +2015,27 @@ body.dark #workers-body tr:hover{background-color:rgba(58,110,232,.08)}
 <!-- CONTROLE DE EXTRA ESCOPO — consolida todo o Extra Escopo/Adicional já registrado em
      qualquer RDO salvo (data, serviço, quem trabalhou, quantas horas), sempre disponível -->
 <div id="extra-escopo-modal">
-  <div class="multipdf-box" style="max-width:1180px;width:90vw;height:92vh;max-height:92vh">
+  <div class="multipdf-box" style="max-width:820px">
     <div class="multipdf-header" style="background:linear-gradient(135deg,#158038,#0d5228)">
       <span>🟢 Controle de Extra Escopo / Adicional</span>
       <button onclick="document.getElementById('extra-escopo-modal').classList.remove('show')" style="background:none;border:none;color:#fff;font-size:20px;cursor:pointer">✕</button>
     </div>
-    <div class="multipdf-body" style="overflow-y:hidden;padding:12px 16px;gap:8px">
-      <div style="flex-shrink:0;display:flex;flex-wrap:wrap;gap:6px;align-items:center">
-        <input type="date" id="ee-de" title="Data inicial (deixe em branco pra ver tudo)" style="flex:1;min-width:118px;padding:6px">
-        <input type="date" id="ee-ate" title="Data final (deixe em branco pra ver tudo)" style="flex:1;min-width:118px;padding:6px">
-        <select id="ee-encarregado" onchange="renderizarExtraEscopo()" title="Ver só de um encarregado" style="flex:1.6;min-width:150px;padding:6px"><option value="">— Todos os encarregados —</option></select>
-        <button type="button" onclick="renderizarExtraEscopo()" style="background:#158038;color:#fff;border:2px solid #0d5228;padding:6px 12px;font-size:11px;font-weight:900;cursor:pointer;white-space:nowrap">🔍 Filtrar</button>
-        <button type="button" onclick="forcarAtualizacaoPainel('extraescopo',this)" style="background:#0d5228;color:#fff;border:2px solid #063d1c;padding:6px 12px;font-size:11px;font-weight:900;cursor:pointer;white-space:nowrap">🔄 Atualizar da nuvem</button>
+    <div class="multipdf-body">
+      <div>
+        <label>Período (deixe em branco pra ver tudo)</label>
+        <div style="display:flex;gap:8px">
+          <input type="date" id="ee-de" style="flex:1">
+          <input type="date" id="ee-ate" style="flex:1">
+          <button type="button" onclick="renderizarExtraEscopo()" style="background:#158038;color:#fff;border:2px solid #0d5228;padding:0 14px;font-size:12px;font-weight:900;cursor:pointer">🔍 Filtrar</button>
+        </div>
       </div>
-      <div id="ee-resumo" style="flex-shrink:0;display:grid;grid-template-columns:repeat(4,1fr);gap:6px"></div>
-      <div id="ee-lista-wrap" style="flex:1;min-height:380px;overflow-y:auto;border:2px solid #000;padding:14px"></div>
+      <div>
+        <label>Ver só de um encarregado (opcional)</label>
+        <select id="ee-encarregado" onchange="renderizarExtraEscopo()" style="width:100%"><option value="">— Todos os encarregados —</option></select>
+      </div>
+      <button type="button" onclick="forcarAtualizacaoPainel('extraescopo',this)" style="background:#158038;color:#fff;border:2px solid #0d5228;padding:9px;font-size:11px;font-weight:900;cursor:pointer;text-transform:uppercase">🔄 Atualizar agora (busca tudo de novo na nuvem)</button>
+      <div id="ee-resumo" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:4px"></div>
+      <div id="ee-lista-wrap" style="max-height:380px;overflow-y:auto;border:2px solid #000;margin-top:4px;padding:6px"></div>
     </div>
     <div class="multipdf-footer" style="flex-wrap:wrap">
       <button class="multipdf-cancel" onclick="document.getElementById('extra-escopo-modal').classList.remove('show')">Fechar</button>
@@ -2173,21 +2051,27 @@ body.dark #workers-body tr:hover{background-color:rgba(58,110,232,.08)}
      projeto/OSE (que pode se repetir em vários dias), consolidando quantas horas cada
      projeto já recebeu ao longo do tempo -->
 <div id="andamento-modal">
-  <div class="multipdf-box" style="max-width:1180px;width:90vw;height:92vh;max-height:92vh">
+  <div class="multipdf-box" style="max-width:820px">
     <div class="multipdf-header" style="background:linear-gradient(135deg,#1a52c8,#0e3a9a)">
       <span>🔵 Controle de Andamento por Projeto</span>
       <button onclick="document.getElementById('andamento-modal').classList.remove('show')" style="background:none;border:none;color:#fff;font-size:20px;cursor:pointer">✕</button>
     </div>
-    <div class="multipdf-body" style="overflow-y:hidden;padding:12px 16px;gap:8px">
-      <div style="flex-shrink:0;display:flex;flex-wrap:wrap;gap:6px;align-items:center">
-        <input type="date" id="an-de" title="Data inicial (deixe em branco pra ver tudo)" style="flex:1;min-width:118px;padding:6px">
-        <input type="date" id="an-ate" title="Data final (deixe em branco pra ver tudo)" style="flex:1;min-width:118px;padding:6px">
-        <select id="an-encarregado" onchange="renderizarAndamento()" title="Ver só de um encarregado" style="flex:1.6;min-width:150px;padding:6px"><option value="">— Todos os encarregados —</option></select>
-        <button type="button" onclick="renderizarAndamento()" style="background:#1a52c8;color:#fff;border:2px solid #0e3a9a;padding:6px 12px;font-size:11px;font-weight:900;cursor:pointer;white-space:nowrap">🔍 Filtrar</button>
-        <button type="button" onclick="forcarAtualizacaoPainel('andamento',this)" style="background:#0e3a9a;color:#fff;border:2px solid #082763;padding:6px 12px;font-size:11px;font-weight:900;cursor:pointer;white-space:nowrap">🔄 Atualizar da nuvem</button>
+    <div class="multipdf-body">
+      <div>
+        <label>Período (deixe em branco pra ver tudo)</label>
+        <div style="display:flex;gap:8px">
+          <input type="date" id="an-de" style="flex:1">
+          <input type="date" id="an-ate" style="flex:1">
+          <button type="button" onclick="renderizarAndamento()" style="background:#1a52c8;color:#fff;border:2px solid #0e3a9a;padding:0 14px;font-size:12px;font-weight:900;cursor:pointer">🔍 Filtrar</button>
+        </div>
       </div>
-      <div id="an-resumo" style="flex-shrink:0;display:grid;grid-template-columns:repeat(4,1fr);gap:6px"></div>
-      <div id="an-lista-wrap" style="flex:1;min-height:380px;overflow-y:auto;border:2px solid #000;padding:14px"></div>
+      <div>
+        <label>Ver só de um encarregado (opcional)</label>
+        <select id="an-encarregado" onchange="renderizarAndamento()" style="width:100%"><option value="">— Todos os encarregados —</option></select>
+      </div>
+      <button type="button" onclick="forcarAtualizacaoPainel('andamento',this)" style="background:#158038;color:#fff;border:2px solid #0d5228;padding:9px;font-size:11px;font-weight:900;cursor:pointer;text-transform:uppercase">🔄 Atualizar agora (busca tudo de novo na nuvem)</button>
+      <div id="an-resumo" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:4px"></div>
+      <div id="an-lista-wrap" style="max-height:380px;overflow-y:auto;border:2px solid #000;margin-top:4px;padding:6px"></div>
     </div>
     <div class="multipdf-footer" style="flex-wrap:wrap">
       <button class="multipdf-cancel" onclick="document.getElementById('andamento-modal').classList.remove('show')">Fechar</button>
@@ -2299,7 +2183,6 @@ body.dark #workers-body tr:hover{background-color:rgba(58,110,232,.08)}
 </div>
 
 <div id="toast"></div>
-<div id="avisoDataDivergente" class="aviso-data-divergente no-print"></div>
 
 <!-- PDF LOADING -->
 <div id="pdf-loading">
@@ -2508,43 +2391,6 @@ async function fazerLogout(){
   location.reload();
 }
 
-// ── Menu dropdown do usuário (header) ──────────────────────────────────
-function toggleMenuUsuario(){
-  document.getElementById('menu-usuario-dropdown')?.classList.toggle('show');
-}
-function fecharMenuUsuario(){
-  document.getElementById('menu-usuario-dropdown')?.classList.remove('show');
-}
-// Fecha o menu ao clicar em qualquer lugar fora dele — comportamento padrão de
-// dropdown, sem precisar de biblioteca nenhuma.
-document.addEventListener('click',e=>{
-  const wrap=document.querySelector('.user-menu-wrap');
-  const menu=document.getElementById('menu-usuario-dropdown');
-  if(!wrap||!menu||!menu.classList.contains('show')) return;
-  if(!wrap.contains(e.target)) fecharMenuUsuario();
-});
-
-// "Sincronizar Dados" do menu do usuário: reenvia pro admin qualquer RDO que ficou só
-// salvo neste aparelho (sem ter chegado na nuvem ainda) E atualiza as listas de nomes/
-// funções/veículos com o que tiver de mais recente no banco — um botão só pra "colocar
-// tudo em dia" manualmente, sem precisar esperar a sincronização automática.
-async function sincronizarManualUsuario(){
-  if(!navigator.onLine){
-    showToast('📵 Sem internet no momento — não dá pra sincronizar agora.','#dc2626');
-    return;
-  }
-  showToast('🔄 Sincronizando...','#7c3aed');
-  try{
-    await verificarEReenviarPendentes();
-    carregarListas();
-    atualizarBadgeConexao();
-    showToast('✓ Dados sincronizados!','#16a34a');
-  }catch(e){
-    console.error('sincronizarManualUsuario error:',e);
-    showToast('⚠️ Não deu pra sincronizar tudo — confira sua internet e tente de novo.','#d97706');
-  }
-}
-
 // Botão disponível na própria tela de login (antes de digitar e-mail/senha) — útil em
 // celular/computador compartilhado entre encarregados: garante que nenhuma sessão de
 // quem usou antes ficou "grudada" no navegador, deixando o campo limpo pra pessoa de
@@ -2623,12 +2469,7 @@ function popularFiltroEncarregado(selectId){
 function popularSelectEncarregado(){
   const campo=document.getElementById('h-enc');
   if(!campo||!usuarioAtual) return;
-  const nome=(usuarioAtual.nome||'').toUpperCase();
-  campo.textContent=nome;
-  let fs=13;
-  if(nome.length>34) fs=10.5;
-  else if(nome.length>24) fs=11.5;
-  campo.style.fontSize=fs+'px';
+  campo.value=(usuarioAtual.nome||'').toUpperCase();
 }
 
 // Mantido só por compatibilidade com chamadas antigas (ex: ao restaurar um RDO salvo) —
@@ -3398,57 +3239,58 @@ async function _syncSalvarSupabaseReal(d,rdoKey){
     }
     const idAtualConfirmado=usuarioAtual.id;
     const h=d.header||{};
+    const{data:rdoRow,error:erroRdo}=await supabaseClient
+      .from('rdos')
+      .upsert({
+        rdo_key:rdoKey,
+        nrdo:h.nrdo||null,
+        data:h.data||null,
+        obra:h.obra||null,
+        disciplina:h.disc||null,
+        encarregado:h.enc||null,
+        names_list:d.namesList||[],
+        funcs_list:d.funcsList||[],
+        vehicles_list:d.vehiclesList||[],
+        row_counter:d.rowCounter||0,
+        criado_por:idAtualConfirmado
+      },{onConflict:'rdo_key'})
+      .select('id')
+      .single();
+    if(erroRdo||!rdoRow){
+      const msg=erroRdo?.message||erroRdo?.hint||erroRdo?.code||'Erro desconhecido ao salvar o cabeçalho do RDO.';
+      console.error('Supabase erro ao salvar RDO:',msg);
+      return{sucesso:false,erro:msg};
+    }
+    const rdoId=rdoRow.id;
 
-    // CORREÇÃO v3 (auditoria 2026-08-18 — fecha a causa raiz da duplicação): antes, o
-    // CABEÇALHO (tabela rdos) era salvo numa chamada separada, ANTES das OSEs/funcionários
-    // (que já viraram atômicas na v2). Isso significa que um erro nas OSEs/funcionários
-    // (como o bug de tipo bigint×uuid que já corrigimos) deixava uma linha "só cabeçalho"
-    // gravada de verdade no Supabase — e a sincronização que baixa RDOs da nuvem
-    // (buscarERestaurarDaNuvem) marca QUALQUER linha que já exista lá como "enviada",
-    // sem checar se tem conteúdo. Resultado prático: o rascunho incompleto reaparecia
-    // como se fosse um RDO válido e separado, e um novo número era sorteado pro que a
-    // pessoa estava tentando terminar — daí dois RDOs (dois números) pra mesma
-    // obra/data/encarregado. Agora cabeçalho + OSEs + funcionários entram numa ÚNICA
-    // função no banco (salvar_rdo_completo, ver fix_salvar_rdo_completo_atomico.sql):
-    // ou tudo é gravado, ou nada é — nunca mais existe linha "pela metade" no Supabase
-    // pra confundir a sincronização.
+    // Limpa OSEs/funcionários antigos desse RDO antes de reinserir a versão atual
+    await supabaseClient.from('rdo_oses').delete().eq('rdo_id',rdoId);
+    await supabaseClient.from('rdo_workers').delete().eq('rdo_id',rdoId);
+
     const osesRows=(d.oses||[]).map((o,idx)=>({
-      ose_numero:idx+1,nome:o.name||null,
+      rdo_id:rdoId,ose_numero:idx+1,nome:o.name||null,
       status:o.status||'sem',descricao:o.desc||null,responsavel:o.resp||null
     }));
+    if(osesRows.length){
+      const{error:erroOses}=await supabaseClient.from('rdo_oses').insert(osesRows);
+      if(erroOses){
+        console.error('Supabase erro ao salvar OSEs:',erroOses.message);
+        return{sucesso:false,erro:'Cabeçalho salvo, mas as OSEs não: '+erroOses.message};
+      }
+    }
+
     const workersRows=(d.workers||[])
       .filter(w=>w.name||(w.hrs||[]).some(v=>v))
       .map((w,idx)=>({
-        worker_index:idx,nome:w.name||null,funcao:w.func||null,veiculo:w.vehicle||null,hrs:w.hrs||[],hst:w.hst||[],
+        rdo_id:rdoId,worker_index:idx,nome:w.name||null,funcao:w.func||null,veiculo:w.vehicle||null,hrs:w.hrs||[],hst:w.hst||[],
         status_dia:statusDiaPorRotulo(w.vehicle)
       }));
-    const{data:rpcResultado,error:erroRdo}=await supabaseClient.rpc('salvar_rdo_completo',{
-      p_rdo_key:rdoKey,
-      p_nrdo:h.nrdo||null,
-      p_data:h.data||null,
-      p_obra:h.obra||null,
-      p_disciplina:h.disc||null,
-      p_encarregado:h.enc||null,
-      p_names_list:d.namesList||[],
-      p_funcs_list:d.funcsList||[],
-      p_vehicles_list:d.vehiclesList||[],
-      p_row_counter:d.rowCounter||0,
-      p_criado_por:idAtualConfirmado,
-      p_oses:osesRows,
-      p_workers:workersRows
-    });
-    if(erroRdo||!rpcResultado){
-      // Código 23505 = violação de índice/constraint único — é exatamente o que a trava
-      // de duplicidade (obra + nº do RDO) do banco dispara quando alguém tenta salvar
-      // um RDO repetido. Mostra uma mensagem clara em vez do erro técnico cru do Postgres.
-      if(erroRdo?.code==='23505'){
-        const msg='Já existe um RDO com esse número nesta obra. Confira o Nº do RDO (campo no topo) antes de salvar de novo.';
-        console.error('Supabase erro ao salvar RDO (duplicidade):',erroRdo.message);
-        return{sucesso:false,erro:msg};
+    if(workersRows.length){
+      const{error:erroWorkers}=await supabaseClient.from('rdo_workers').insert(workersRows);
+      if(erroWorkers){
+        console.error('Supabase erro ao salvar funcionários:',erroWorkers.message);
+        return{sucesso:false,erro:'Cabeçalho e OSEs salvos, mas os funcionários não: '+erroWorkers.message};
       }
-      const msg=erroRdo?.message||erroRdo?.hint||erroRdo?.code||'Erro desconhecido ao salvar o RDO.';
-      console.error('Supabase erro ao salvar RDO (RPC atômica):',msg);
-      return{sucesso:false,erro:msg};
     }
     return{sucesso:true};
   }catch(e){
@@ -3715,14 +3557,6 @@ function atualizarAvisoRDOsPendentes(forcar=false){
   // quem está REALMENTE PRONTO (passaria na validação de envio) mas não foi mandado —
   // um RDO ainda sendo preenchido (ex: só a Obra escolhida, faltando Encarregado) é
   // trabalho normal em andamento, não um esquecimento, e não deveria alarmar ninguém.
-  //
-  // TRAVA DE SEGURANÇA (computador compartilhado, 2026-08-18): também só conta RDO cujo
-  // campo Encarregado bate com quem está logado agora (Admin Mestre vê todos, como já
-  // é padrão no resto do sistema) — sem isso, o rascunho esquecido de OUTRO encarregado
-  // no mesmo aparelho ficava piscando "pendente" pra qualquer um que logasse depois,
-  // e essa pessoa podia acabar abrindo e enviando o RDO de quem não é ela.
-  const ehAdminPend=usuarioAtual&&usuarioAtual.papel==='admin_mestre';
-  const meuNomeNormalizadoPend=usuarioAtual?normalizarObra(usuarioAtual.nome):null;
   const idsCompletosPendentes=new Set();
   const idsIncompletos=new Set();
   for(let i=0;i<localStorage.length;i++){
@@ -3733,7 +3567,6 @@ function atualizarAvisoRDOsPendentes(forcar=false){
       const d=JSON.parse(localStorage.getItem(k));
       const h=d?.header;
       if(!h?.obra||!h.obra.trim()) continue; // sem Obra nenhuma ainda — nem rascunho de verdade é, ignora
-      if(!ehAdminPend&&meuNomeNormalizadoPend&&normalizarObra(h.enc)!==meuNomeNormalizadoPend) continue; // rascunho de outro encarregado
       const id=extrairIdDaChave(k)||k; // agrupa pelo id fixo; sem id (RDO bem antigo), usa a própria chave
       if(rdoEstaCompleto(h)) idsCompletosPendentes.add(id);
       else idsIncompletos.add(id);
@@ -3766,10 +3599,6 @@ function atualizarAvisoRDOsPendentes(forcar=false){
 function abrirListaPendentes(){
   autoSilentSave();
   const pendentesPorId={};
-  // TRAVA DE SEGURANÇA (computador compartilhado, 2026-08-18): mesma regra das outras
-  // telas — encarregado só vê/abre os PRÓPRIOS RDOs pendentes; Admin Mestre vê todos.
-  const ehAdminList=usuarioAtual&&usuarioAtual.papel==='admin_mestre';
-  const meuNomeNormalizadoList=usuarioAtual?normalizarObra(usuarioAtual.nome):null;
   for(let i=0;i<localStorage.length;i++){
     const k=localStorage.key(i);
     if(!k||!k.startsWith('rdo-')||CHAVES_META_BACKUP.includes(k)) continue;
@@ -3777,7 +3606,6 @@ function abrirListaPendentes(){
     try{
       const d=JSON.parse(localStorage.getItem(k));
       const h=d?.header;
-      if(!ehAdminList&&meuNomeNormalizadoList&&normalizarObra(h?.enc)!==meuNomeNormalizadoList) continue;
       if(h?.obra&&h.obra.trim()){
         const id=extrairIdDaChave(k)||k;
         if(!pendentesPorId[id]) pendentesPorId[id]={id,key:k,data:h.data||'',obra:h.obra,disc:h.disc||'',enc:h.enc||'',nrdo:h.nrdo||'',todasChaves:[]};
@@ -3906,8 +3734,7 @@ function descartarRdoPendente(todasChaves){
     // Limpa os campos visíveis também — senão o autosave, na próxima vez que rodar
     // sozinho, salva de novo exatamente o que acabou de ser apagado.
     localStorage.removeItem('rdo-last-key');
-    ['h-obra','h-disc'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
-    popularSelectEncarregado();
+    ['h-obra','h-enc','h-disc'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
     for(let o=1;o<=NUM_OSE;o++) oseStatus[o]='sem';
     if(typeof buildOSECards==='function') buildOSECards();
     if(typeof atualizarBannerObra==='function') atualizarBannerObra();
@@ -3963,29 +3790,11 @@ async function verificarEReenviarPendentes(){
     try{ enviados=JSON.parse(localStorage.getItem(CHAVE_ENVIADOS)||'[]'); }catch(e){}
     if(!enviados.length){ showToast('Nenhum RDO marcado como enviado neste aparelho.','#6b7fa0'); return; }
 
-    // TRAVA DE SEGURANÇA (computador compartilhado, 2026-08-18): CHAVE_ENVIADOS é do
-    // APARELHO, não da conta — pode ter RDO de OUTRO encarregado que usou este mesmo
-    // navegador antes. A consulta abaixo só traz RDOs do usuário logado agora
-    // (criado_por), então um RDO de outra pessoa nunca ia bater e entraria como
-    // "pendente" — e reenviar aqui GRAVARIA ESSE RDO COM criado_por DO USUÁRIO ATUAL,
-    // trocando o dono dele no banco sem querer. Filtra ANTES: só mexe em RDO cujo
-    // campo Encarregado bate com quem está logado agora (Admin Mestre continua
-    // reconciliando tudo, como já é padrão no resto do sistema).
-    const ehAdminVerif=usuarioAtual.papel==='admin_mestre';
-    const meuNomeNormalizadoVerif=normalizarObra(usuarioAtual.nome);
-    const enviados_meus=ehAdminVerif?enviados:enviados.filter(key=>{
-      try{
-        const d=JSON.parse(localStorage.getItem(key));
-        return normalizarObra(d?.header?.enc)===meuNomeNormalizadoVerif;
-      }catch(e){ return false; }
-    });
-    if(!enviados_meus.length){ showToast('Nenhum RDO seu marcado como enviado neste aparelho.','#6b7fa0'); return; }
-
     const{data,error}=await supabaseClient.from('rdos').select('rdo_key').eq('criado_por',usuarioAtual.id);
     if(error){ showToast('Erro ao consultar a nuvem: '+error.message,'#dc2626'); return; }
     const existentesNaNuvem=new Set((data||[]).map(r=>r.rdo_key));
 
-    const pendentes=enviados_meus.filter(key=>!existentesNaNuvem.has(key)&&localStorage.getItem(key));
+    const pendentes=enviados.filter(key=>!existentesNaNuvem.has(key)&&localStorage.getItem(key));
     if(!pendentes.length){ showToast('✓ Tudo certo — todos os seus RDOs enviados já estão na nuvem.','#16a34a'); return; }
 
     const nomes=pendentes.map(key=>{
@@ -4014,16 +3823,6 @@ async function verificarEReenviarPendentes(){
   }
 }
 
-// CORREÇÃO (pedido do usuário 2026-08-18 — "aviso piscando dizendo que não foi enviado
-// mesmo já tendo sido"): esta função rodava a CADA abertura do app e, se por qualquer
-// motivo a consulta à nuvem não trouxesse de volta um RDO que na verdade ainda existe lá
-// (uma falha de rede momentânea, uma reautenticação em andamento, qualquer soluço), ela
-// já desmarcava esse RDO como "enviado" e apagava a cópia local NA HORA — fazendo um RDO
-// genuinamente já enviado voltar a piscar como pendente, sem nenhum motivo real. Agora
-// só age depois de confirmar a AUSÊNCIA duas vezes seguidas (guardado em
-// CHAVE_SUSPEITOS_ADMIN) — uma falha isolada não derruba mais nada; só some de vez
-// quando a segunda checagem, numa execução separada, confirma de novo que sumiu.
-const CHAVE_SUSPEITOS_ADMIN='rdo-suspeitos-apagados-admin';
 async function reconciliarRDOsApagadosPeloAdmin(){
   const supabaseClient=getSupabaseClient();
   if(!supabaseClient||!usuarioAtual) return;
@@ -4031,45 +3830,17 @@ async function reconciliarRDOsApagadosPeloAdmin(){
     let enviados=[];
     try{ enviados=JSON.parse(localStorage.getItem(CHAVE_ENVIADOS)||'[]'); }catch(e){}
     if(!enviados.length) return;
-    // TRAVA DE SEGURANÇA (computador compartilhado, 2026-08-18): a consulta abaixo só
-    // traz RDOs do usuário logado AGORA (criado_por=id de quem está logado). Se
-    // CHAVE_ENVIADOS tiver chaves de OUTRO encarregado que usou este mesmo aparelho
-    // antes, elas nunca vão bater nessa consulta — não porque foram apagadas pelo
-    // admin, mas porque pertencem a outra conta. Sem filtrar isso ANTES de comparar, o
-    // RDO já enviado do encarregado anterior seria apagado daqui como se tivesse sido
-    // excluído — quando na verdade só não é "meu". Ignora de vez qualquer chave cujo
-    // Encarregado salvo não bate com quem está logado (Admin Mestre continua vendo/
-    // reconciliando tudo, sem esse filtro).
-    const ehAdminRec=usuarioAtual.papel==='admin_mestre';
-    const meuNomeNormalizadoRec=normalizarObra(usuarioAtual.nome);
-    const enviadosMeus=ehAdminRec?enviados:enviados.filter(key=>{
-      try{
-        const d=JSON.parse(localStorage.getItem(key));
-        return normalizarObra(d?.header?.enc)===meuNomeNormalizadoRec;
-      }catch(e){ return false; } // não deu pra ler o conteúdo — mais seguro não mexer
-    });
-    if(!enviadosMeus.length) return;
     const{data,error}=await supabaseClient.from('rdos').select('rdo_key').eq('criado_por',usuarioAtual.id);
-    if(error||!data) return; // consulta falhou — não assume nada, tenta de novo na próxima
+    if(error||!data) return;
     const existentesNaNuvem=new Set(data.map(r=>r.rdo_key));
-    let suspeitos=[];
-    try{ suspeitos=JSON.parse(localStorage.getItem(CHAVE_SUSPEITOS_ADMIN)||'[]'); }catch(e){}
-    const suspeitosDeAgora=[];
     let removidos=0;
-    enviadosMeus.forEach(key=>{
+    enviados.forEach(key=>{
       if(!existentesNaNuvem.has(key)){
-        if(suspeitos.includes(key)){
-          // 2ª vez seguida que não acha — agora sim trata como apagado de verdade
-          localStorage.removeItem(key);
-          desmarcarComoEnviado(key);
-          removidos++;
-        }else{
-          // 1ª vez que não achou — só marca como suspeito, ainda não mexe em nada
-          suspeitosDeAgora.push(key);
-        }
+        localStorage.removeItem(key);
+        desmarcarComoEnviado(key);
+        removidos++;
       }
     });
-    localStorage.setItem(CHAVE_SUSPEITOS_ADMIN,JSON.stringify(suspeitosDeAgora));
     if(removidos>0){
       showToast(`🔄 ${removidos} RDO(s) removido(s) deste aparelho — foram excluídos pelo admin.`,'#d97706');
       renderizarRdosDoDia();renderizarObrasParadas();
@@ -4083,31 +3854,9 @@ function atualizarSeloUsuarioLogado(){
   const selo=document.getElementById('usuario-logado-badge');
   if(!selo||!usuarioAtual) return;
   const papelLabel=usuarioAtual.papel==='admin_mestre'?'Admin Mestre':'Encarregado';
-  const textoEl=document.getElementById('badge-conexao-texto');
-  if(textoEl) textoEl.textContent=`👤 ${usuarioAtual.nome} · ${papelLabel}`;
-  selo.style.display='flex';
-  atualizarBadgeConexao();
+  selo.textContent=`👤 ${usuarioAtual.nome} · ${papelLabel}`;
+  selo.style.display='block';
 }
-
-// Bolinha luminosa no selo do usuário — 🟢 verde quando está online e conectado ao
-// Supabase, 🔘 cinza quando está offline. Usa navigator.onLine (API do navegador) pra
-// saber se o aparelho tem internet — "conectado" exige TER internet E o cliente do
-// Supabase já estar inicializado, já que só ter internet não garante que o app
-// conseguiu montar a conexão com o banco (ex: variável de ambiente errada, Supabase
-// fora do ar). Atualiza sozinha em tempo real sempre que a conexão cai/volta (eventos
-// nativos "online"/"offline"), com um reforço a cada 20s — em alguns navegadores/
-// aparelhos esses eventos nem sempre disparam de forma confiável sozinhos.
-function atualizarBadgeConexao(){
-  const dot=document.getElementById('badge-conexao-dot');
-  if(!dot) return;
-  const online=navigator.onLine && !!getSupabaseClient();
-  dot.style.background=online?'#22c55e':'#9ca3af';
-  dot.style.boxShadow=online?'0 0 6px #22c55e':'0 0 4px #9ca3af';
-  dot.title=online?'Conectado — online':'Sem conexão — offline (o RDO fica salvo neste aparelho até a internet voltar)';
-}
-window.addEventListener('online',atualizarBadgeConexao);
-window.addEventListener('offline',atualizarBadgeConexao);
-setInterval(atualizarBadgeConexao,20000);
 
 function iniciarAppAposLogin(){
   aplicarPermissoesPorPapel();
@@ -4136,24 +3885,13 @@ function iniciarAppAposLogin(){
   });
   buildWorkersTable(1);
   buildOSECards();
-  // CORREÇÃO (pedido do usuário 2026-08-18): antes, o app SEMPRE reabria sozinho o
-  // último RDO deixado salvo — inclusive a DATA dele, sobrescrevendo a data de hoje
-  // que acabou de ser setada acima. Agora o app sempre abre uma tela EM BRANCO, com a
-  // data de hoje e um número sugerido automaticamente — nunca reabre um rascunho
-  // sozinho. Pra continuar de propósito um RDO anterior, o encarregado usa o botão
-  // "➕ Novo RDO" → "A partir do último RDO" (novoRDOComNomes, já existente),
-  // ou abre um específico em "🔍 Buscar RDOs"/pela barra "RDOs salvos hoje".
-  iniciarRDOEmBrancoNoBoot();
+  carregarRDO();
   recalcAll();
   updateDiaSemana();
   atualizarBannerObra();
   ajustarTextareasAuto();
   initAutoSave();
-  // "Urgente" mas não precisa travar a primeira pintura da tela pra rodar: essa
-  // varredura passa por TUDO que está salvo no aparelho (fica mais pesada quanto
-  // mais RDO acumulado com os meses) — adiada pro próximo tick (0ms) só pra deixar
-  // o navegador desenhar a tela primeiro; continua aparecendo quase instantâneo.
-  setTimeout(()=>atualizarAvisoRDOsPendentes(true),0);
+  atualizarAvisoRDOsPendentes(true); // esse sim é urgente — a pessoa precisa ver na hora se tem RDO pendente
   // Reconfere a cada 60s — pega o caso de alguém deixar o app aberto sem mexer em nada,
   // mesmo assim continua avisando que tem RDO parado esperando ser enviado.
   clearInterval(window._intervalAvisoPendentes);
@@ -4171,40 +3909,8 @@ function iniciarAppAposLogin(){
     carregarFuncionariosDaEscala();
     carregarVeiculosDaEscala();
     reconciliarRDOsApagadosPeloAdmin();
-    recuperarFuncoesApagadasPorEngano(); // conserto de um bug já corrigido, ver comentário na função — roda 1 vez só (e é pesada: melhor aqui, junto das outras tarefas não-urgentes, do que competindo com o carregamento inicial)
   },150);
-  // ATUALIZAÇÃO AUTOMÁTICA DA ESCALA (pedido do usuário 2026-08-18): antes, se o
-  // funcionário fosse escalado DEPOIS que a linha já estava aberta no RDO com o nome
-  // selecionado, o veículo só era buscado de novo se a pessoa trocasse o nome e
-  // voltasse pro mesmo (forçando o gatilho de re-seleção). Agora reconsulta sozinho, em
-  // segundo plano, a cada 25s — mas SÓ preenche linhas cujo veículo ainda está EM
-  // BRANCO; nunca sobrescreve um veículo que já apareceu (seja vindo da Escala antes,
-  // seja escolhido manualmente por você), pra nunca trocar por baixo dos panos algo que
-  // já foi decidido.
-  clearInterval(window._intervalAtualizarVeiculosEscala);
-  window._intervalAtualizarVeiculosEscala=setInterval(atualizarVeiculosVaziosAutomaticamente,25000);
 }
-// Roda em segundo plano: reconsulta a Escala só pras linhas com nome preenchido e
-// veículo ainda vazio. Não mexe em nada que já tenha um veículo definido, não mostra
-// toast (silenciosa, pra não interromper quem está digitando), e não roda se estiver
-// offline ou sem o Supabase disponível.
-async function atualizarVeiculosVaziosAutomaticamente(){
-  if(!navigator.onLine) return;
-  const supabaseClient=getSupabaseClient();
-  if(!supabaseClient) return;
-  const selects=document.querySelectorAll('select.cell-name');
-  for(const sel of selects){
-    const i=Number(sel.id.replace('name-',''));
-    if(!i && i!==0) continue;
-    const nome=sel.value;
-    if(!nome||nome==='__custom__') continue;
-    const vehicleSel=document.getElementById(`vehicle-${i}`);
-    if(!vehicleSel||vehicleSel.value) continue; // já tem veículo (automático ou manual) — não mexe
-    if(document.activeElement===sel||document.activeElement===vehicleSel) continue; // pessoa mexendo nessa linha agora — espera a próxima rodada
-    await buscarVeiculoAutomaticoSilencioso(nome,i);
-  }
-}
-
 document.addEventListener('DOMContentLoaded',()=>{
   // Trava a rolagem da página enquanto a tela de login estiver visível — a
   // página de trás (escondida atrás dela) pode ser mais alta que a tela, e
@@ -4213,28 +3919,6 @@ document.addEventListener('DOMContentLoaded',()=>{
   document.body.style.overflow='hidden';
   aplicarEmailLembrado();
   verificarSessaoEIniciar();
-
-  // RE-seleção do mesmo funcionário: o evento nativo "change" do <select> só dispara
-  // quando o valor escolhido MUDA de verdade — escolher de novo o mesmo nome que já
-  // estava ali (ex: reabriu a lista e confirmou o mesmo) não dispara nada sozinho. Este
-  // listener delegado (funciona pra qualquer linha, inclusive as criadas depois) guarda
-  // o valor no foco e compara no blur — se for o mesmo nome de antes, dispara a mesma
-  // consulta de novo (veículo + função), do mesmo jeito que uma troca de verdade faria.
-  const workersBody=document.getElementById('workers-body');
-  if(workersBody){
-    workersBody.addEventListener('focusin',e=>{
-      if(e.target.matches('select.cell-name')) e.target.dataset.antesDoFoco=e.target.value;
-    });
-    workersBody.addEventListener('focusout',e=>{
-      const sel=e.target;
-      if(!sel.matches||!sel.matches('select.cell-name')) return;
-      const antes=sel.dataset.antesDoFoco;
-      if(sel.value && sel.value===antes && sel.value!=='__custom__'){
-        const i=sel.id.replace('name-','');
-        dispararConsultaEscalaEFuncao(sel.value,i);
-      }
-    });
-  }
 });
 
 // ── Gera próximo número de RDO automaticamente ──
@@ -4362,35 +4046,22 @@ function renderizarRdosDoDia(){
 
   const keys=getAllRDOKeys();
   const doDia=[];
-  // TRAVA DE SEGURANÇA (computador compartilhado, 2026-08-18): mesma regra do resto do
-  // sistema — encarregado só vê RDOs do dia com o PRÓPRIO nome no campo Encarregado;
-  // Admin Mestre continua vendo todos. Sem isso, essa barra mostrava (e deixava abrir)
-  // rascunhos de OUTRO encarregado que usou o mesmo aparelho antes, no mesmo dia.
-  const ehAdminDia=usuarioAtual&&usuarioAtual.papel==='admin_mestre';
-  const meuNomeNormalizadoDia=usuarioAtual?normalizarObra(usuarioAtual.nome):null;
   keys.forEach(k=>{
     try{
       const d=JSON.parse(localStorage.getItem(k));
       // Só conta como "outro RDO do dia" quem já tem Obra escolhida — um rascunho ainda
       // sem Obra definida (ex: RDO que acabou de começar, autosalvo de segurança ao clicar
       // em Buscar/Novo) não deve aparecer como se fosse um RDO separado e confundir.
-      if(!ehAdminDia&&meuNomeNormalizadoDia&&normalizarObra(d?.header?.enc)!==meuNomeNormalizadoDia) return;
       if(d?.header?.data===dataAtual && (d?.header?.obra||'').trim()) doDia.push({key:k,header:d.header});
     }catch(e){}
   });
 
-  // CORREÇÃO (2026-08-18): baixei o limite de 2 pra 1 — agora que o boot sempre abre uma
-  // tela em branco (não reabre mais o rascunho sozinho), um único rascunho do dia com
-  // Obra já preenchida e ainda não enviado precisa continuar visível aqui, senão fica
-  // sem nenhum jeito óbvio de voltar pra ele. (O botão "Salvar e Enviar" piscando/o
-  // painel de "RDOs pendentes" já cobre isso pra QUALQUER data, não só hoje — esta
-  // barra aqui é só o atalho rápido pro dia que está na tela agora.)
-  if(doDia.length<1){ barra.style.display='none'; return; }
+  if(doDia.length<2){ barra.style.display='none'; return; }
 
   const chaveAtiva=localStorage.getItem('rdo-last-key');
   doDia.sort((a,b)=>(a.header.nrdo||'').localeCompare(b.header.nrdo||''));
   const rotuloBarra=document.getElementById('rdos-do-dia-label');
-  if(rotuloBarra) rotuloBarra.textContent=doDia.length===1?`📋 Já existe 1 RDO salvo hoje — toque pra abrir:`:`📋 ${doDia.length} RDOs salvos hoje — toque pra trocar:`;
+  if(rotuloBarra) rotuloBarra.textContent=`📋 ${doDia.length} RDOs salvos hoje — toque pra trocar:`;
   const esc=s=>{const d=document.createElement('div');d.textContent=s||'';return d.innerHTML;};
   lista.innerHTML=doDia.map(r=>{
     // Sempre mostra o nome da obra preenchida no diário + o Nº do RDO como diferenciador —
@@ -4432,11 +4103,6 @@ function atualizarBannerObra(){
 
 // ── LISTAS SUSPENSAS ──
 let namesList = [];
-// Cache local nome → função, usado só pra formatar o texto visível dos dropdowns
-// ("Nome Completo (Função)") sem precisar consultar o Supabase de novo a cada
-// desenho da lista. Populado em lote no início (prefetchMapaFuncoes) e também
-// atualizado a cada consulta individual (dispararConsultaEscalaEFuncao).
-let mapaFuncaoPorNome = {};
 let funcsList = ['Mecânico','Soldador','Montador','Encanador','Instrumentista','Eletricista','Mont. Andaime','Mec. Montador','Eletric. Montador','1/2 Oficial Mecânica','Pintor','Ajudante','Operador','Supervisor','Encarregado'];
 // Lista de veículos — hoje preenchida manualmente pelo encarregado/admin, igual Nome e
 // Função. O CAMPO já nasce pronto pra, no futuro, ser preenchido AUTOMATICAMENTE puxando
@@ -4476,13 +4142,7 @@ function buildNameOptions(selected=''){
   // rolar a lista inteira só pra achar essa opção lá no fim.
   let opts=`<option value="">— Selecione —</option>`;
   opts+=`<option value="__custom__">🔍 Buscar / digitar nome...</option>`;
-  semDuplicatas(namesList).forEach(n=>{
-    // "Nome Completo (Função)" no texto exibido — se não souber a função ainda
-    // (cache local vazio pra esse nome), mostra só o nome mesmo, sem parênteses vazios.
-    const funcao=mapaFuncaoPorNome[n];
-    const rotulo=funcao?`${n} (${funcao})`:n;
-    opts+=`<option value="${n}" ${n===selected?'selected':''}>${rotulo}</option>`;
-  });
+  semDuplicatas(namesList).forEach(n=>{ opts+=`<option value="${n}" ${n===selected?'selected':''}>${n}</option>`; });
   return opts;
 }
 function buildFuncOptions(selected=''){
@@ -4565,7 +4225,7 @@ function onNameChange(sel,i){
         novaSel.innerHTML=buildNameOptions(n);
         novaSel.value=n;
         td.replaceChild(novaSel,inp);
-        dispararConsultaEscalaEFuncao(n,i);
+        buscarVeiculoAutomatico(n,i);
       } else {
         const novaSel=document.createElement('select');
         novaSel.className='cell-name';
@@ -4587,7 +4247,7 @@ function onNameChange(sel,i){
   }
   sel.dataset.prev=sel.value;
   recalcAll();
-  dispararConsultaEscalaEFuncao(sel.value,i);
+  buscarVeiculoAutomatico(sel.value,i);
 }
 
 function onFuncChange(sel,i){
@@ -4716,44 +4376,32 @@ function aplicarStatusAbsenteismoNaLinha(i,valorVeiculo){
    INTEGRAÇÃO RDO ↔ ESCALA DE TRABALHO
    ============================================================ */
 
-// Busca os nomes de funcionários cadastrados na Escala de Trabalho (tabela
-// "funcionarios", mesmo banco Supabase) e RECONCILIA com a lista de nomes do
-// RDO: acrescenta quem é novo lá, e REMOVE quem já existiu na Escala antes mas
-// foi excluído de lá (evita nome "fantasma"/duplicado sobrando pra sempre no
-// dropdown do RDO). Nomes que só existem no RDO (nunca vieram da Escala, ex:
-// digitados manualmente) NUNCA são removidos por essa reconciliação — só quem
-// já apareceu antes numa sincronização anterior e sumiu de lá.
+// Busca os nomes de funcionários cadastrados na Escala de Trabalho
+// (tabela "funcionarios", mesmo banco Supabase) e junta na lista de
+// nomes do RDO — sem apagar nomes que só existem aqui no RDO.
+// Guarda a função cadastrada de cada funcionário (vinda da tabela
+// "funcionarios" no banco), pra preencher sozinho quando o nome for
+// escolhido — nome → função. Fica em memória, recarregado toda vez
+// que a lista de funcionários é atualizada.
+let funcaoPorFuncionario={};
+
 async function carregarFuncionariosDaEscala(){
   const supabaseClient=getSupabaseClient();
   if(!supabaseClient) return;
   try{
-    const{data,error}=await supabaseClient.from('funcionarios').select('nome').order('nome');
+    const{data,error}=await supabaseClient.from('funcionarios').select('nome,funcao').order('nome');
     if(error||!data) return;
     const nomesEscala=data.map(f=>f.nome).filter(Boolean);
-    let snapshotAnterior=carregarUltimoSnapshotEscala('rdo-ultimo-snapshot-nomes-escala');
-    // 1ª vez que essa reconciliação roda neste aparelho (nunca existiu snapshot
-    // salvo antes) — sem isso, um nome que JÁ estava fantasma antes dessa correção
-    // existir nunca seria limpo, porque não havia "antes" pra comparar e descobrir
-    // que ele sumiu. Bootstrap: assume que tudo que já está na lista veio da Escala.
-    if(snapshotAnterior===null) snapshotAnterior=namesList.slice();
+    // Guarda a função de cada um pra consulta rápida na hora de escolher
+    // o nome (chave normalizada, tolerante a maiúscula/espaço — mesma
+    // regra usada pra evitar duplicata de nome).
+    data.forEach(f=>{
+      if(f.nome && f.funcao && f.funcao.trim()){
+        funcaoPorFuncionario[normalizarParaComparar(f.nome)]=f.funcao.trim();
+      }
+    });
     let mudou=false;
-
-    // Acrescenta quem é novo na Escala e ainda não está no RDO.
     nomesEscala.forEach(n=>{ if(!namesList.some(x=>normalizarParaComparar(x)===normalizarParaComparar(n))){ namesList.push(n); mudou=true; } });
-
-    // Remove quem estava no snapshot anterior (veio da Escala numa sync passada,
-    // ou é o bootstrap acima) mas não está mais na lista atual da Escala.
-    const removidosDaEscala=snapshotAnterior.filter(nomeAntigo=>
-      !nomesEscala.some(n=>normalizarParaComparar(n)===normalizarParaComparar(nomeAntigo))
-    );
-    if(removidosDaEscala.length){
-      const antesQtd=namesList.length;
-      namesList=namesList.filter(n=>!removidosDaEscala.some(r=>normalizarParaComparar(r)===normalizarParaComparar(n)));
-      if(namesList.length!==antesQtd) mudou=true;
-    }
-
-    salvarUltimoSnapshotEscala(nomesEscala, carregarUltimoSnapshotEscala('rdo-ultimo-snapshot-veiculos-escala')||[]);
-
     if(mudou){
       namesList.sort();
       salvarListas();
@@ -4767,7 +4415,9 @@ async function carregarFuncionariosDaEscala(){
   }catch(e){ console.error('carregarFuncionariosDaEscala error:',e); }
 }
 
-// Mesma reconciliação acima, agora pra veículos (tabela "veiculos").
+// Busca os veículos cadastrados na Escala de Trabalho (tabela "veiculos",
+// mesmo banco Supabase) e junta na lista de veículos do RDO — mesma lógica
+// da função acima, agora para a lista suspensa de veículos.
 async function carregarVeiculosDaEscala(){
   const supabaseClient=getSupabaseClient();
   if(!supabaseClient) return;
@@ -4775,23 +4425,8 @@ async function carregarVeiculosDaEscala(){
     const{data,error}=await supabaseClient.from('veiculos').select('nome').order('nome');
     if(error||!data) return;
     const veiculosEscala=data.map(v=>v.nome).filter(Boolean);
-    let snapshotAnterior=carregarUltimoSnapshotEscala('rdo-ultimo-snapshot-veiculos-escala');
-    if(snapshotAnterior===null) snapshotAnterior=vehiclesList.slice();
     let mudou=false;
-
     veiculosEscala.forEach(n=>{ if(!vehiclesList.some(x=>normalizarParaComparar(x)===normalizarParaComparar(n))){ vehiclesList.push(n); mudou=true; } });
-
-    const removidosDaEscala=snapshotAnterior.filter(nomeAntigo=>
-      !veiculosEscala.some(n=>normalizarParaComparar(n)===normalizarParaComparar(nomeAntigo))
-    );
-    if(removidosDaEscala.length){
-      const antesQtd=vehiclesList.length;
-      vehiclesList=vehiclesList.filter(n=>!removidosDaEscala.some(r=>normalizarParaComparar(r)===normalizarParaComparar(n)));
-      if(vehiclesList.length!==antesQtd) mudou=true;
-    }
-
-    salvarUltimoSnapshotEscala(carregarUltimoSnapshotEscala('rdo-ultimo-snapshot-nomes-escala')||[], veiculosEscala);
-
     if(mudou){
       vehiclesList.sort();
       salvarListas();
@@ -4804,57 +4439,6 @@ async function carregarVeiculosDaEscala(){
   }catch(e){ console.error('carregarVeiculosDaEscala error:',e); }
 }
 
-// PREPARAÇÃO DA CONSULTA DE FUNÇÃO: busca a função/cargo do colaborador a partir de um
-// cadastro central (tabela "funcionarios", coluna "funcao") — pensada pra já funcionar
-// automaticamente assim que esse cadastro existir/for populado no banco, sem quebrar
-// nada enquanto isso não acontece. IMPORTANTE: sempre LIMPA o campo Função antes de
-// consultar — se não achar nada pra esse nome (ou o nome mudou pra outra pessoa sem
-// função cadastrada), o campo tem que ficar vazio, nunca continuar mostrando a função
-// de quem estava selecionado ali ANTES. Nunca mostra erro pro usuário por causa disso
-// (é uma tentativa "silenciosa" de preencher sozinho, não uma etapa obrigatória).
-async function buscarFuncaoAutomatica(nome,i){
-  const funcSel=document.getElementById(`func-${i}`);
-  if(!funcSel||funcSel.tagName!=='SELECT') return; // se a célula virou <input> (edição manual em andamento), não mexe
-  // Limpa ANTES de qualquer outra coisa — troca de nome (ou nome vazio/"__custom__")
-  // nunca deve deixar a função de quem estava ali antes grudada na linha.
-  funcSel.innerHTML=buildFuncOptions('');
-  funcSel.value='';
-  if(!nome||nome==='__custom__') return;
-  const supabaseClient=getSupabaseClient();
-  if(!supabaseClient) return;
-  try{
-    const{data,error}=await supabaseClient
-      .from('funcionarios')
-      .select('funcao')
-      .ilike('nome',nome)
-      .maybeSingle();
-    if(error||!data||!data.funcao) return; // tabela/coluna ainda não existe, ou em branco pra esse nome — já está limpo, não faz mais nada
-    const funcao=String(data.funcao).trim();
-    if(!funcao) return;
-    // Se o nome mudou de novo enquanto essa consulta estava em andamento (troca
-    // rápida de funcionário na mesma linha), não aplica uma resposta desatualizada.
-    const nomeAtualDaLinha=document.getElementById(`name-${i}`)?.value;
-    if(nomeAtualDaLinha && normalizarParaComparar(nomeAtualDaLinha)!==normalizarParaComparar(nome)) return;
-    mapaFuncaoPorNome[nome]=funcao;
-    if(!funcsList.includes(funcao)){ funcsList.push(funcao); salvarListas(); }
-    funcSel.innerHTML=buildFuncOptions(funcao);
-    funcSel.value=funcao;
-  }catch(e){
-    // Erro esperado enquanto a tabela/coluna "funcionarios.funcao" ainda não existir no
-    // banco — fica só no console, não interrompe nem avisa o usuário à toa.
-    console.error('buscarFuncaoAutomatica error (cadastro de função pode ainda não existir no banco):',e);
-  }
-}
-
-// Disparador único: toda vez que um funcionário é selecionado (ou RE-selecionado, veja
-// o listener de foco/blur mais abaixo) numa linha do RDO, busca AO MESMO TEMPO o
-// veículo dele na Escala do dia e a função dele no cadastro — os dois preenchimentos
-// automáticos partem sempre do mesmo gatilho, juntos.
-function dispararConsultaEscalaEFuncao(nome,i){
-  buscarVeiculoAutomatico(nome,i);
-  buscarFuncaoAutomatica(nome,i);
-}
-
 // Quando um funcionário é escolhido numa linha do RDO, busca automaticamente
 // (na Escala de Trabalho) em qual veículo ele foi escalado — a função no
 // banco procura a partir do dia anterior à data do RDO, e se não achar
@@ -4865,84 +4449,101 @@ function dispararConsultaEscalaEFuncao(nome,i){
 // Se a Escala mostrar que o funcionário está de folga/férias/atestado/
 // falta/afastado/aguardando, marca isso sozinho nas células de hora da
 // linha, em vez de tentar buscar um veículo que não existe nesse caso.
-// Mesma consulta à Escala que buscarVeiculoAutomatico faz, mas "quieta" — sem toast
-// individual (quem chama decide o que mostrar, ex: um resumo único depois de rodar pra
-// vários funcionários de uma vez) e devolve um resultado resumido pra quem chamou.
-// Sempre resolve (nunca rejeita), mesmo em erro — pra usar tranquilo dentro de
-// Promise.all sem uma falha isolada derrubar as outras.
-async function buscarVeiculoAutomaticoSilencioso(nome,i){
-  const vehicleSel=document.getElementById(`vehicle-${i}`);
-  limparStatusAusenciaAutoNaLinha(i);
-  aplicarStatusAbsenteismoNaLinha(i,'');
-  if(!nome||nome==='__custom__'){
-    if(vehicleSel){ vehicleSel.innerHTML=buildVehicleOptions(''); vehicleSel.value=''; }
-    return{ok:false};
-  }
-  const supabaseClient=getSupabaseClient();
-  if(!supabaseClient) return{ok:false,erro:true,motivo:'sem-conexao'};
-  const data=document.getElementById('h-data')?.value;
-  if(!data) return{ok:false,erro:true,motivo:'sem-data'};
-  try{
-    const{data:resultado,error}=await supabaseClient.rpc('buscar_veiculo_funcionario',{p_nome:nome,p_data:data});
-    if(error){ console.error('buscar_veiculo_funcionario error:',error); return{ok:false,erro:true,motivo:error.message||String(error)}; }
-    const linha=resultado&&resultado[0];
-    if(linha&&linha.encontrado&&linha.status_ausencia){
-      const rotulo=rotuloStatusAusencia(linha.status_ausencia);
-      if(vehicleSel){
-        vehicleSel.innerHTML=buildVehicleOptions('')+`<option value="${rotulo}" selected>⚠️ ${rotulo}</option>`;
-        vehicleSel.value=rotulo;
-      }
-      aplicarStatusAusenciaNaLinha(i,linha.status_ausencia);
-      aplicarStatusAbsenteismoNaLinha(i,rotulo);
-      return{ok:true,tipo:'ausencia',rotulo,dataEscala:linha.data_escala};
-    }else if(linha&&linha.encontrado&&linha.veiculo){
-      if(!vehiclesList.some(x=>normalizarParaComparar(x)===normalizarParaComparar(linha.veiculo))){ vehiclesList.push(linha.veiculo); salvarListas(); }
-      if(vehicleSel){
-        vehicleSel.innerHTML=buildVehicleOptions(linha.veiculo);
-        vehicleSel.value=linha.veiculo;
-      }
-      return{ok:true,tipo:'veiculo',veiculo:linha.veiculo,dataEscala:linha.data_escala};
-    }else{
-      if(vehicleSel){ vehicleSel.innerHTML=buildVehicleOptions(''); vehicleSel.value=''; }
-      return{ok:true,tipo:'sem-escala'};
-    }
-  }catch(e){
-    console.error('buscarVeiculoAutomaticoSilencioso error:',e);
-    return{ok:false,erro:true,motivo:e.message||String(e)};
-  }
-}
-
 async function buscarVeiculoAutomatico(nome,i){
+  const vehicleSel=document.getElementById(`vehicle-${i}`);
+  // Preenche a função automaticamente, se essa pessoa já tiver uma
+  // função cadastrada na tabela de funcionários (busca já feita antes,
+  // guardada em funcaoPorFuncionario) — só preenche se o campo Função
+  // ainda estiver vazio, pra nunca sobrescrever uma escolha manual que
+  // a pessoa já tenha feito antes de eu adicionar esse recurso.
+  const funcSel=document.getElementById(`func-${i}`);
+  if(funcSel && nome && nome!=='__custom__'){
+    const funcaoConhecida=funcaoPorFuncionario[normalizarParaComparar(nome)];
+    if(funcaoConhecida && !funcSel.value){
+      if(!funcsList.some(x=>normalizarParaComparar(x)===normalizarParaComparar(funcaoConhecida))){
+        funcsList.push(funcaoConhecida);
+        salvarListas();
+      }
+      funcSel.innerHTML=buildFuncOptions(funcaoConhecida);
+      funcSel.value=funcaoConhecida;
+    }
+  }
+  // SEMPRE limpa qualquer marcação automática de ausência que tenha ficado
+  // de um funcionário anterior nessa mesma linha, antes de qualquer outra
+  // coisa — inclusive se o nome for limpo (voltar pra "— Selecione —"),
+  // pra nunca deixar um status "grudado" de quem estava ali antes.
+  limparStatusAusenciaAutoNaLinha(i);
   // "limparStatusAusenciaAutoNaLinha" limpa o TEXTO/classe da célula, mas
   // nunca soltava o bloqueio de verdade (disabled) que o módulo de
   // Absenteísmo aplica quando alguém é marcado como FALTA — trocar de
   // funcionário numa linha que estava travada deixava a hora presa,
-  // mesmo pro novo funcionário selecionado. A versão silenciosa abaixo já
-  // reseta tudo isso por dentro, pra cada troca de nome sempre começar
-  // destravada do zero.
+  // mesmo pro novo funcionário selecionado. Isso reseta tudo de vez,
+  // pra cada troca de nome sempre começar destravada do zero.
+  aplicarStatusAbsenteismoNaLinha(i,'');
   if(!nome||nome==='__custom__'){
-    await buscarVeiculoAutomaticoSilencioso(nome,i);
+    if(vehicleSel){ vehicleSel.innerHTML=buildVehicleOptions(''); vehicleSel.value=''; }
     return;
   }
   const supabaseClient=getSupabaseClient();
   if(!supabaseClient){ showToast('❌ Sistema não conectado ao banco — não deu pra buscar o veículo na Escala.','#dc2626'); return; }
   const data=document.getElementById('h-data')?.value;
   if(!data){ showToast('⚠️ Preencha a data do RDO primeiro, pra conseguir buscar o veículo na Escala.','#d97706'); return; }
-  const r=await buscarVeiculoAutomaticoSilencioso(nome,i);
-  if(r.erro){
-    showToast(`❌ Erro ao buscar veículo na Escala pra "${nome}": ${r.motivo}`,'#dc2626');
-    return;
-  }
-  if(r.tipo==='ausencia'){
-    const dataEscalaFmt=r.dataEscala?formatarDataBR(r.dataEscala):'';
-    showToast(`⚠️ ${nome} está marcado como ${r.rotulo} na escala de ${dataEscalaFmt} — confira se ele deveria estar no RDO hoje.`,'#d97706');
-  }else if(r.tipo==='veiculo'){
-    const dataEscalaFmt=r.dataEscala?formatarDataBR(r.dataEscala):'';
-    showToast(`🚚 Veículo preenchido: ${r.veiculo} (escala de ${dataEscalaFmt})`,'#1457c8');
-  }else if(r.tipo==='sem-escala'){
-    showToast(`ℹ️ Sem escala encontrada pra ${nome} nesta data — escolha o veículo manualmente.`,'#6b7fa0');
-    const dataFmt=data?formatarDataBR(data):data;
-    mostrarAvisoDataDivergente(`Nenhuma escala encontrada pra <strong>${nome}</strong> no dia <strong>${dataFmt}</strong> (a data deste RDO). Confira se a data do RDO está igual à data em que ele foi escalado no sistema de Escala — um dia diferente faz o veículo não ser encontrado automaticamente.`);
+  try{
+    const{data:resultado,error}=await supabaseClient.rpc('buscar_veiculo_funcionario',{p_nome:nome,p_data:data});
+    if(error){
+      console.error('buscar_veiculo_funcionario error:',error);
+      showToast(`❌ Erro ao consultar a Escala: ${error.message||error}`,'#dc2626');
+      return;
+    }
+    const linha=resultado&&resultado[0];
+    if(linha&&linha.encontrado&&linha.status_ausencia){
+      // Funcionário está com um status de ausência na Escala (não uma obra
+      // de verdade) — não tem veículo pra buscar. Em vez de deixar o campo
+      // Veículo vazio, mostra o STATUS bem visível ali mesmo (ex: "⚠️ FALTA"),
+      // e também marca a linha inteira (células de hora) automaticamente.
+      const rotulo=rotuloStatusAusencia(linha.status_ausencia);
+      if(vehicleSel){
+        vehicleSel.innerHTML=buildVehicleOptions('')+`<option value="${rotulo}" selected>⚠️ ${rotulo}</option>`;
+        vehicleSel.value=rotulo;
+      }
+      const dataEscalaFmt=linha.data_escala?formatarDataBR(linha.data_escala):'';
+      aplicarStatusAusenciaNaLinha(i,linha.status_ausencia);
+      // IMPORTANTE: quando o valor do campo Veículo é trocado por código
+      // (como aqui), o evento "change" NÃO dispara sozinho — então, sem
+      // esta chamada, o preenchimento automático vindo da Escala nunca
+      // acionava o bloqueio/cor do módulo de Absenteísmo (só a escolha
+      // MANUAL do encarregado acionava). Isso fazia a tela mostrar dois
+      // comportamentos diferentes pro mesmo "FALTA", um vindo da Escala e
+      // outro escolhido na mão — agora os dois caminhos usam a mesma
+      // trava, sempre.
+      aplicarStatusAbsenteismoNaLinha(i,rotulo);
+      showToast(`⚠️ ${nome} está marcado como ${rotulo} na escala de ${dataEscalaFmt} — confira se ele deveria estar no RDO hoje.`,'#d97706');
+    }else if(linha&&linha.encontrado&&linha.veiculo){
+      if(!vehiclesList.some(x=>normalizarParaComparar(x)===normalizarParaComparar(linha.veiculo))){ vehiclesList.push(linha.veiculo); salvarListas(); }
+      if(vehicleSel){
+        vehicleSel.innerHTML=buildVehicleOptions(linha.veiculo);
+        vehicleSel.value=linha.veiculo;
+        const dataEscalaFmt=linha.data_escala?formatarDataBR(linha.data_escala):'';
+        showToast(`🚚 Veículo preenchido: ${linha.veiculo} (escala de ${dataEscalaFmt})`,'#1457c8');
+      }
+    }else{
+      // Não achou escala pra esse funcionário em nenhum dos últimos 5 dias
+      // antes do RDO — LIMPA o campo (não pode ficar o veículo de quem
+      // estava selecionado antes) e deixa livre pra escolha manual normal.
+      if(vehicleSel){
+        vehicleSel.innerHTML=buildVehicleOptions('');
+        vehicleSel.value='';
+      }
+      showToast(`ℹ️ Sem escala encontrada pra ${nome} nos últimos dias — escolha o veículo manualmente.`,'#6b7fa0');
+    }
+  }catch(e){
+    console.error('buscarVeiculoAutomatico error:',e);
+    // Antes, um erro aqui só ficava escondido no console (que quase
+    // ninguém abre) — a pessoa via o campo Veículo simplesmente vazio,
+    // sem nenhuma pista do motivo. Agora aparece um aviso na tela, com o
+    // erro de verdade, pra dar pra identificar o problema na hora, sem
+    // precisar rodar SQL nem abrir ferramenta nenhuma de desenvolvedor.
+    showToast(`❌ Erro ao buscar veículo na Escala pra "${nome}": ${e.message||e}`,'#dc2626');
   }
 }
 
@@ -5032,27 +4633,6 @@ function salvarListas(){
     localStorage.setItem('rdo-vehicles-list',JSON.stringify(vehiclesList));
   }catch(e){ console.error('salvarListas error:',e); }
 }
-// Guarda a última "foto" de quem veio da Escala (funcionários, veículos e funções)
-// — usada só pra saber, na próxima sincronização, quem SUMIU de lá (foi excluído)
-// e por isso deve sair também do dropdown do RDO. Sem isso, um nome/veículo/função
-// excluído na Escala ficava "fantasma" pra sempre no RDO (nunca era removido, só
-// adicionado).
-function salvarUltimoSnapshotEscala(nomes,veiculos,funcoes){
-  try{
-    localStorage.setItem('rdo-ultimo-snapshot-nomes-escala',JSON.stringify(nomes));
-    localStorage.setItem('rdo-ultimo-snapshot-veiculos-escala',JSON.stringify(veiculos));
-    if(funcoes!==undefined) localStorage.setItem('rdo-ultimo-snapshot-funcoes-escala',JSON.stringify(funcoes));
-  }catch(e){ console.error('salvarUltimoSnapshotEscala error:',e); }
-}
-// Devolve null (não array vazio) quando a chave nunca existiu — diferencia "1ª vez
-// rodando essa reconciliação neste aparelho" de "já rodou antes e não achou nada".
-// Isso importa: sem essa distinção, um nome/veículo/função que JÁ estava fantasma
-// ANTES dessa correção existir nunca seria limpo (não tinha "antes" pra comparar).
-function carregarUltimoSnapshotEscala(chave){
-  const bruto=localStorage.getItem(chave);
-  if(bruto===null) return null;
-  try{ return JSON.parse(bruto); }catch(e){ return null; }
-}
 function carregarListas(){
   const n=localStorage.getItem('rdo-names-list');
   const f=localStorage.getItem('rdo-funcs-list');
@@ -5070,101 +4650,6 @@ function carregarListas(){
   funcsList=semDuplicatas(funcsList);
   if(namesList.length!==nomesQtdAntes||vehiclesList.length!==veicQtdAntes||funcsList.length!==funcQtdAntes){
     salvarListas();
-  }
-  prefetchMapaFuncoes(); // não bloqueia — atualiza os dropdowns já abertos assim que a resposta chegar
-}
-
-// CONSERTO DE INCIDENTE (uma vez só, nunca mais depois): uma versão anterior desta
-// correção tentou "limpar" funcsList do mesmo jeito que nomes/veículos — e isso
-// apagou opções de função que já estavam cadastradas e em uso, porque nem toda
-// função do RDO corresponde a um funcionarios.funcao da Escala (muita função é
-// digitada livre, por linha, tipo "Ajudante"/"Soldador"). Essa lógica de apagar já
-// foi REMOVIDA do código (funcsList só cresce agora, nunca encolhe sozinha) — esta
-// função aqui só existe pra RECUPERAR o que já tinha sido apagado por engano antes
-// dessa remoção, puxando de volta do histórico de RDOs já salvos no Supabase (que
-// preservam intacto o funcs_list de cada RDO, e também o valor de função usado por
-// cada trabalhador em cada linha — nada foi perdido de verdade lá). Só ADICIONA de
-// volta, nunca remove nada — roda 1 vez por aparelho e nunca mais depois disso.
-async function recuperarFuncoesApagadasPorEngano(){
-  const chaveFeito='rdo-recuperacao-funcoes-v1';
-  if(localStorage.getItem(chaveFeito)) return; // já rodou neste aparelho, não repete
-  const supabaseClient=getSupabaseClient();
-  if(!supabaseClient) return; // tenta de novo na próxima vez que abrir com internet
-  try{
-    const funcoesRecuperadas=new Set();
-    const[{data:rdosData,error:erroRdos},{data:workersData,error:erroWorkers}]=await Promise.all([
-      supabaseClient.from('rdos').select('funcs_list').limit(5000),
-      supabaseClient.from('rdo_workers').select('funcao').not('funcao','is',null).limit(20000)
-    ]);
-    if(!erroRdos&&rdosData){ rdosData.forEach(r=>{ (r.funcs_list||[]).forEach(f=>{ if(f) funcoesRecuperadas.add(f); }); }); }
-    if(!erroWorkers&&workersData){ workersData.forEach(w=>{ if(w.funcao) funcoesRecuperadas.add(w.funcao); }); }
-    let mudou=false;
-    funcoesRecuperadas.forEach(f=>{
-      if(!funcsList.some(x=>normalizarParaComparar(x)===normalizarParaComparar(f))){ funcsList.push(f); mudou=true; }
-    });
-    if(mudou){
-      funcsList.sort();
-      salvarListas();
-      document.querySelectorAll('select.cell-func').forEach(sel=>{
-        const atual=sel.value;
-        sel.innerHTML=buildFuncOptions(atual);
-        sel.value=atual;
-      });
-      showToast(`✅ Lista de funções restaurada (${funcoesRecuperadas.size} função(ões) recuperada(s) do histórico).`,'#16a34a');
-    }
-    localStorage.setItem(chaveFeito,'1'); // só marca como feito se conseguiu consultar (sem erro de conexão) — se falhar, tenta de novo na próxima
-  }catch(e){
-    console.error('recuperarFuncoesApagadasPorEngano error:',e); // não marca como feito — tenta de novo na próxima vez
-  }
-}
-
-// Busca de uma vez só (em lote) a função de TODOS os funcionários cadastrados no
-// Supabase, montando o cache local (mapaFuncaoPorNome) usado pra mostrar "Nome
-// (Função)" nos dropdowns — sem isso, cada nome só mostraria a função DEPOIS de já
-// ter sido selecionado uma vez (quando dispararConsultaEscalaEFuncao roda). Silenciosa
-// de propósito (sem toast): se a tabela/coluna ainda não existir, ou não tiver
-// internet, os dropdowns simplesmente continuam mostrando só o nome, sem erro nenhum
-// pra pessoa.
-async function prefetchMapaFuncoes(){
-  const supabaseClient=getSupabaseClient();
-  if(!supabaseClient) return;
-  try{
-    const{data,error}=await supabaseClient.from('funcionarios').select('nome,funcao');
-    if(error||!data) return;
-    let mudou=false;
-    data.forEach(row=>{
-      if(row.funcao && mapaFuncaoPorNome[row.nome]!==row.funcao){
-        mapaFuncaoPorNome[row.nome]=row.funcao;
-        mudou=true;
-      }
-    });
-    // Some do mapa quem não tem mais função cadastrada (ou foi excluído) — senão
-    // o "Nome (Função)" antigo continua aparecendo pra sempre no dropdown.
-    Object.keys(mapaFuncaoPorNome).forEach(nome=>{
-      const aindaTemEssaFuncao=data.some(row=>row.nome===nome && row.funcao);
-      if(!aindaTemEssaFuncao){ delete mapaFuncaoPorNome[nome]; mudou=true; }
-    });
-    // NÃO reconcilia funcsList aqui (revertido) — funcsList é a lista de OPÇÕES
-    // de função que aparecem pra digitar em qualquer linha do RDO, e nem toda
-    // função ali corresponde a um "funcionarios.funcao" da Escala (encarregado
-    // digita funções ad-hoc por linha, tipo "Ajudante", "Soldador" etc., que
-    // nunca precisaram estar cadastradas na Escala). Uma versão anterior desta
-    // função tentou limpar funcsList do mesmo jeito que nomes/veículos e isso
-    // apagou opções de função que já estavam cadastradas e em uso — funcsList
-    // só cresce por escolha da pessoa (ou pelo botão de gerenciar listas), nunca
-    // encolhe sozinha.
-
-    if(mudou){
-      // Atualiza os dropdowns de nome que já estiverem na tela, sem perder o valor
-      // selecionado em cada linha — só o texto exibido das opções muda.
-      document.querySelectorAll('select.cell-name').forEach(sel=>{
-        const atual=sel.value;
-        sel.innerHTML=buildNameOptions(atual);
-        sel.value=atual;
-      });
-    }
-  }catch(e){
-    console.error('prefetchMapaFuncoes error (tabela/coluna funcionarios.funcao pode ainda não existir):',e);
   }
 }
 
@@ -5277,30 +4762,11 @@ function autoGrowTA(el){
   el.style.height='auto';
   el.style.height=el.scrollHeight+'px';
 }
-// Elementos <select> (Obra, Disciplina) nunca conseguem quebrar o texto selecionado em
-// duas linhas — é assim que o navegador desenha esses elementos, nenhum CSS muda isso.
-// O que dá pra fazer (e ajuda bastante): encolher a fonte sozinha conforme o nome
-// escolhido fica mais comprido, então cabe mais texto antes de precisar cortar com "...".
-function ajustarFontePorTextoSelect(sel){
-  if(!sel) return;
-  const texto=(sel.options[sel.selectedIndex]&&sel.options[sel.selectedIndex].text)||'';
-  const len=texto.trim().length;
-  let fs=13;
-  if(len>34) fs=10;
-  else if(len>26) fs=11;
-  else if(len>20) fs=12;
-  sel.style.fontSize=fs+'px';
-}
-function ajustarFontesCabecalhoLongo(){
-  ajustarFontePorTextoSelect(document.getElementById('h-obra'));
-  ajustarFontePorTextoSelect(document.getElementById('h-disc'));
-}
 // Aplica autoGrowTA em todos os campos "textarea-de-linha-única" da página de uma vez —
 // chamado depois de carregar/restaurar um RDO salvo, já que setar .value via JS não
 // dispara o evento "input" sozinho.
 function ajustarTextareasAuto(){
   document.querySelectorAll('#h-obra,#h-disc,#h-enc,.ose-resp textarea').forEach(autoGrowTA);
-  ajustarFontesCabecalhoLongo();
 }
 
 function makeHrsCell(i,o){
@@ -5850,7 +5316,7 @@ function getFormData(){
   for(let o=1;o<=NUM_OSE;o++){
     oses.push({name:document.getElementById(`ose-name-${o}`)?.value||'',status:document.getElementById(`ose-status-${o}`)?.value||'sem',desc:document.getElementById(`ose-desc-${o}`)?.innerHTML||'',descText:document.getElementById(`ose-desc-${o}`)?.innerText||'',resp:document.getElementById(`ose-resp-${o}`)?.value||''});
   }
-  return{header:{nrdo:document.getElementById('h-nrdo').value,data:document.getElementById('h-data').value,obra:document.getElementById('h-obra').value,enc:document.getElementById('h-enc').textContent,disc:document.getElementById('h-disc').value},rowCounter,workers,oses,namesList,funcsList,vehiclesList};
+  return{header:{nrdo:document.getElementById('h-nrdo').value,data:document.getElementById('h-data').value,obra:document.getElementById('h-obra').value,enc:document.getElementById('h-enc').value,disc:document.getElementById('h-disc').value},rowCounter,workers,oses,namesList,funcsList,vehiclesList};
 }
 
 // Trava contra clique duplo acidental nos botões de Salvar/Exportar — muito comum no
@@ -5913,46 +5379,31 @@ async function salvarRDO(){
   try{
     const d=getFormData();
 
-    // VALIDAÇÃO ÚNICA E UNIFICADA: nunca deixa enviar um RDO pro admin com qualquer
-    // pendência — cabeçalho, equipe, veículo/status, horas, projeto/OS, status do
-    // projeto ou descrição. Cada campo com problema é destacado em vermelho na tela
-    // (some assim que for preenchido). Mesma validação usada antes de Excel/PDF/WhatsApp.
-    if(!bloquearSeFormularioInvalido(d)) return;
+    // CAMPOS OBRIGATÓRIOS: nunca deixa enviar um RDO pro admin sem essas informações
+    // básicas preenchidas — sem elas, o RDO não serve pra nada (admin não sabe de qual
+    // obra é, quem preencheu, nem quando), então trava aqui antes de qualquer coisa.
+    const faltando=[];
+    const camposObrigatorios=[
+      {id:'h-data',rotulo:'Data',valor:d.header.data},
+      {id:'h-dia',rotulo:'Dia da Semana',valor:document.getElementById('h-dia')?.value},
+      {id:'h-obra',rotulo:'Obra / Projeto (Cliente)',valor:d.header.obra},
+      {id:'h-disc',rotulo:'Disciplina',valor:d.header.disc},
+      {id:'h-enc',rotulo:'Encarregado',valor:d.header.enc}
+    ];
+    camposObrigatorios.forEach(c=>{
+      const el=document.getElementById(c.id);
+      if(!c.valor){
+        faltando.push(c.rotulo);
+        if(el){ el.style.outline='3px solid #dc2626'; el.style.outlineOffset='2px'; setTimeout(()=>{el.style.outline='';el.style.outlineOffset='';},6000); }
+      }
+    });
+    if(faltando.length){
+      showToast(`⚠️ Faltam preencher: ${faltando.join(', ')}`,'#dc2626');
+      alert(`Não é possível enviar o RDO — faltam preencher estes campos:\n\n${faltando.map(f=>'• '+f).join('\n')}\n\nEsses campos são obrigatórios: sem eles, o admin não consegue saber de qual obra é esse RDO nem quem preencheu, e ele não serve pra nada. Preencha e tente enviar de novo.`);
+      return;
+    }
 
     const key=chaveRDO(d.header.data);
-
-    // TRAVA CONTRA DUPLICADO ANTES DE ENVIAR (auditoria 2026-08-18): antes, esse aviso só
-    // aparecia DEPOIS, na tela "Buscar RDOs" — fácil de não ver a tempo. Agora checa direto
-    // na nuvem, ANTES da confirmação de envio, se já existe outro RDO enviado com a MESMA
-    // obra + data + encarregado + disciplina (só isso junto conta como duplicado de
-    // verdade — obra/data/encarregado repetidos com disciplina DIFERENTE é uso normal,
-    // cada disciplina tem seu próprio RDO). Se achar, obriga a pessoa a confirmar de
-    // propósito, mostrando o número do RDO já existente — não deixa passar batido.
-    const supabaseClientParaChecagem=getSupabaseClient();
-    if(supabaseClientParaChecagem && usuarioAtual && d.header.obra && d.header.data && d.header.enc){
-      try{
-        const{data:possiveisDuplicados}=await supabaseClientParaChecagem
-          .from('rdos')
-          .select('nrdo,rdo_key')
-          .eq('data',d.header.data)
-          .ilike('obra',(d.header.obra||'').trim())
-          .ilike('encarregado',(d.header.enc||'').trim())
-          .ilike('disciplina',(d.header.disc||'').trim())
-          .neq('rdo_key',key);
-        if(possiveisDuplicados && possiveisDuplicados.length){
-          const numeros=possiveisDuplicados.map(r=>r.nrdo||'(sem número)').join(', ');
-          const confirmarMesmoAssim=confirm(
-            `⚠️ ATENÇÃO — POSSÍVEL DUPLICADO\n\nJá existe RDO enviado com a MESMA obra, data, encarregado e disciplina: ${numeros}.\n\n` +
-            `Se você já preencheu esse RDO antes e está só terminando/reenviando, cancele aqui e abra o RDO ${numeros} em "Buscar RDOs" em vez de criar um novo.\n\n` +
-            `Enviar mesmo assim como um RDO SEPARADO?`
-          );
-          if(!confirmarMesmoAssim){
-            showToast('Envio cancelado — verifique se não é o mesmo RDO já enviado.','#d97706');
-            return;
-          }
-        }
-      }catch(e){ console.error('Checagem de duplicado antes de enviar:',e); } // se a checagem falhar, não bloqueia o envio por causa disso — só não avisa
-    }
 
     // CONFIRMAÇÃO EXPLÍCITA: nunca envia pro admin sem a pessoa confirmar de propósito —
     // clicar no botão sozinho não basta, precisa confirmar aqui também.
@@ -5965,14 +5416,7 @@ async function salvarRDO(){
     // NÚMERO 100% AUTOMÁTICO: recalcula o próximo disponível (local + nuvem) e corrige
     // sozinho, sem perguntar — garante que nunca existe conflito de número entre
     // encarregados diferentes na mesma obra, mesmo sem ninguém perceber que ia colidir.
-    // CORREÇÃO (auditoria 2026-08-18): só recalcula na PRIMEIRA vez que este RDO é
-    // enviado (estaEnviado(key) ainda false). Antes, isso rodava em TODO clique de
-    // "Salvar e Enviar" — inclusive ao reabrir e reenviar um RDO que já tinha sido
-    // confirmado antes — o que podia trocar o número de um RDO já registrado sem
-    // nenhum motivo real (nenhuma colisão de verdade, só o cálculo rodando de novo).
-    // Depois do primeiro envio confirmado, o número fica fixo; só muda se a pessoa
-    // editar o campo manualmente.
-    if(d.header.obra && !estaEnviado(key)){
+    if(d.header.obra){
       const numeroCorreto=await resolverNumeroSemConflito(d.header.obra,key);
       if(numeroCorreto&&numeroCorreto!==d.header.nrdo){
         d.header.nrdo=numeroCorreto;
@@ -6077,45 +5521,6 @@ function restoreRow(w,i){
   if(STATUS_ABSENTEISMO_VEICULO.includes(w.vehicle)){
     aplicarStatusAbsenteismoNaLinha(i,w.vehicle);
   }
-}
-
-// Abre sempre com a data de hoje — nunca restaura sozinho um rascunho de DIA ANTERIOR
-// (mesmo que exista salvo no aparelho). Reaproveita um rascunho de HOJE já existente em
-// vez de criar outro do zero — criar um novo toda hora que o app é reaberto no mesmo dia
-// gerava "rascunho duplicado do que já estava sendo preenchido".
-// CORREÇÃO DE SEGURANÇA (computador compartilhado, pedido do usuário 2026-08-18): só
-// reaproveita um rascunho de hoje se o campo Encarregado dele bater com quem está
-// LOGADO AGORA. Sem essa trava, um encarregado terminando a sessão sem enviar (ou só
-// fechando o app) e outro encarregado entrando depois no MESMO computador no MESMO dia
-// faria os dados do primeiro (obra, equipe, horas) aparecerem sozinhos pré-preenchidos
-// pro segundo — que podia nem perceber e enviar o RDO errado sem querer. Admin Mestre
-// não tem esse filtro (já enxerga tudo normalmente em outras telas do sistema).
-function iniciarRDOEmBrancoNoBoot(){
-  const hoje=hojeLocal();
-  const ehAdmin=usuarioAtual&&usuarioAtual.papel==='admin_mestre';
-  const meuNomeNormalizado=usuarioAtual?normalizarObra(usuarioAtual.nome):null;
-  const candidatosHoje=[];
-  for(let i=0;i<localStorage.length;i++){
-    const k=localStorage.key(i);
-    if(!k||!k.startsWith(`rdo-${hoje}__`)) continue;
-    const idDaChave=extrairIdDaChave(k);
-    if(!idDaChave) continue; // formato antigo sem id — não reaproveita, mais seguro deixar como está
-    try{
-      const d=JSON.parse(localStorage.getItem(k));
-      if(!(d?.header?.obra||'').trim()) continue;
-      if(!ehAdmin&&meuNomeNormalizado&&normalizarObra(d.header.enc)!==meuNomeNormalizado) continue; // rascunho de OUTRO encarregado — nunca reaproveita
-      candidatosHoje.push({key:k,id:idDaChave,dados:d});
-    }catch(e){}
-  }
-  if(candidatosHoje.length===1){
-    rdoAtualId=candidatosHoje[0].id;
-    localStorage.setItem('rdo-last-key',candidatosHoje[0].key);
-    restaurarEstadoCompleto(candidatosHoje[0].dados);
-    return;
-  }
-  document.getElementById('h-nrdo').value=gerarProximoNRDO(document.getElementById('h-obra')?.value||'');
-  nrdoEditadoManualmente=false;
-  rdoAtualId=gerarRdoId();
 }
 
 function carregarRDO(){
@@ -6341,7 +5746,7 @@ function desfazerUltimaAcao(){
 // e zera horas e responsável (que são específicos do dia). Descrição das OSEs só é apagada
 // se "manterDescricoes" for false — e isso é sempre uma escolha explícita do usuário no
 // modal de Novo RDO, nunca uma decisão automática do sistema.
-async function aplicarModeloNovoDia(d,proximoNRDO,manterStatus=true,dataAlvo=null,manterDescricoes=false){
+function aplicarModeloNovoDia(d,proximoNRDO,manterStatus=true,dataAlvo=null,manterDescricoes=false){
   if(d.namesList&&d.namesList.length) namesList=d.namesList;
   if(d.funcsList&&d.funcsList.length) funcsList=d.funcsList;
   if(d.vehiclesList&&d.vehiclesList.length) vehiclesList=d.vehiclesList;
@@ -6386,49 +5791,17 @@ async function aplicarModeloNovoDia(d,proximoNRDO,manterStatus=true,dataAlvo=nul
   if(d.workers&&d.workers.length){
     rowCounter=0;
     document.getElementById('workers-body').innerHTML='';
-    const linhasParaChecarEscala=[]; // {nome,i} — só funcionários de verdade, não linhas vazias
     d.workers.forEach((w)=>{
       rowCounter++;
-      // O veículo NUNCA vem copiado do RDO anterior — nem um veículo de verdade (ex:
-      // "Van 01"), nem um status de ausência (FALTA/SAIU MAIS CEDO/TRANSFERIDO). Cada
-      // dia é um dia novo: o veículo de cada funcionário é sempre buscado de novo na
-      // Escala da NOVA data, logo abaixo (mantendo só Nome e Função do modelo).
-      const wZerado={...w, vehicle:'', hrs:Array(NUM_OSE).fill(''), hst:Array(NUM_OSE).fill('normal')};
+      // Se o veículo do funcionário no RDO anterior era, na verdade, um
+      // status de ausência (FALTA/SAIU MAIS CEDO/TRANSFERIDO), NÃO pode
+      // vir junto pro novo RDO — cada dia é um dia novo, ninguém "nasce"
+      // de falta só porque estava assim ontem. Um veículo de verdade
+      // (ex: "Van 01") continua vindo normalmente, esse não é o problema.
+      const veiculoLimpo=STATUS_ABSENTEISMO_VEICULO.includes(w.vehicle)?'':w.vehicle;
+      const wZerado={...w, vehicle:veiculoLimpo, hrs:Array(NUM_OSE).fill(''), hst:Array(NUM_OSE).fill('normal')};
       restoreRow(wZerado,rowCounter);
-      if(w.name && w.name!=='__custom__') linhasParaChecarEscala.push({nome:w.name,i:rowCounter});
     });
-
-    // Reatribuição automática: pra cada funcionário trazido do modelo, consulta a
-    // Escala na data NOVA do RDO — se estiver escalado hoje com um veículo, preenche
-    // sozinho; se estiver de folga/férias/atestado/afastado, marca o status
-    // correspondente; se não achar nada, o campo fica livre pra escolha manual
-    // (veículo real ou Falta/Saiu mais cedo/Transferido). Roda tudo de uma vez,
-    // silencioso (sem toast por funcionário), com um resumo único no final.
-    if(linhasParaChecarEscala.length){
-      const resultados=await Promise.all(linhasParaChecarEscala.map(l=>buscarVeiculoAutomaticoSilencioso(l.nome,l.i)));
-      const qtdVeiculo=resultados.filter(r=>r.tipo==='veiculo').length;
-      const qtdAusencia=resultados.filter(r=>r.tipo==='ausencia').length;
-      const qtdLivre=resultados.filter(r=>r.tipo==='sem-escala').length;
-      const qtdErro=resultados.filter(r=>r.erro).length;
-      const partes=[];
-      if(qtdVeiculo) partes.push(`${qtdVeiculo} veículo(s) atualizado(s) pela escala de hoje`);
-      if(qtdAusencia) partes.push(`${qtdAusencia} com status de ausência na escala`);
-      if(qtdLivre) partes.push(`${qtdLivre} sem escala hoje (livre pra preencher)`);
-      if(partes.length) showToast(`🚚 Equipe carregada — ${partes.join(', ')}.`,'#1457c8');
-      if(qtdErro) showToast(`⚠️ Não deu pra consultar a escala de ${qtdErro} funcionário(s) — confira o veículo deles manualmente.`,'#d97706');
-      // Aviso amarelo persistente, além do toast rápido acima — quando ninguém
-      // souber olhar o toast a tempo, pelo menos esse fica na tela. O motivo
-      // mais comum de "sem escala" em lote é a data do RDO não bater com a
-      // data em que a equipe foi realmente escalada.
-      if(qtdLivre){
-        const nomesSemEscala=linhasParaChecarEscala.filter((l,idx)=>resultados[idx].tipo==='sem-escala').map(l=>l.nome);
-        const dataRdoFmt=document.getElementById('h-data')?.value?formatarDataBR(document.getElementById('h-data').value):'';
-        const listaNomes=nomesSemEscala.length>5
-          ? nomesSemEscala.slice(0,5).join(', ')+` e mais ${nomesSemEscala.length-5}`
-          : nomesSemEscala.join(', ');
-        mostrarAvisoDataDivergente(`${qtdLivre} funcionário(s) sem escala encontrada no dia <strong>${dataRdoFmt}</strong> (a data deste RDO): ${listaNomes}. Confira se a data do RDO está igual à data em que eles foram escalados no sistema de Escala.`);
-      }
-    }
   } else {
     buildWorkersTable(1);
   }
@@ -6438,11 +5811,24 @@ async function aplicarModeloNovoDia(d,proximoNRDO,manterStatus=true,dataAlvo=nul
   renderizarRdosDoDia();renderizarObrasParadas();
 }
 
-// A data do novo RDO é sempre a mesma que já estava no formulário (a escolha
-// "mesmo dia / próximo dia" foi removida do modal a pedido — se for preciso
-// mudar o dia, o encarregado edita a data manualmente depois de criado).
+// 'seguinte' = soma 1 dia à data atual do formulário (padrão, comportamento de sempre)
+// 'mesmo'    = mantém exatamente a mesma data (outro RDO do mesmo dia, outra obra/equipe)
+let novoRdoDiaEscolhido='mesmo';
+function selecionarDiaNovoRDO(tipo){
+  novoRdoDiaEscolhido=tipo;
+  const bs=document.getElementById('btn-novo-dia-seguinte'), bm=document.getElementById('btn-novo-dia-mesmo');
+  if(bs) bs.classList.toggle('ativo', tipo==='seguinte');
+  if(bm) bm.classList.toggle('ativo', tipo==='mesmo');
+}
+// Calcula a data do novo RDO conforme a escolha acima — sempre a partir da data que já
+// estava no formulário (não trava na data real do relógio do aparelho), dando controle
+// manual total: você decide se é "amanhã" ou "hoje de novo, outra obra".
 function dataParaNovoRDO(){
-  return document.getElementById('h-data').value||hojeLocal();
+  const dataForm=document.getElementById('h-data').value||hojeLocal();
+  if(novoRdoDiaEscolhido==='mesmo') return dataForm;
+  const d=new Date(dataForm+'T12:00:00');
+  d.setDate(d.getDate()+1);
+  return d.toISOString().slice(0,10);
 }
 
 function novoRDO(){
@@ -6451,6 +5837,7 @@ function novoRDO(){
   const lastRaw=lastKey?localStorage.getItem(lastKey):null;
   const aviso=document.getElementById('novo-rdo-aviso');
   if(aviso) aviso.style.display=lastRaw?'block':'none';
+  selecionarDiaNovoRDO('mesmo'); // padrão agora é o mesmo dia — escolha manual a cada vez, se quiser mudar
   const radioUltimo=document.querySelector('input[name="novo-rdo-tipo"][value="ultimo"]');
   if(radioUltimo) radioUltimo.checked=true; // reabre sempre com a opção padrão marcada
   document.getElementById('novo-rdo-modal').classList.add('show');
@@ -6460,11 +5847,13 @@ function fecharNovoRDOModal(){
   document.getElementById('novo-rdo-modal').classList.remove('show');
 }
 
-// Lê qual das 2 opções está marcada e só age quando o usuário aperta "OK — CONFIRMAR" —
+// Lê qual das 3 opções está marcada e só age quando o usuário aperta "OK — CONFIRMAR" —
 // nada acontece só de selecionar, precisa confirmar explicitamente.
 function confirmarNovoRDO(){
   const tipo=document.querySelector('input[name="novo-rdo-tipo"]:checked')?.value||'ultimo';
   if(tipo==='zero') novoRDOZerado();
+  else if(tipo==='nova-obra') novoRDOParaNovaObra();
+  else if(tipo==='duplicar') duplicarUltimoRDO();
   else novoRDOComNomes();
 }
 
@@ -6476,51 +5865,7 @@ function confirmarNovoRDO(){
 // RDOs serem criados de uma vez só, não importa a causa exata do disparo duplo.
 let criandoNovoRDO=false;
 
-// Busca de verdade (SELECT) no Supabase o último RDO CRIADO POR VOCÊ (o encarregado
-// logado) — não depende do que está salvo neste aparelho/navegador, então funciona
-// igual não importa de qual celular/computador você está entrando. Se não tiver
-// internet ou a busca falhar, cai pro que já estiver salvo localmente (rdo-last-key),
-// sem travar quem está sem sinal no meio da obra.
-async function buscarUltimoRDOSupabase(){
-  const supabaseClient=getSupabaseClient();
-  if(!supabaseClient||!usuarioAtual) return null;
-  try{
-    const{data:rdoRow,error:erroRdo}=await supabaseClient
-      .from('rdos')
-      .select('*')
-      .eq('criado_por',usuarioAtual.id)
-      .order('created_at',{ascending:false})
-      .limit(1)
-      .maybeSingle();
-    if(erroRdo||!rdoRow) return null;
-    const[{data:osesData},{data:workersData}]=await Promise.all([
-      supabaseClient.from('rdo_oses').select('*').eq('rdo_id',rdoRow.id),
-      supabaseClient.from('rdo_workers').select('*').eq('rdo_id',rdoRow.id)
-    ]);
-    const osesArr=Array.from({length:NUM_OSE},(_,idx)=>{
-      const n=idx+1;
-      const achada=(osesData||[]).find(o=>o.ose_numero===n);
-      return{name:achada?.nome||'',status:achada?.status||'sem',desc:achada?.descricao||'',resp:achada?.responsavel||''};
-    });
-    const workersArr=(workersData||[])
-      .slice().sort((a,b)=>(a.worker_index??0)-(b.worker_index??0))
-      .map(w=>({name:w.nome||'',func:w.funcao||'',vehicle:w.veiculo||'',hrs:w.hrs||[],hst:w.hst||[]}));
-    return{
-      header:{nrdo:rdoRow.nrdo||'',data:rdoRow.data||'',obra:rdoRow.obra||'',enc:rdoRow.encarregado||'',disc:rdoRow.disciplina||''},
-      rowCounter:rdoRow.row_counter||0,
-      workers:workersArr,
-      oses:osesArr,
-      namesList:rdoRow.names_list||[],
-      funcsList:rdoRow.funcs_list||[],
-      vehiclesList:rdoRow.vehicles_list||[]
-    };
-  }catch(e){
-    console.error('buscarUltimoRDOSupabase error:',e);
-    return null;
-  }
-}
-
-async function novoRDOComNomes(){
+function novoRDOComNomes(){
   if(criandoNovoRDO) return;
   criandoNovoRDO=true;
   try{
@@ -6532,32 +5877,24 @@ async function novoRDOComNomes(){
     autoSilentSave();
     salvarSnapshotDesfazer();
     fecharNovoRDOModal();
-
-    // 1ª tentativa: busca de verdade no Supabase (o último RDO que VOCÊ criou, não
-    // importa em qual aparelho). Só cai pro que está salvo neste navegador se a nuvem
-    // não responder (sem internet, por exemplo).
-    let d=await buscarUltimoRDOSupabase();
-    if(!d){
-      const lastKey=localStorage.getItem('rdo-last-key');
-      const lastRaw=lastKey?localStorage.getItem(lastKey):null;
-      if(lastRaw){
-        try{ d=JSON.parse(lastRaw); }catch(e){ d=null; }
-      }
-    }
-    if(!d){
+    const lastKey=localStorage.getItem('rdo-last-key');
+    const lastRaw=lastKey?localStorage.getItem(lastKey):null;
+    if(!lastRaw){
       showToast('Nenhum RDO anterior encontrado — criando em branco.','#d97706');
       criandoNovoRDO=false;
       novoRDOZerado();
       return;
     }
+    const d=JSON.parse(lastRaw);
     // O número segue a sequência da MESMA obra que está sendo carregada como modelo
     const proximoNRDO=gerarProximoNRDO(d.header?.obra);
     const novaData=dataParaNovoRDO();
     const manterDescricoes=!!document.getElementById('chk-manter-descricoes')?.checked;
-    await aplicarModeloNovoDia(d,proximoNRDO,false,novaData,manterDescricoes); // false = não mantém o status das OSEs
+    aplicarModeloNovoDia(d,proximoNRDO,false,novaData,manterDescricoes); // false = não mantém o status das OSEs
     rdoAtualId=gerarRdoId(); // identidade própria — nunca sobrescreve o RDO de origem, nem outro do mesmo dia
     localStorage.setItem('rdo-last-key', chaveRDO(novaData));
-    showToast(`📄 Novo RDO Nº ${proximoNRDO} criado com os nomes do último diário!`,'#1457c8');
+    const msgDia=novoRdoDiaEscolhido==='mesmo'?'do mesmo dia':'';
+    showToast(`📄 Novo RDO Nº ${proximoNRDO} ${msgDia} criado com os nomes do último diário!`,'#1457c8');
     renderizarRdosDoDia();renderizarObrasParadas();
   }catch(e){
     console.error('novoRDOComNomes error:',e);
@@ -6599,7 +5936,7 @@ function duplicarUltimoRDO(){
     restaurarEstadoCompleto(d); // restaura TUDO — horas, status, descrições, responsáveis
     rdoAtualId=gerarRdoId(); // identidade própria — nunca sobrescreve o RDO original
     localStorage.setItem('rdo-last-key', chaveRDO(novaData));
-    const msgDia='do mesmo dia';
+    const msgDia=novoRdoDiaEscolhido==='mesmo'?'do mesmo dia':'';
     showToast(`🔁 RDO duplicado ${msgDia}! Nº ${proximoNRDO} — ajuste o que precisar.`,'#7c3aed');
     renderizarRdosDoDia();renderizarObrasParadas();
   }catch(e){
@@ -6614,20 +5951,21 @@ function novoRDOZerado(){
   if(criandoNovoRDO) return;
   criandoNovoRDO=true;
   try{
-    _criarRDOEmBranco(`🧹 Novo RDO 100% zerado criado!`,false);
+    _criarRDOEmBranco(`🧹 Novo RDO 100% zerado ${novoRdoDiaEscolhido==='mesmo'?'do mesmo dia':''} criado!`,false);
   }finally{
     criandoNovoRDO=false;
   }
 }
 
-// Opção antiga, mantida no código mas não mais alcançável pelo modal simplificado (que
-// agora só tem "do zero" e "a partir do último") — mesma base "em branco" da opção
-// zerada, focando direto no campo Obra pra uma obra que ainda não existe no sistema.
+// Opção 3: mesma base "em branco" da opção zerada, mas pensada especificamente pra quando
+// é uma obra que ainda não existe no sistema — foca direto no campo Obra, já que é a
+// próxima coisa que precisa ser preenchida, e o Nº RDO já nasce certo (001) assim que
+// o nome for digitado.
 function novoRDOParaNovaObra(){
   if(criandoNovoRDO) return;
   criandoNovoRDO=true;
   try{
-    _criarRDOEmBranco(`🏗️ Novo RDO pra nova obra criado! Preencha o nome da obra.`,true);
+    _criarRDOEmBranco(`🏗️ Novo RDO pra nova obra ${novoRdoDiaEscolhido==='mesmo'?'do mesmo dia':''} criado! Preencha o nome da obra.`,true);
   }finally{
     criandoNovoRDO=false;
   }
@@ -6647,7 +5985,7 @@ function _criarRDOEmBranco(mensagemToast,focarObra){
   const novaData=dataParaNovoRDO();
   rdoAtualId=gerarRdoId(); // identidade própria — nunca sobrescreve outro RDO já salvo
   localStorage.removeItem('rdo-last-key');
-  ['h-obra','h-disc'].forEach(id=>{const el=document.getElementById(id); if(el) el.value='';});
+  ['h-obra','h-enc','h-disc'].forEach(id=>{const el=document.getElementById(id); if(el) el.value='';});
   popularSelectEncarregado(); // sempre o nome de quem está logado, mesmo depois de limpar o campo
   document.getElementById('h-data').value=novaData;
   updateDiaSemana();
@@ -6732,8 +6070,6 @@ function getNomeArquivoBackup(){
 function exportarPDF(){
   if(!travarAcao('exportarPDF',2000)) return;
   autoSilentSave();
-  // Mesma validação unificada dos outros pontos de entrada.
-  if(!bloquearSeFormularioInvalido()) return;
   // Geração via biblioteca externa (html2canvas) se mostrou pouco confiável em diversos
   // celulares (tela em branco, campos cortados). Por isso o botão PDF usa SEMPRE a
   // impressão nativa do navegador/celular — 100% confiável, mostra tudo corretamente,
@@ -7049,39 +6385,12 @@ function gerarPdfComJsPDF(){
   const OSE_C=Array.from({length:6},(_,i)=>sColor(oseStatus[i+1]||'sem'));
 
   // Cabeçalho da tabela — largura total = CW (190mm)
-  // Larguras recalculadas pra incluir a coluna VEÍCULO (que faltava nesta função — o
-  // botão de impressão normal já tinha, mas esta geração via jsPDF nunca teve) — e
-  // testadas de verdade com jsPDF (doc.getTextWidth) pros termos mais compridos do
-  // dia a dia ("INSTRUMENTISTA" cabe em 1 linha a 7pt com folga dentro de 26mm; mesmo
-  // teste pra "TRANSFERIDO"/"CALDEIREIRO" dentro de 24mm):
-  // #=6, FUNCIONÁRIO=31, FUNÇÃO=26, VEÍCULO=24, 6×OSE=15 (90), TOTAL=13 → soma=190 ✓
-  const COL_NUM=6, COL_FUNC=31, COL_FN=26, COL_VEIC=24, COL_OSE=15, COL_TOT=13;
+  // #=6, FUNC=36, FUNCAO=24, 6×OSE=16 cada (96), TOTAL=14  → total=6+36+24+96+14=176... precisa=190
+  // Ajuste: #=6, FUNC=42, FUNCAO=28, 6×OSE=15 (90), TOTAL=14 → 6+42+28+90+14=180
+  // Final: #=6, FUNC=43, FUNCAO=28, 6×OSE=15 (90), TOTAL=13 → 6+43+28+90+13=180... ainda 10 a menos
+  // Usar: #=6, FUNC=46, FUNCAO=30, 6×OSE=16 (96), TOTAL=12 → 6+46+30+96+12=190 ✓
+  const COL_NUM=6, COL_FUNC=46, COL_FN=30, COL_OSE=16, COL_TOT=12;
   const TH=8, RH=6.5;
-  // Nenhuma palavra pode ultrapassar a borda da coluna nem ser cortada no meio — era o
-  // outro problema: o texto de Funcionário/Função era desenhado sem NENHUM limite de
-  // largura antes, então um nome comprido simplesmente vazava por cima da coluna vizinha.
-  // Esta versão tenta caber numa linha só (7pt, o tamanho normal); se mesmo assim uma
-  // palavra não couber (caso raro, além do que os testes acima cobrem), cai pra 2 linhas
-  // com fonte um pouco menor (6pt) — MAS a quebra continua acontecendo só em espaço entre
-  // palavras (é o que splitTextToSize faz), nunca no meio de uma palavra única. Ou seja:
-  // o texto às vezes ganha uma 2ª linha em vez de cortar — nunca perde informação
-  // escondida atrás da borda.
-  function desenharTextoEncaixado(texto,xEsq,yTopo,larguraCol,alinhamento){
-    texto=(texto||'').toString();
-    if(!texto) texto='—';
-    const larguraMax=larguraCol-3;
-    doc.setFont('helvetica','bold');
-    doc.setFontSize(7);
-    let linhas=doc.splitTextToSize(texto,larguraMax);
-    if(linhas.length>2){
-      doc.setFontSize(6);
-      linhas=doc.splitTextToSize(texto,larguraMax);
-    }
-    linhas=linhas.slice(0,2);
-    const cy=yTopo+RH/2+(linhas.length>1?-0.3:1.2);
-    const xTxt=alinhamento==='C'? xEsq+larguraCol/2: xEsq+1.5;
-    doc.text(linhas,xTxt,cy,{align:alinhamento==='C'?'center':'left'});
-  }
   // O cabeçalho SEMPRE identifica as colunas como "OSE 01"…"OSE 06" (igual à planilha e à
   // tela) — nunca é trocado pelo nome do projeto nem colorido por status. Quem informa o
   // nome/cor de cada OSE são os cards de descrição logo abaixo, que já trazem esse mesmo
@@ -7090,7 +6399,6 @@ function gerarPdfComJsPDF(){
     {l:'#',w:COL_NUM,oi:-1},
     {l:'FUNCIONÁRIO',w:COL_FUNC,oi:-1},
     {l:'FUNÇÃO',w:COL_FN,oi:-1},
-    {l:'VEÍCULO',w:COL_VEIC,oi:-1},
     ...Array.from({length:6},(_,i)=>({l:`OSE ${String(i+1).padStart(2,'0')}\nHRS`,w:COL_OSE,oi:-1})),
     {l:'TOTAL\nH.H/DIA',w:COL_TOT,oi:-1}
   ];
@@ -7129,24 +6437,17 @@ function gerarPdfComJsPDF(){
     newPage(RH+1);
     const bg=ri%2===0? C.white: C.light;
     x=M; sd(C.border); doc.setLineWidth(.2);
-    const nm=(w.name||'').replace('__custom__','').trim().toUpperCase()||'—';
-    const fn=(w.func||'').trim().toUpperCase()||'—';
-    const vc=(w.vehicle||'').trim().toUpperCase()||'—';
-    // Número da linha (coluna #) é sempre curto, desenha direto sem o encaixe especial.
-    sf(bg); sd(C.border); doc.setLineWidth(.2);
-    doc.rect(x,y,COL_NUM,RH,'FD');
-    doc.setFont('helvetica','bold'); doc.setFontSize(8); st(C.black);
-    doc.text(String(ri+1),x+COL_NUM/2,y+RH/2+1.2,{align:'center'});
-    x+=COL_NUM;
-    // Funcionário, Função e Veículo passam pelo encaixe robusto — nunca cortam uma
-    // palavra no meio, e nunca vazam pra fora da borda da coluna.
-    [{v:nm,w:TCOLS[1].w},{v:fn,w:COL_FN},{v:vc,w:COL_VEIC}].forEach(({v,w})=>{
-      sf(bg); sd(C.border); doc.setLineWidth(.2);
-      doc.rect(x,y,w,RH,'FD');
-      st(C.black);
-      desenharTextoEncaixado(v,x,y,w,'L');
-      x+=w;
-    });
+    const nm=(w.name||'').replace('__custom__','').trim()||'—';
+    const fn=(w.func||'').trim()||'—';
+    [{v:String(ri+1),w:COL_NUM,a:'C'},{v:nm,w:TCOLS[1].w,a:'L'},{v:fn,w:COL_FN,a:'L'}]
+      .forEach(({v,w,a})=>{
+        sf(bg); sd(C.border); doc.setLineWidth(.2);
+        doc.rect(x,y,w,RH,'FD');
+        doc.setFont('helvetica','bold'); doc.setFontSize(8); st(C.black);
+        if(a==='C') doc.text(v.toUpperCase(),x+w/2,y+RH/2+1.2,{align:'center'});
+        else doc.text(v.toUpperCase(),x+1.5,y+RH/2+1.2);
+        x+=w;
+      });
     (w.hrs||[]).forEach((hv,oi)=>{
       const v=parseHrs(hv||'');
       const statusColuna=oseStatus[oi+1]||'sem';
@@ -7195,10 +6496,10 @@ function gerarPdfComJsPDF(){
   const grand=colTots.reduce((s,v)=>s+v,0);
   x=M;
   sf(C.hdr); sd(C.border); doc.setLineWidth(.2);
-  doc.rect(M,y,COL_NUM+TCOLS[1].w+COL_FN+COL_VEIC,RH,'FD');
+  doc.rect(M,y,COL_NUM+TCOLS[1].w+COL_FN,RH,'FD');
   doc.setFont('helvetica','bold'); doc.setFontSize(8); st(C.white);
-  doc.text('TOTAL H.H',M+(COL_NUM+TCOLS[1].w+COL_FN+COL_VEIC)/2,y+RH/2+1.2,{align:'center'});
-  x=M+COL_NUM+TCOLS[1].w+COL_FN+COL_VEIC;
+  doc.text('TOTAL H.H',M+(COL_NUM+TCOLS[1].w+COL_FN)/2,y+RH/2+1.2,{align:'center'});
+  x=M+COL_NUM+TCOLS[1].w+COL_FN;
   colTots.forEach((tot,oi)=>{
     sf(OSE_C[oi]); sd(C.border); doc.setLineWidth(.2);
     doc.rect(x,y,COL_OSE,RH,'FD');
@@ -7343,167 +6644,13 @@ function gerarPdfComJsPDF(){
   return doc;
 }
 
-// Destaque de erro reativo: aplica a borda/anel vermelho no campo e registra um
-// listener que TIRA o destaque assim que a pessoa preencher aquele campo especificamente
-// — não é um temporizador (antes o aviso sumia sozinho depois de alguns segundos, mesmo
-// que o campo continuasse vazio; agora só some quando o problema é corrigido de verdade).
-// Funciona em <select>, <input>/<textarea> e nas divs "contenteditable" (campo de
-// Descrição da OSE, que não é um input comum).
-function destacarCampoInvalido(el){
-  if(!el) return;
-  el.classList.add('campo-invalido');
-  el.style.outline='3px solid #dc2626';
-  el.style.outlineOffset='2px';
-  el.style.boxShadow='0 0 0 2px rgba(220,38,38,.35)';
-  const limpar=()=>{
-    const valor=el.matches&&el.matches('[contenteditable]')?(el.innerText||'').trim():(el.value||'').trim();
-    if(!valor) return;
-    el.style.outline='';
-    el.style.outlineOffset='';
-    el.style.boxShadow='';
-    el.classList.remove('campo-invalido');
-    el.removeEventListener('input',limpar);
-    el.removeEventListener('change',limpar);
-  };
-  el.addEventListener('input',limpar);
-  el.addEventListener('change',limpar);
-}
-
-// Destaque agrupado específico pras células de HORAS de um funcionário: diferente de
-// destacarCampoInvalido (que limpa só a própria célula quando ELA é preenchida), aqui
-// TODAS as células de hora da linha são destacadas juntas, mas assim que QUALQUER UMA
-// delas passa a ter horas>0, o destaque some de TODAS ao mesmo tempo — porque a regra é
-// "pelo menos 1 OS com horas", não "todas as OS preenchidas". Preencher só uma já resolve
-// a pendência da linha inteira, na hora, sem precisar preencher as demais.
-function destacarHorasFuncionario(idx){
-  const celulas=[];
-  for(let o=1;o<=NUM_OSE;o++){
-    const el=document.getElementById(`hrs-${idx}-${o}`);
-    if(el) celulas.push(el);
-  }
-  if(!celulas.length) return;
-  celulas.forEach(el=>{
-    el.classList.add('campo-invalido');
-    el.style.outline='3px solid #dc2626';
-    el.style.outlineOffset='2px';
-    el.style.boxShadow='0 0 0 2px rgba(220,38,38,.35)';
-  });
-  const limparTodas=()=>{
-    const temAlguma=celulas.some(el=>parseHrs(el.value)>0);
-    if(!temAlguma) return;
-    celulas.forEach(el=>{
-      el.style.outline='';
-      el.style.outlineOffset='';
-      el.style.boxShadow='';
-      el.classList.remove('campo-invalido');
-      el.removeEventListener('input',limparTodas);
-      el.removeEventListener('change',limparTodas);
-    });
-  };
-  celulas.forEach(el=>{
-    el.addEventListener('input',limparTodas);
-    el.addEventListener('change',limparTodas);
-  });
-}
-
-// VALIDAÇÃO ÚNICA E UNIFICADA do formulário inteiro — usada antes de QUALQUER ação que
-// transmita ou gere um documento a partir do RDO: Salvar/Enviar ao Supabase, Exportar
-// Excel, Exportar PDF e Compartilhar via WhatsApp. Cobre Obra, Disciplina, Data,
-// Encarregado, Equipe, Veículo/Status e Horas de cada funcionário, Projeto/OS, Status do
-// Projeto e Descrição de cada OSE ativa. Cada campo com pendência é destacado em
-// vermelho na tela (ver destacarCampoInvalido, acima). Devolve a lista de problemas
-// encontrados — lista vazia significa "tudo certo, pode prosseguir". Aceita opcionalmente
-// os dados já coletados (d); se não vier nada, coleta sozinha via getFormData().
-function validarFormularioRDO(d){
-  d=d||getFormData();
+function validarRDOAntesDeCompartilhar(h,oses){
   const problemas=[];
-
-  // ── Cabeçalho: Obra, Disciplina, Data, Dia da Semana, Encarregado ──
-  const camposHeader=[
-    {id:'h-data',rotulo:'Data',valor:d.header.data},
-    {id:'h-dia',rotulo:'Dia da Semana',valor:document.getElementById('h-dia')?.value},
-    {id:'h-obra',rotulo:'Obra / Projeto (Cliente)',valor:d.header.obra},
-    {id:'h-disc',rotulo:'Disciplina',valor:d.header.disc},
-    {id:'h-enc',rotulo:'Encarregado',valor:d.header.enc}
-  ];
-  camposHeader.forEach(c=>{
-    if(!c.valor){ problemas.push(c.rotulo); destacarCampoInvalido(document.getElementById(c.id)); }
-  });
-
-  // ── Equipe: precisa de pelo menos 1 funcionário selecionado ──
-  const workersComNome=(d.workers||[]).filter(w=>w.name&&w.name!=='__custom__');
-  if(!workersComNome.length){
-    problemas.push('Equipe (nenhum funcionário selecionado)');
-  }
-
-  // ── Pra cada funcionário com nome: Veículo/Status e Horas ──
-  workersComNome.forEach(w=>{
-    if(!w.vehicle){
-      problemas.push(`Veículo/Status de ${w.name}`);
-      destacarCampoInvalido(document.getElementById(`vehicle-${w.idx}`));
-    }
-    const temHoras=(w.hrs||[]).some(v=>parseHrs(v)>0);
-    // Quem está marcado com um status de ausência (Falta/Saiu mais cedo/Transferido)
-    // não precisa ter horas lançadas — o próprio status já explica a ausência do dia.
-    // Basta 1 OS com horas>0 — as outras colunas dessa linha NÃO são exigidas.
-    if(!temHoras && !STATUS_ABSENTEISMO_VEICULO.includes(w.vehicle)){
-      problemas.push(`Horas de ${w.name} (precisa de pelo menos 1 OS com horas)`);
-      destacarHorasFuncionario(w.idx);
-    }
-  });
-
-  // ── Projeto/OS: precisa de pelo menos 1 OSE preenchida ──
-  const osesComNome=(d.oses||[]).filter(o=>o.name);
-  if(!osesComNome.length){
-    problemas.push('Projeto/OS (nenhuma OSE preenchida)');
-    destacarCampoInvalido(document.getElementById('ose-name-1'));
-  }
-
-  // ── Pra cada OSE preenchida: Status do Projeto (obrigatório e precisa ser um status
-  // de verdade — "Sem Atividade" é só o valor inicial enquanto preenche, não pode ser
-  // o que fica quando envia) e Descrição dos Serviços Realizados (sempre obrigatória,
-  // mesmo quando o status escolhido for diferente de "Sem Atividade") ──
-  (d.oses||[]).forEach((o,idx)=>{
-    const n=idx+1;
-    if(!o.name) return; // OSE em branco não precisa de status/descrição
-    if(!o.status || o.status==='sem'){
-      problemas.push('Por favor, selecione um status válido para a obra/projeto (Em Andamento, Extra Escopo, Paralisado, Concluído, etc.) antes de enviar o RDO.');
-      destacarCampoInvalido(document.getElementById(`ose-status-${n}`));
-    }
-    if(!(o.descText||'').trim()){
-      problemas.push(`Descrição dos Serviços Realizados — OSE ${n} (${o.name})`);
-      destacarCampoInvalido(document.getElementById(`ose-desc-${n}`));
-    }
-  });
-
-  return [...new Set(problemas)];
-}
-
-// Modal de alerta de pendências — reestilizado a pedido, substitui o antigo
-// toast+alert() nativo do navegador (que ficava escuro e pouco legível). Mostra o
-// título e a mensagem fixos pedidos, mais a lista específica do que está faltando
-// (mantém a informação detalhada que já existia, só que num visual mais claro).
-function _escaparParaListaPendencias(s){
-  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-}
-function abrirModalPendenciasRDO(problemas){
-  const lista=document.getElementById('pendencias-lista-itens');
-  if(lista) lista.innerHTML=(problemas||[]).map(p=>`<li>${_escaparParaListaPendencias(p)}</li>`).join('');
-  document.getElementById('modal-pendencias-rdo')?.classList.add('show');
-}
-function fecharModalPendenciasRDO(){
-  document.getElementById('modal-pendencias-rdo')?.classList.remove('show');
-}
-
-// Dispara a validação unificada e trata o bloqueio de forma padronizada — usada nos 4
-// pontos de entrada (Salvar/Enviar, Excel, PDF, WhatsApp). Devolve true se está tudo
-// certo (pode prosseguir) e false se bloqueou (mostra o modal de pendências e destaca
-// os campos, quem chamou só precisa dar "return" quando vier false).
-function bloquearSeFormularioInvalido(d){
-  const problemas=validarFormularioRDO(d);
-  if(!problemas.length) return true;
-  abrirModalPendenciasRDO(problemas);
-  return false;
+  if(!h.obra) problemas.push('Obra/Projeto');
+  if(!h.enc) problemas.push('Encarregado');
+  const temOSE=(oses||[]).some((o,idx)=>oseTemConteudo(idx+1));
+  if(!temOSE) problemas.push('nenhuma OSE preenchida');
+  return problemas;
 }
 
 function pdfParaWhatsApp(){
@@ -7513,17 +6660,20 @@ function pdfParaWhatsApp(){
   const dia=document.getElementById('h-dia')?.value||'';
   const filename=getPdfFilename();
 
-  // Mesma validação unificada dos outros pontos de entrada — bloqueia de vez (sem opção
-  // de "compartilhar mesmo assim") se faltar qualquer coisa no formulário.
-  if(!bloquearSeFormularioInvalido(d)) return;
+  // Evita mandar um RDO incompleto por engano — avisa e pede confirmação, mas não trava
+  // (a pessoa pode ter um motivo válido pra compartilhar mesmo assim).
+  const problemas=validarRDOAntesDeCompartilhar(h,d.oses);
+  if(problemas.length){
+    const ok=confirm(`⚠️ Este RDO está sem preencher: ${problemas.join(', ')}.\n\nDeseja compartilhar mesmo assim?`);
+    if(!ok) return;
+  }
 
-  // Mensagem padrão de identificação — vai JUNTO com o arquivo (como legenda, quando o
-  // aparelho suporta compartilhar arquivo real) ou sozinha só no método antigo de reserva.
   const msg=
     `📋 *RDO — Master Energy*\n`+
     `📅 *Data:* ${formatarDataBR(h.data)||'-'} — ${dia}\n`+
     `🏭 *Cliente/Obra:* ${(h.obra||'-').toUpperCase()}\n`+
-    `👷 *Encarregado:* ${(h.enc||'-').toUpperCase()}`;
+    `👷 *Encarregado:* ${(h.enc||'-').toUpperCase()}\n`+
+    `📎 _Segue o PDF do Relatório Diário de Obra._`;
 
   // Mostrar loading
   const loading=document.getElementById('pdf-loading');
@@ -7547,46 +6697,22 @@ function pdfParaWhatsApp(){
     },400);
   };
 
-  // Método de reserva (navegadores/aparelhos sem suporte a compartilhar arquivo real):
-  // baixa o PDF e abre o WhatsApp já com a mensagem pronta — único caso em que a
-  // mensagem ainda chega como texto avulso, por limitação técnica do navegador, não
-  // por escolha do fluxo.
-  function metodoAntigoBaixarEAbrirWpp(){
-    window.open('https://api.whatsapp.com/send?text='+encodeURIComponent(msg),'_blank');
-    showToast('📎 PDF baixado! Anexe no WhatsApp.','#25d366');
-  }
-
-  // Método novo (preferido): usa a Web Share API pra mandar o ARQUIVO PDF de verdade
-  // acompanhado da mensagem, os dois juntos numa única ação de compartilhar — sem
-  // nenhum texto chegando separado antes do arquivo.
-  async function compartilharArquivoDeVerdade(doc){
-    try{
-      const blob=doc.output('blob');
-      const file=new File([blob],filename,{type:'application/pdf'});
-      if(navigator.canShare && navigator.canShare({files:[file]})){
-        await navigator.share({files:[file],text:msg,title:'RDO — Master Energy'});
-        showToast('📎 PDF enviado!','#25d366');
-        return true;
-      }
-    }catch(err){
-      if(err && err.name==='AbortError') return true; // usuário cancelou o compartilhamento — não é erro
-      console.error('Web Share API falhou, usando método de reserva:',err);
-    }
-    return false;
-  }
-
   // jsPDF — funciona 100% offline, sem html2canvas
   if(typeof window.jspdf!=='undefined'){
     setTimeout(()=>{ // deixa o loading aparecer antes de bloquear a thread
       try{
         const doc=gerarPdfComJsPDF();
         fecharLoading();
-        compartilharArquivoDeVerdade(doc).then(sucesso=>{
-          if(!sucesso){
-            doc.save(filename);
-            setTimeout(metodoAntigoBaixarEAbrirWpp,500);
-          }
-        });
+
+        // Baixa o PDF e abre o WhatsApp já com a mensagem pronta pra enviar (Data, Obra,
+        // Encarregado). Depois é só anexar o PDF (que acabou de baixar) na sequência —
+        // vão como 2 mensagens (texto e depois o arquivo), do jeito que sempre funcionou.
+        doc.save(filename);
+        setTimeout(()=>{
+          window.open('https://api.whatsapp.com/send?text='+encodeURIComponent(msg),'_blank');
+          showToast('📎 PDF baixado! Anexe no WhatsApp.','#25d366');
+        },500);
+
       }catch(err){
         fecharLoading();
         console.error('jsPDF:',err);
@@ -7614,16 +6740,10 @@ async function exportarXLSX(){
   if(!travarAcao('exportarXLSX')) return;
   if(typeof ExcelJS==='undefined'){ showToast('Biblioteca de Excel ainda carregando — espera 2 segundos e tenta de novo.','#d97706'); return; }
   const d=getFormData(); const h=d.header;
-  // Mesma validação unificada dos outros pontos de entrada.
-  if(!bloquearSeFormularioInvalido(d)) return;
   const dia=document.getElementById('h-dia').value;
   const sL={sem:'SEM ATIVIDADE',and:'EM ANDAMENTO',par:'PARALISADO',blq:'ABSENTEÍSMO',ext:'EXTRA ESCOPO / ADICIONAL',conc:'CONCLUÍDO'};
   const corFill={sem:'FFE8ECF4',and:'FF1A52C8',par:'FFE07010',blq:'FFCC2020',ext:'FF158038',conc:'FF6830CC'};
   const corFonte={sem:'FF4A5568',and:'FFFFFFFF',par:'FFFFFFFF',blq:'FFFFFFFF',ext:'FFFFFFFF',conc:'FFFFFFFF'};
-  // Mesmas cores usadas na tela (função aplicarStatusAbsenteismoNaLinha) pra colorir o
-  // campo Veículo quando ele está marcado com um status de ausência em vez de um
-  // veículo de verdade — a exportação Excel replica isso dinamicamente na célula.
-  const corFillVeiculo={'FALTA':'FFB91C1C','SAIU MAIS CEDO':'FF8A5A12','TRANSFERIDO':'FF1F3A7A'};
 
   const wb=new ExcelJS.Workbook();
   wb.creator='Master Energy — Sistema de RDO';
@@ -7675,12 +6795,7 @@ async function exportarXLSX(){
     ws1.getCell(L,1).value=idx+1; ws1.getCell(L,1).alignment={horizontal:'center'};
     ws1.getCell(L,2).value=w.name||''; ws1.getCell(L,2).font={bold:true,size:10};
     ws1.getCell(L,3).value=w.func||'';
-    const celVeiculo=ws1.getCell(L,4);
-    celVeiculo.value=w.vehicle||'';
-    if(corFillVeiculo[w.vehicle]){
-      celVeiculo.fill={type:'pattern',pattern:'solid',fgColor:{argb:corFillVeiculo[w.vehicle]}};
-      celVeiculo.font={bold:true,color:{argb:'FFFFFFFF'}};
-    }
+    ws1.getCell(L,4).value=w.vehicle||'';
     w.hrs.forEach((v,oi)=>{
       const n=parseHrs(v); rt+=n; oseTotals[oi+1]+=n;
       const status=oseStatus[oi+1]||'sem';
@@ -8169,8 +7284,6 @@ function initAutoSave(){
 }
 
 // ── BUSCAR RDOs ──
-let _ultimaSincronizacaoEncarregado=0;
-
 async function abrirBuscaRDO(){
   autoSilentSave(); // garante que as edições atuais na tela entram na busca, sem esperar o autosave
   // Admin busca sempre atualizado com a nuvem primeiro — sem isso, um admin entrando
@@ -8178,16 +7291,6 @@ async function abrirBuscaRDO(){
   // mesmos acessos de outro admin cujo aparelho já tinha dados salvos localmente.
   if(usuarioAtual&&usuarioAtual.papel==='admin_mestre'){
     await sincronizarSeAdmin();
-  } else if(usuarioAtual){
-    // Encarregado: "Buscar todos RDOs" precisa mostrar o HISTÓRICO COMPLETO criado por
-    // ele, não só o que sobrou salvo neste aparelho específico — sincroniza com a nuvem
-    // também (o RLS do banco garante que só voltam os RDOs dele mesmo, nunca de outra
-    // pessoa). Mesmo limite de 30s do admin, pra não buscar tudo de novo toda hora.
-    const agora=Date.now();
-    if(agora-_ultimaSincronizacaoEncarregado>=30000){
-      const{erro}=await buscarERestaurarDaNuvem(null,null);
-      if(!erro) _ultimaSincronizacaoEncarregado=agora;
-    }
   }
   buscarRDOs();
   document.getElementById('search-modal').classList.add('show');
@@ -8257,17 +7360,6 @@ function buscarRDOs(){
     const chave=`${(r.obra||'').trim().toUpperCase()}|${(r.nrdo||'').trim().toUpperCase()}|${r.data}`;
     contagem[chave]=(contagem[chave]||0)+1;
   });
-  // CORREÇÃO (auditoria 2026-08-18): a checagem acima só pega duplicado quando o
-  // NÚMERO também bate. O caso real que aconteceu (falha no meio do envio seguida de
-  // reenvio) gera dois RDOs pra mesma obra+data+encarregado só que com NÚMEROS
-  // DIFERENTES — esse padrão passava batido antes. Contagem separada, sem o número,
-  // pra pegar esse caso também (aviso mais brando, cor diferente, já que aqui não dá
-  // pra saber de cara qual dos dois está certo).
-  const contagemSemNumero={};
-  resultados.forEach(r=>{
-    const chave=`${(r.obra||'').trim().toUpperCase()}|${(r.enc||'').trim().toUpperCase()}|${r.data}`;
-    contagemSemNumero[chave]=(contagemSemNumero[chave]||0)+1;
-  });
   resultDiv.innerHTML=resultados.map(r=>{
     let diaStr='';
     if(r.data){
@@ -8278,11 +7370,8 @@ function buscarRDOs(){
     const isCurrent=localStorage.getItem('rdo-last-key')===r.key;
     const chave=`${(r.obra||'').trim().toUpperCase()}|${(r.nrdo||'').trim().toUpperCase()}|${r.data}`;
     const possivelDuplicado=r.nrdo&&contagem[chave]>1;
-    const chaveSemNumero=`${(r.obra||'').trim().toUpperCase()}|${(r.enc||'').trim().toUpperCase()}|${r.data}`;
-    const possivelDuplicadoSemNumero=!possivelDuplicado&&r.enc&&contagemSemNumero[chaveSemNumero]>1;
-    return `<div class="rdo-result-item" style="${isCurrent?'border-color:#16a34a;':''}${possivelDuplicado?'border-color:#d97706;background:rgba(217,119,6,.08);':''}${possivelDuplicadoSemNumero?'border-color:#d97706;background:rgba(217,119,6,.04);':''}">
+    return `<div class="rdo-result-item" style="${isCurrent?'border-color:#16a34a;':''}${possivelDuplicado?'border-color:#d97706;background:rgba(217,119,6,.08);':''}">
       ${possivelDuplicado?'<div style="font-size:10px;font-weight:900;color:#d97706;margin-bottom:2px">⚠️ POSSÍVEL DUPLICADO — mesma obra, número e data de outro RDO</div>':''}
-      ${possivelDuplicadoSemNumero?'<div style="font-size:10px;font-weight:900;color:#d97706;margin-bottom:2px">⚠️ Existe outro RDO da mesma obra/data/encarregado com número diferente — confira se não é duplicado antes de manter os dois</div>':''}
       <div class="rdo-result-main">
         <span class="rdo-result-date">📅 ${dataFmt}${diaStr} ${isCurrent?'<span style="background:#16a34a;color:#fff;font-size:9px;padding:1px 5px;border-radius:8px;margin-left:4px">ABERTO</span>':''}</span>
         <span class="rdo-result-info">${r.obra||'—'} ${r.nrdo?'| '+r.nrdo:''} ${r.enc?'| '+r.enc:''}</span>
@@ -10521,7 +9610,7 @@ function executarCheckIntegridade(){
     if(!k||!k.startsWith('rdo-')||CHAVES_META_BACKUP.includes(k)) continue;
     let d;
     try{ d=JSON.parse(localStorage.getItem(k)); }catch(e){
-      problemas.push({grave:true,titulo:`Arquivo corrompido: ${k}`,detalhe:'Esse RDO não pôde ser lido (JSON inválido) — não tem como "consertar" um arquivo corrompido desse jeito, a única correção possível é apagar esse arquivo quebrado.',acaoTipo:'apagar',acaoChave:k});
+      problemas.push({grave:true,titulo:`Arquivo corrompido: ${k}`,detalhe:'Esse RDO não pôde ser lido (JSON inválido). Pode ter sido corrompido. Considere restaurar de um backup.'});
       continue;
     }
     const h=d.header||{};
@@ -10591,7 +9680,7 @@ function executarCheckIntegridade(){
   Object.values(numerosRDO).forEach(({obra,nrdo,datas})=>{
     const datasUnicas=[...new Set(datas)];
     if(datasUnicas.length>1){
-      problemas.push({grave:true,titulo:`Nº de RDO duplicado na mesma obra: ${nrdo} — ${(obra||'').toUpperCase()}`,detalhe:`Esse número aparece em ${datasUnicas.length} dias diferentes NA MESMA OBRA "${(obra||'').toUpperCase()}": ${datasUnicas.map(dt=>dt.includes('-')?dt.split('-').reverse().join('/'):dt).join(', ')}. Dentro de uma mesma obra, cada RDO deveria ter um número único.`,acaoTipo:'duplicata',acaoObra:obra});
+      problemas.push({grave:true,titulo:`Nº de RDO duplicado na mesma obra: ${nrdo} — ${(obra||'').toUpperCase()}`,detalhe:`Esse número aparece em ${datasUnicas.length} dias diferentes NA MESMA OBRA "${(obra||'').toUpperCase()}": ${datasUnicas.map(dt=>dt.includes('-')?dt.split('-').reverse().join('/'):dt).join(', ')}. Dentro de uma mesma obra, cada RDO deveria ter um número único.`,acaoLabel:'🔍 Ver e resolver agora',acaoObra:obra});
     }
   });
 
@@ -10609,18 +9698,9 @@ function executarCheckIntegridade(){
     wrap.innerHTML=`<div class="check-ok">✓ Nenhuma inconsistência encontrada — tudo certo!</div>`;
     return;
   }
-  function botaoAcao(p){
-    if(p.acaoTipo==='duplicata'){
-      return `<button type="button" onclick="resolverDuplicataNRDO('${(p.acaoObra||'').replace(/'/g,"\\'")}')" style="display:block;margin-top:8px;background:#dc2626;color:#fff;border:2px solid #7f1d1d;padding:7px 12px;font-size:11px;font-weight:900;cursor:pointer;text-transform:uppercase">🔍 Ver e resolver agora</button>`;
-    }
-    if(p.acaoTipo==='apagar'){
-      return `<button type="button" onclick="apagarArquivoCorrompido('${(p.acaoChave||'').replace(/'/g,"\\'")}')" style="display:block;margin-top:8px;background:#dc2626;color:#fff;border:2px solid #7f1d1d;padding:7px 12px;font-size:11px;font-weight:900;cursor:pointer;text-transform:uppercase">🗑️ Apagar arquivo corrompido</button>`;
-    }
-    return '';
-  }
   wrap.innerHTML=problemas
     .sort((a,b)=>(b.grave?1:0)-(a.grave?1:0))
-    .map(p=>`<div class="check-item${p.grave?' grave':''}"><b>${p.grave?'🔴':'🟡'} ${p.titulo}</b>${p.detalhe}${botaoAcao(p)}</div>`)
+    .map(p=>`<div class="check-item${p.grave?' grave':''}"><b>${p.grave?'🔴':'🟡'} ${p.titulo}</b>${p.detalhe}${p.acaoLabel?`<button type="button" onclick="resolverDuplicataNRDO('${(p.acaoObra||'').replace(/'/g,"\\'")}')" style="display:block;margin-top:8px;background:#dc2626;color:#fff;border:2px solid #7f1d1d;padding:7px 12px;font-size:11px;font-weight:900;cursor:pointer;text-transform:uppercase">${p.acaoLabel}</button>`:''}</div>`)
     .join('');
 }
 
@@ -10632,31 +9712,6 @@ function resolverDuplicataNRDO(obra){
   if(campoObra) campoObra.value=obra||'';
   abrirBuscaRDO();
   showToast('🔍 Compare as datas/números e exclua a cópia errada.','#d97706');
-}
-
-// Apaga DE VERDADE o arquivo corrompido identificado pelo Check de Integridade — um JSON
-// inválido não tem como ser "reparado" (não dá nem pra ler o que tinha dentro), então a
-// única correção real possível é remover esse arquivo quebrado do armazenamento deste
-// aparelho. Pede confirmação explícita antes, já que é uma ação que não tem volta.
-function apagarArquivoCorrompido(chave){
-  if(!chave) return;
-  const ok=confirm(`Apagar de vez o arquivo corrompido "${chave}"?\n\nEsse arquivo está com o conteúdo inválido e não pode ser lido nem recuperado — apagar é a única correção possível. Isso NÃO tem volta.`);
-  if(!ok) return;
-  try{
-    localStorage.removeItem(chave);
-    // Também tira esse arquivo de qualquer lista de "enviados" — um arquivo corrompido
-    // nunca deveria contar como enviado de verdade.
-    try{
-      const enviados=JSON.parse(localStorage.getItem(CHAVE_ENVIADOS)||'[]');
-      const corrigido=enviados.filter(k=>k!==chave);
-      if(corrigido.length!==enviados.length) localStorage.setItem(CHAVE_ENVIADOS,JSON.stringify(corrigido));
-    }catch(e){}
-    showToast('🗑️ Arquivo corrompido apagado.','#158038');
-    executarCheckIntegridade(); // atualiza a lista na hora, sem precisar fechar/reabrir o modal
-  }catch(e){
-    console.error('apagarArquivoCorrompido error:',e);
-    showToast('❌ Erro ao apagar o arquivo.','#dc2626');
-  }
 }
 
 function showToast(msg,color){
@@ -10671,23 +9726,6 @@ function showToast(msg,color){
   const duracao=Math.min(7000,Math.max(3500,msg.length*55));
   t._timer=setTimeout(()=>t.classList.remove('show'),duracao);
 }
-
-// Aviso amarelo persistente — usado quando a Escala de Trabalho não acha
-// NADA pro funcionário na data do RDO. O motivo quase sempre é a data do
-// RDO estar diferente da data em que ele foi realmente escalado — um toast
-// rápido passa despercebido pra isso e ninguém (admin ou encarregado) nunca
-// fica sabendo. Fica na tela até a pessoa fechar ou até 9s (bem mais que o
-// toast normal), pra dar tempo real de notar.
-let avisoDataDivergenteTimeout;
-function mostrarAvisoDataDivergente(msg){
-  const el=document.getElementById('avisoDataDivergente');
-  if(!el) return;
-  el.innerHTML=`<button type="button" class="fechar-aviso-divergente" onclick="document.getElementById('avisoDataDivergente').classList.remove('show')" title="Fechar">✕</button>⚠️ ${msg}`;
-  el.classList.add('show');
-  clearTimeout(avisoDataDivergenteTimeout);
-  avisoDataDivergenteTimeout=setTimeout(()=>el.classList.remove('show'),9000);
-}
-
 
 // ════════════════════════════════════════════════════════════
 // BACKUP / RESTAURAÇÃO COMPLETA — protege contra perda de dados se o
@@ -10914,20 +9952,6 @@ window.addEventListener('beforeinstallprompt',(e)=>{
   };
 });
 </script>
-<div class="no-print" style="position:fixed;bottom:2px;right:4px;font-size:8px;color:rgba(120,120,120,.4);font-family:monospace;pointer-events:none;z-index:5">v2026.08.17-aviso-data-divergente</div>
-
-<!-- MODAL DE ALERTA DE PENDÊNCIAS — substitui o toast/alert escuro de antes. Aparece
-     sempre que a validação unificada (validarFormularioRDO) bloqueia uma tentativa de
-     salvar/enviar ou exportar (Excel/PDF/WhatsApp) com campos obrigatórios em branco. -->
-<div id="modal-pendencias-rdo" role="alertdialog" aria-modal="true" aria-labelledby="pendencias-titulo-txt">
-  <div class="pendencias-caixa">
-    <div class="pendencias-titulo" id="pendencias-titulo-txt">⚠️ Atenção: Campos Pendentes</div>
-    <p class="pendencias-msg">Preencha todos os campos obrigatórios em destaque para poder salvar, enviar ou exportar o RDO.</p>
-    <ul class="pendencias-lista" id="pendencias-lista-itens"></ul>
-    <div class="pendencias-rodape">
-      <button type="button" class="pendencias-btn" onclick="fecharModalPendenciasRDO()">Entendi / Corrigir</button>
-    </div>
-  </div>
-</div>
+<div class="no-print" style="position:fixed;bottom:2px;right:4px;font-size:8px;color:rgba(120,120,120,.4);font-family:monospace;pointer-events:none;z-index:5">v2026.08.14-funcao-automatica</div>
 </body>
 </html>
