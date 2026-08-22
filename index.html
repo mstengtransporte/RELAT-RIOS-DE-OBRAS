@@ -1706,7 +1706,7 @@ body.dark #workers-body tr:hover{background-color:rgba(58,110,232,.08)}
      fontes) — os dois sistemas usam a mesma "moldura" de login, só
      o papel de parede muda entre eles. -->
 <div id="login-overlay" style="position:fixed;inset:0;z-index:99999;background:#0b1220 url('login-fundo-rdo.jpg') center center / cover no-repeat;color-scheme:dark">
-  <div style="position:absolute;bottom:6px;right:8px;font-size:9px;color:rgba(255,255,255,.35);font-family:monospace;pointer-events:none">v2026.08.22-duplicado-bloqueio-total</div>
+  <div style="position:absolute;bottom:6px;right:8px;font-size:9px;color:rgba(255,255,255,.35);font-family:monospace;pointer-events:none">v2026.08.22-check-ignora-rascunho</div>
   <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:calc(100% - 32px);max-width:380px;background:rgb(10,17,32);border:1px solid rgba(255,255,255,.14);border-radius:18px;padding:32px 28px;box-shadow:0 20px 60px rgba(0,0,0,.6);text-transform:none;font-weight:400">
     <h1 style="font-size:20px;margin:0 0 4px;color:#fff;text-align:center;font-weight:700">RDO <span style="color:#3ea6ff">Master Energy</span></h1>
     <p style="margin:0 0 24px;text-align:center;color:#9ca3af;font-size:13px;letter-spacing:.5px;font-weight:600">DIÁRIO DE OBRA PRO</p>
@@ -2246,8 +2246,9 @@ body.dark #workers-body tr:hover{background-color:rgba(58,110,232,.08)}
     </div>
     <div class="multipdf-body">
       <div style="font-size:12px;color:var(--text2);line-height:1.5">
-        Varre todos os RDOs salvos neste aparelho procurando coisas que podem causar erro
-        de contagem de horas — sem alterar nada automaticamente, só avisa.
+        Varre todos os RDOs já <b>enviados</b> ao admin (rascunhos ainda não enviados não
+        entram nessa análise — só o que passou pela validação completa) procurando coisas
+        que podem causar erro de contagem de horas — sem alterar nada automaticamente, só avisa.
       </div>
       <div id="check-resumo" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px"></div>
       <div id="check-lista-wrap" style="max-height:380px;overflow-y:auto;border:2px solid #000;padding:6px"></div>
@@ -10608,6 +10609,14 @@ function executarCheckIntegridade(){
       problemas.push({grave:true,titulo:`Arquivo corrompido: ${k}`,detalhe:'Esse RDO não pôde ser lido (JSON inválido) — não tem como "consertar" um arquivo corrompido desse jeito, a única correção possível é apagar esse arquivo quebrado.',acaoTipo:'apagar',acaoChave:k});
       continue;
     }
+    // NUNCA analisa rascunho ainda não enviado — mesma regra usada em todo o resto do
+    // sistema (busca, numeração automática): um rascunho é, por definição, um RDO ainda
+    // incompleto/em digitação, então "problemas" nele (obra vazia, OSE sem status, número
+    // repetido tipo RDO-001 sugerido em dois dias diferentes) são normais e esperados, não
+    // erros de verdade — só o que passou pela validação completa e foi realmente ENVIADO
+    // pro admin é analisado aqui. Isso evita alarme falso/notificação inútil sobre
+    // rascunhos que nem podem ser enviados do jeito que estão.
+    if(!estaEnviado(k)) continue;
     const h=d.header||{};
     const dataFmt=h.data?h.data.split('-').reverse().join('/'):'(sem data)';
 
@@ -11015,7 +11024,7 @@ window.addEventListener('beforeinstallprompt',(e)=>{
   };
 });
 </script>
-<div class="no-print" style="position:fixed;bottom:2px;right:4px;font-size:8px;color:rgba(120,120,120,.4);font-family:monospace;pointer-events:none;z-index:5">v2026.08.22-duplicado-bloqueio-total</div>
+<div class="no-print" style="position:fixed;bottom:2px;right:4px;font-size:8px;color:rgba(120,120,120,.4);font-family:monospace;pointer-events:none;z-index:5">v2026.08.22-check-ignora-rascunho</div>
 
 <!-- MODAL DE ALERTA DE PENDÊNCIAS — substitui o toast/alert escuro de antes. Aparece
      sempre que a validação unificada (validarFormularioRDO) bloqueia uma tentativa de
