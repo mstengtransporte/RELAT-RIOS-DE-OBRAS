@@ -4812,37 +4812,47 @@ async function carregarVeiculosDaEscala(){
 // função cadastrada), o campo tem que ficar vazio, nunca continuar mostrando a função
 // de quem estava selecionado ali ANTES. Nunca mostra erro pro usuário por causa disso
 // (é uma tentativa "silenciosa" de preencher sozinho, não uma etapa obrigatória).
+// Retorna um resultado (nunca lança) pra quem chamar decidir se avisa ou não —
+// mesmo padrão do buscarVeiculoAutomaticoSilencioso/buscarVeiculoAutomatico.
 async function buscarFuncaoAutomatica(nome,i){
   const funcSel=document.getElementById(`func-${i}`);
-  if(!funcSel||funcSel.tagName!=='SELECT') return; // se a célula virou <input> (edição manual em andamento), não mexe
+  if(!funcSel||funcSel.tagName!=='SELECT') return{ok:false}; // célula virou <input> (edição manual em andamento) — não mexe
   // Limpa ANTES de qualquer outra coisa — troca de nome (ou nome vazio/"__custom__")
   // nunca deve deixar a função de quem estava ali antes grudada na linha.
   funcSel.innerHTML=buildFuncOptions('');
   funcSel.value='';
-  if(!nome||nome==='__custom__') return;
+  if(!nome||nome==='__custom__') return{ok:false};
   const supabaseClient=getSupabaseClient();
-  if(!supabaseClient) return;
+  if(!supabaseClient) return{ok:false,erro:true,motivo:'sem-conexao'};
   try{
     const{data,error}=await supabaseClient
       .from('funcionarios')
       .select('funcao')
       .ilike('nome',nome)
       .maybeSingle();
-    if(error||!data||!data.funcao) return; // tabela/coluna ainda não existe, ou em branco pra esse nome — já está limpo, não faz mais nada
+    // CORREÇÃO (2026-08-22): antes, qualquer um desses três casos (erro de verdade,
+    // coluna/tabela sem essa informação, ou cadastro em branco pra esse nome) ficava
+    // 100% silencioso — a pessoa não tinha como saber se era "ninguém cadastrou a
+    // função dele ainda" ou "o sistema quebrou". Agora devolve qual dos três foi, pra
+    // quem chamou decidir avisar (a versão que dispara ao selecionar um nome mostra um
+    // toast; a atualização automática em segundo plano continua sem avisar nada, pra
+    // não incomodar toda hora).
+    if(error){ console.error('buscarFuncaoAutomatica error:',error); return{ok:false,erro:true,motivo:error.message||String(error)}; }
+    if(!data||!data.funcao){ return{ok:true,tipo:'sem-cadastro'}; } // consulta funcionou, mas não tem função cadastrada pra essa pessoa
     const funcao=String(data.funcao).trim();
-    if(!funcao) return;
+    if(!funcao) return{ok:true,tipo:'sem-cadastro'};
     // Se o nome mudou de novo enquanto essa consulta estava em andamento (troca
     // rápida de funcionário na mesma linha), não aplica uma resposta desatualizada.
     const nomeAtualDaLinha=document.getElementById(`name-${i}`)?.value;
-    if(nomeAtualDaLinha && normalizarParaComparar(nomeAtualDaLinha)!==normalizarParaComparar(nome)) return;
+    if(nomeAtualDaLinha && normalizarParaComparar(nomeAtualDaLinha)!==normalizarParaComparar(nome)) return{ok:false};
     mapaFuncaoPorNome[nome]=funcao;
     if(!funcsList.includes(funcao)){ funcsList.push(funcao); salvarListas(); }
     funcSel.innerHTML=buildFuncOptions(funcao);
     funcSel.value=funcao;
+    return{ok:true,tipo:'funcao',funcao};
   }catch(e){
-    // Erro esperado enquanto a tabela/coluna "funcionarios.funcao" ainda não existir no
-    // banco — fica só no console, não interrompe nem avisa o usuário à toa.
-    console.error('buscarFuncaoAutomatica error (cadastro de função pode ainda não existir no banco):',e);
+    console.error('buscarFuncaoAutomatica error:',e);
+    return{ok:false,erro:true,motivo:e.message||String(e)};
   }
 }
 
@@ -4852,7 +4862,14 @@ async function buscarFuncaoAutomatica(nome,i){
 // automáticos partem sempre do mesmo gatilho, juntos.
 function dispararConsultaEscalaEFuncao(nome,i){
   buscarVeiculoAutomatico(nome,i);
-  buscarFuncaoAutomatica(nome,i);
+  buscarFuncaoAutomatica(nome,i).then(r=>{
+    if(!r) return;
+    if(r.erro){
+      showToast(`❌ Erro ao buscar a função de "${nome}" no cadastro: ${r.motivo}`,'#dc2626');
+    }else if(r.tipo==='sem-cadastro'){
+      showToast(`ℹ️ Sem função cadastrada pra ${nome} — escolha manualmente ou cadastre a função dele na Escala.`,'#6b7fa0');
+    }
+  });
 }
 
 // Quando um funcionário é escolhido numa linha do RDO, busca automaticamente
