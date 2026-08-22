@@ -1696,7 +1696,7 @@ body.dark #workers-body tr:hover{background-color:rgba(58,110,232,.08)}
      fontes) — os dois sistemas usam a mesma "moldura" de login, só
      o papel de parede muda entre eles. -->
 <div id="login-overlay" style="position:fixed;inset:0;z-index:99999;background:#0b1220 url('login-fundo-rdo.jpg') center center / cover no-repeat;color-scheme:dark">
-  <div style="position:absolute;bottom:6px;right:8px;font-size:9px;color:rgba(255,255,255,.35);font-family:monospace;pointer-events:none">v2026.08.17-aviso-data-divergente</div>
+  <div style="position:absolute;bottom:6px;right:8px;font-size:9px;color:rgba(255,255,255,.35);font-family:monospace;pointer-events:none">v2026.08.22-funcao-tolerante-mesclada</div>
   <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:calc(100% - 32px);max-width:380px;background:rgb(10,17,32);border:1px solid rgba(255,255,255,.14);border-radius:18px;padding:32px 28px;box-shadow:0 20px 60px rgba(0,0,0,.6);text-transform:none;font-weight:400">
     <h1 style="font-size:20px;margin:0 0 4px;color:#fff;text-align:center;font-weight:700">RDO <span style="color:#3ea6ff">Master Energy</span></h1>
     <p style="margin:0 0 24px;text-align:center;color:#9ca3af;font-size:13px;letter-spacing:.5px;font-weight:600">DIÁRIO DE OBRA PRO</p>
@@ -4452,7 +4452,41 @@ let listModalTemp = [];
 // nas pontas — "João Silva", "joão silva " e "JOÃO SILVA" contam como o
 // MESMO nome pra fins de duplicata, mesmo que a grafia salva seja diferente.
 function normalizarParaComparar(s){
-  return (s||'').trim().toLowerCase().replace(/\s+/g,' ');
+  // .normalize('NFD') separa letra+acento, e o replace tira o acento por
+  // completo — assim "Ã", "A", e qualquer variação de acentuação contam
+  // como a mesma letra na comparação. Sem isso, nomes com acento podiam
+  // falhar silenciosamente numa busca no banco (duas formas diferentes
+  // de guardar "Ã" por baixo dos panos, mesmo parecendo idênticas na tela).
+  return (s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toLowerCase().replace(/\s+/g,' ');
+}
+// Distância de edição entre dois textos (quantas letras precisam mudar
+// pra virar uma na outra) — usada só nas buscas automáticas de veículo/
+// função, pra tolerar um nome digitado com uma letra faltando/trocada,
+// sem travar o preenchimento. NÃO é usada na prevenção de nome
+// duplicado (ali precisa continuar rigoroso).
+function distanciaDeEdicao(a,b){
+  const m=a.length,n=b.length;
+  const d=Array.from({length:m+1},(_,i)=>[i,...Array(n).fill(0)]);
+  for(let j=0;j<=n;j++) d[0][j]=j;
+  for(let i=1;i<=m;i++){
+    for(let j=1;j<=n;j++){
+      d[i][j]=a[i-1]===b[j-1] ? d[i-1][j-1] : 1+Math.min(d[i-1][j],d[i][j-1],d[i-1][j-1]);
+    }
+  }
+  return d[m][n];
+}
+// Acha, numa lista de nomes, o mais parecido com o nome procurado —
+// tolera até 2 letras de diferença (faltando/trocada/a mais).
+function acharNomeParecido(nomeProcurado, listaDeNomes){
+  const alvo=normalizarParaComparar(nomeProcurado);
+  let melhor=null, menorDistancia=Infinity;
+  for(const candidato of listaDeNomes){
+    const normalizado=normalizarParaComparar(candidato);
+    if(normalizado===alvo) return candidato;
+    const dist=distanciaDeEdicao(alvo,normalizado);
+    if(dist<=2 && dist<menorDistancia){ menorDistancia=dist; melhor=candidato; }
+  }
+  return melhor;
 }
 // Tira duplicatas de uma lista de nomes/veículos, mantendo a PRIMEIRA
 // grafia encontrada de cada um (não mistura maiúsculas no meio do nome).
@@ -4825,31 +4859,34 @@ async function buscarFuncaoAutomatica(nome,i){
   const supabaseClient=getSupabaseClient();
   if(!supabaseClient) return{ok:false,erro:true,motivo:'sem-conexao'};
   try{
-    const{data,error}=await supabaseClient
-      .from('funcionarios')
-      .select('funcao')
-      .ilike('nome',nome)
-      .maybeSingle();
-    // CORREÇÃO (2026-08-22): antes, qualquer um desses três casos (erro de verdade,
-    // coluna/tabela sem essa informação, ou cadastro em branco pra esse nome) ficava
-    // 100% silencioso — a pessoa não tinha como saber se era "ninguém cadastrou a
-    // função dele ainda" ou "o sistema quebrou". Agora devolve qual dos três foi, pra
-    // quem chamou decidir avisar (a versão que dispara ao selecionar um nome mostra um
-    // toast; a atualização automática em segundo plano continua sem avisar nada, pra
-    // não incomodar toda hora).
+    // Busca a lista INTEIRA (nome+função) e compara com tolerância (acento,
+    // maiúscula, até 2 letras de diferença) — em vez de pedir pro banco achar
+    // exatamente esse texto (.ilike sozinho não resolve diferença de
+    // acentuação por baixo dos panos, só maiúscula/minúscula).
+    const{data:todosFunc,error}=await supabaseClient.from('funcionarios').select('nome,funcao');
     if(error){ console.error('buscarFuncaoAutomatica error:',error); return{ok:false,erro:true,motivo:error.message||String(error)}; }
-    if(!data||!data.funcao){ return{ok:true,tipo:'sem-cadastro'}; } // consulta funcionou, mas não tem função cadastrada pra essa pessoa
-    const funcao=String(data.funcao).trim();
+    if(!todosFunc||todosFunc.length===0){ return{ok:true,tipo:'sem-cadastro'}; }
+    const nomeParecido=acharNomeParecido(nome, todosFunc.map(f=>f.nome).filter(Boolean));
+    const encontrado=todosFunc.find(f=>f.nome===nomeParecido);
+    if(!encontrado||!encontrado.funcao){ return{ok:true,tipo:'sem-cadastro'}; } // achou a pessoa, ou nem isso — sem função cadastrada
+    const funcao=String(encontrado.funcao).trim();
     if(!funcao) return{ok:true,tipo:'sem-cadastro'};
     // Se o nome mudou de novo enquanto essa consulta estava em andamento (troca
     // rápida de funcionário na mesma linha), não aplica uma resposta desatualizada.
     const nomeAtualDaLinha=document.getElementById(`name-${i}`)?.value;
     if(nomeAtualDaLinha && normalizarParaComparar(nomeAtualDaLinha)!==normalizarParaComparar(nome)) return{ok:false};
     mapaFuncaoPorNome[nome]=funcao;
-    if(!funcsList.includes(funcao)){ funcsList.push(funcao); salvarListas(); }
-    funcSel.innerHTML=buildFuncOptions(funcao);
-    funcSel.value=funcao;
-    return{ok:true,tipo:'funcao',funcao};
+    // Se já existir uma versão dessa função na lista (mesmo com maiúscula/
+    // minúscula diferente, tipo "Encanador" x "ENCANADOR"), usa exatamente a
+    // grafia que JÁ ESTÁ na lista — o campo <select> só aceita um valor que
+    // bata letra por letra com uma das opções existentes, senão fica em
+    // branco silenciosamente mesmo tendo "achado" a função certa.
+    const jaExisteComOutraGrafia=funcsList.find(x=>normalizarParaComparar(x)===normalizarParaComparar(funcao));
+    const funcaoParaUsar=jaExisteComOutraGrafia||funcao;
+    if(!jaExisteComOutraGrafia){ funcsList.push(funcao); salvarListas(); }
+    funcSel.innerHTML=buildFuncOptions(funcaoParaUsar);
+    funcSel.value=funcaoParaUsar;
+    return{ok:true,tipo:'funcao',funcao:funcaoParaUsar};
   }catch(e){
     console.error('buscarFuncaoAutomatica error:',e);
     return{ok:false,erro:true,motivo:e.message||String(e)};
@@ -10931,7 +10968,7 @@ window.addEventListener('beforeinstallprompt',(e)=>{
   };
 });
 </script>
-<div class="no-print" style="position:fixed;bottom:2px;right:4px;font-size:8px;color:rgba(120,120,120,.4);font-family:monospace;pointer-events:none;z-index:5">v2026.08.17-aviso-data-divergente</div>
+<div class="no-print" style="position:fixed;bottom:2px;right:4px;font-size:8px;color:rgba(120,120,120,.4);font-family:monospace;pointer-events:none;z-index:5">v2026.08.22-funcao-tolerante-mesclada</div>
 
 <!-- MODAL DE ALERTA DE PENDÊNCIAS — substitui o toast/alert escuro de antes. Aparece
      sempre que a validação unificada (validarFormularioRDO) bloqueia uma tentativa de
