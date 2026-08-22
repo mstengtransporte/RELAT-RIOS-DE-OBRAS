@@ -156,13 +156,13 @@ textarea.hrs.falta,textarea.hrs.cedo,textarea.hrs.integracao,textarea.hrs.aguard
 .btn{
   padding:6px 10px;border:1.5px solid rgba(255,255,255,.15);cursor:pointer;
   font-size:10px;font-weight:900;display:inline-flex;align-items:center;gap:4px;
-  transition:transform .14s ease,box-shadow .14s ease,filter .12s;white-space:nowrap;letter-spacing:.3px;
+  transition:transform .16s cubic-bezier(.34,1.56,.64,1),box-shadow .16s ease,filter .12s;white-space:nowrap;letter-spacing:.3px;
   -webkit-appearance:none;touch-action:manipulation;
   border-radius:3px;text-transform:uppercase;flex-shrink:0;
   box-shadow:2px 2px 0 rgba(0,0,0,.85)
 }
 .btn:disabled{opacity:.35;cursor:not-allowed}
-.btn:hover{filter:brightness(1.15);transform:translate(-2px,-2px);box-shadow:4px 4px 0 rgba(0,0,0,.85)}
+.btn:hover{filter:brightness(1.15);transform:translate(-2px,-2px) scale(1.02);box-shadow:4px 4px 0 rgba(0,0,0,.85),0 0 12px rgba(37,104,214,.35)}
 #login-overlay button{transition:transform .1s ease,filter .1s ease,opacity .1s ease}
 /* Papel de parede de verdade: cobre 100% da tela, sem sobrar faixa vazia
    em lugar nenhum — nem no celular, nem no computador. A caixa de login
@@ -171,7 +171,7 @@ textarea.hrs.falta,textarea.hrs.cedo,textarea.hrs.integracao,textarea.hrs.aguard
 #login-overlay{background:#0b1220 url('login-fundo-rdo.jpg') center center / cover no-repeat!important;}
 #login-overlay button:active{transform:scale(.96);filter:brightness(.8)}
 #login-overlay button:disabled{opacity:.6;transform:none}
-.btn:active{transform:translate(0,0);box-shadow:1px 1px 0 rgba(0,0,0,.85);filter:brightness(.9)}
+.btn:active{transform:translate(0,0) scale(.97);box-shadow:1px 1px 0 rgba(0,0,0,.85);filter:brightness(.9)}
 
 /* Menu dropdown do usuário logado — abre pra baixo, alinhado à direita do botão. */
 .user-menu-wrap{display:flex}
@@ -184,10 +184,11 @@ textarea.hrs.falta,textarea.hrs.cedo,textarea.hrs.integracao,textarea.hrs.aguard
 #menu-usuario-dropdown button{
   display:flex;align-items:center;gap:8px;width:100%;background:none;border:none;
   padding:12px 14px;font-size:13px;font-weight:800;color:var(--text,#0a1628);cursor:pointer;
-  text-align:left;transition:background-color .12s;
+  text-align:left;transition:background-color .12s,transform .16s cubic-bezier(.34,1.56,.64,1),box-shadow .16s;
 }
 #menu-usuario-dropdown button+button{border-top:1.5px solid var(--card-border,#e2e8f0)}
-#menu-usuario-dropdown button:hover{background:var(--surface2,#f1f5f9)}
+#menu-usuario-dropdown button:hover{background:var(--surface2,#f1f5f9);transform:scale(1.015);box-shadow:inset 0 0 0 1px rgba(37,104,214,.25)}
+#menu-usuario-dropdown button:active{transform:scale(.98)}
 body.dark #menu-usuario-dropdown{background:#1a2530}
 .btn-save{background:linear-gradient(180deg,#1fa35a 0%,#0d5f34 100%)!important;color:#fff;border-color:#0a3d21}
 @keyframes piscarFaixaPendente{
@@ -588,15 +589,17 @@ tfoot td.col-sem{background:rgba(255,255,255,.12);color:rgba(255,255,255,.9)}
   width:100%;padding:9px;
   background:var(--surface2);border:none;border-top:2px dashed var(--border);
   color:var(--text3);font-size:12px;cursor:pointer;font-weight:900;letter-spacing:.5px;
-  min-height:38px;text-transform:uppercase;transition:all .12s
+  min-height:38px;text-transform:uppercase;transition:transform .16s cubic-bezier(.34,1.56,.64,1),background-color .12s,color .12s,box-shadow .16s
 }
-.btn-add-row:hover{background:var(--accent-light);color:var(--accent)}
+.btn-add-row:hover{background:var(--accent-light);color:var(--accent);transform:scale(1.015);box-shadow:0 0 10px rgba(37,104,214,.25)}
+.btn-add-row:active{transform:scale(.98)}
 .btn-del-row{
   background:none;border:none;cursor:pointer;color:#cc2020;font-size:15px;
-  padding:2px 4px;opacity:.4;transition:opacity .12s;
+  padding:2px 4px;opacity:.4;transition:opacity .12s,transform .16s cubic-bezier(.34,1.56,.64,1),box-shadow .16s;
   min-width:28px;min-height:28px;display:inline-flex;align-items:center;justify-content:center
 }
-.btn-del-row:hover{opacity:1;background:#fee2e2}
+.btn-del-row:hover{opacity:1;background:#fee2e2;transform:scale(1.08);box-shadow:0 0 8px rgba(204,32,32,.35)}
+.btn-del-row:active{transform:scale(.94)}
 
 /* ══════════════════════════════════════
    GERENCIAR LISTAS BUTTON
@@ -604,9 +607,10 @@ tfoot td.col-sem{background:rgba(255,255,255,.12);color:rgba(255,255,255,.9)}
 .btn-manage-list{
   background:none;border:1.5px solid var(--border);
   color:var(--text3);font-size:10px;cursor:pointer;padding:3px 8px;
-  transition:all .12s;white-space:nowrap;font-weight:800;text-transform:uppercase
+  transition:transform .16s cubic-bezier(.34,1.56,.64,1),background-color .12s,color .12s,border-color .12s,box-shadow .16s;white-space:nowrap;font-weight:800;text-transform:uppercase
 }
-.btn-manage-list:hover{background:var(--accent-light);color:var(--accent);border-color:var(--accent)}
+.btn-manage-list:hover{background:var(--accent-light);color:var(--accent);border-color:var(--accent);transform:scale(1.02);box-shadow:0 0 10px rgba(37,104,214,.25)}
+.btn-manage-list:active{transform:scale(.97)}
 
 /* ══════════════════════════════════════
    OSE CARDS
@@ -773,15 +777,21 @@ tfoot td.col-sem{background:rgba(255,255,255,.12);color:rgba(255,255,255,.9)}
 .list-input-row input{flex:1;padding:8px 10px;border:2px solid #000;background:#dbe2ee;color:#0a1628;font-size:13px;font-weight:900;outline:none}
 body.dark .list-input-row input{background:#2a3a58;color:#fff;border-color:#5a7ac0}
 .list-input-row input:focus{border-color:var(--accent)}
-.list-input-row button{padding:8px 14px;background:var(--accent);color:#fff;border:2px solid #000;cursor:pointer;font-size:12px;font-weight:900;white-space:nowrap}
+.list-input-row button{padding:8px 14px;background:var(--accent);color:#fff;border:2px solid #000;cursor:pointer;font-size:12px;font-weight:900;white-space:nowrap;transition:transform .16s cubic-bezier(.34,1.56,.64,1),box-shadow .16s,filter .12s}
+.list-input-row button:hover{transform:scale(1.03);box-shadow:0 0 10px rgba(37,104,214,.35);filter:brightness(1.08)}
+.list-input-row button:active{transform:scale(.96)}
 .list-items{display:flex;flex-direction:column;gap:5px;max-height:280px;overflow-y:auto}
 .list-item{display:flex;align-items:center;justify-content:space-between;padding:7px 11px;background:#dbe2ee;border:1.5px solid #7a8aa8;font-size:13px;font-weight:900;color:#0a1628}
 body.dark .list-item{background:#1c2a44;border-color:#3a5a90;color:#fff}
-.list-item-del{background:none;border:none;cursor:pointer;color:#cc2020;font-size:15px;padding:2px 6px;opacity:.5;transition:opacity .12s}
-.list-item-del:hover{opacity:1;background:#fee2e2}
+.list-item-del{background:none;border:none;cursor:pointer;color:#cc2020;font-size:15px;padding:2px 6px;opacity:.5;transition:opacity .12s,transform .16s cubic-bezier(.34,1.56,.64,1),box-shadow .16s}
+.list-item-del:hover{opacity:1;background:#fee2e2;transform:scale(1.1);box-shadow:0 0 8px rgba(204,32,32,.35)}
+.list-item-del:active{transform:scale(.92)}
 .list-box-footer{padding:12px 16px;border-top:2px solid #000;display:flex;gap:8px;justify-content:flex-end}
-.list-box-footer button{padding:9px 18px;border:2px solid #000;cursor:pointer;font-size:12px;font-weight:900}
+.list-box-footer button{padding:9px 18px;border:2px solid #000;cursor:pointer;font-size:12px;font-weight:900;transition:transform .16s cubic-bezier(.34,1.56,.64,1),box-shadow .16s,filter .12s}
+.list-box-footer button:hover{transform:scale(1.03);filter:brightness(1.08)}
+.list-box-footer button:active{transform:scale(.96)}
 .btn-list-ok{background:var(--accent);color:#fff}
+.btn-list-ok:hover{box-shadow:0 0 10px rgba(37,104,214,.4)}
 .btn-list-cancel{background:var(--surface2);color:var(--text2)}
 
 /* PDF Loading */
@@ -6082,6 +6092,16 @@ async function salvarRDO(){
       marcarComoEnviado(key);
       const avisoRenumeracao=tentativas>1?` (número final: ${d.header.nrdo}, ajustado automaticamente por causa de outro envio simultâneo)`:'';
       showToast(`✓ RDO salvo e enviado ao admin!${avisoRenumeracao}`,'#16a34a');
+      // RESET DA TELA APÓS ENVIO CONFIRMADO: assim que o admin recebeu o RDO de verdade
+      // (chegou na nuvem, não só salvo local), a tela zera sozinha — campos, horas,
+      // status das OSEs, tudo — deixando claro pro encarregado que aquele envio terminou
+      // e já preparando o formulário pronto pra um próximo RDO, sem precisar apertar
+      // "Novo RDO" manualmente. Um pequeno atraso deixa a pessoa ler a mensagem de
+      // sucesso antes da tela mudar debaixo dela. Reaproveita a mesma rotina usada pelo
+      // botão "Novo RDO 100% zerado", que já limpa cabeçalho, OSEs, equipe e totais.
+      setTimeout(()=>{
+        _criarRDOEmBranco('🧹 Tela pronta para um novo RDO.',false);
+      },1400);
     }else{
       const motivo=resultado?.erro||'Falha de conexão com o servidor.';
       alert(`⚠️ O RDO foi salvo NESTE APARELHO, mas NÃO FOI ENVIADO ao admin.\n\nMotivo: ${motivo}\n\nConfira sua internet e clique em "Salvar e Enviar" de novo. Seus dados não foram perdidos, só ainda não chegaram na nuvem.`);
