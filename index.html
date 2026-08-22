@@ -4118,13 +4118,44 @@ let listModalTemp = [];
 // nas pontas — "João Silva", "joão silva " e "JOÃO SILVA" contam como o
 // MESMO nome pra fins de duplicata, mesmo que a grafia salva seja diferente.
 function normalizarParaComparar(s){
-  // .normalize('NFC') junta letra+acento numa forma única — sem isso,
-  // "Ã" digitado/importado de formas diferentes (mesmo parecendo
-  // idêntico na tela) podia ser tratado como "diferente" numa
-  // comparação de texto simples, fazendo buscas por nome falharem
-  // silenciosamente. Corrige pra ESTA função e pra tudo que já usa ela
-  // (duplicata de nome, busca de veículo, agora também busca de função).
-  return (s||'').normalize('NFC').trim().toLowerCase().replace(/\s+/g,' ');
+  // .normalize('NFD') separa letra+acento, e o replace tira o acento
+  // por completo — assim "Ã", "A", e qualquer variação de acentuação
+  // contam como a mesma letra na comparação. Resolve tanto a diferença
+  // de codificação Unicode quanto alguém simplesmente não ter digitado
+  // o acento.
+  return (s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toLowerCase().replace(/\s+/g,' ');
+}
+// Distância de edição entre dois textos (quantas letras precisam mudar
+// pra virar uma na outra) — usada só na busca automática de veículo/
+// função, pra tolerar um nome digitado com uma letra faltando/trocada,
+// sem travar o preenchimento. NÃO é usada na prevenção de nome
+// duplicado (ali precisa continuar rigoroso, pra não juntar duas
+// pessoas diferentes por engano).
+function distanciaDeEdicao(a,b){
+  const m=a.length,n=b.length;
+  const d=Array.from({length:m+1},(_,i)=>[i,...Array(n).fill(0)]);
+  for(let j=0;j<=n;j++) d[0][j]=j;
+  for(let i=1;i<=m;i++){
+    for(let j=1;j<=n;j++){
+      d[i][j]=a[i-1]===b[j-1] ? d[i-1][j-1] : 1+Math.min(d[i-1][j],d[i][j-1],d[i-1][j-1]);
+    }
+  }
+  return d[m][n];
+}
+// Acha, numa lista de nomes, o mais parecido com o nome procurado —
+// tolera até 2 letras de diferença (faltando/trocada/a mais), o
+// suficiente pra pequenos erros de digitação sem juntar pessoas
+// realmente diferentes por engano.
+function acharNomeParecido(nomeProcurado, listaDeNomes){
+  const alvo=normalizarParaComparar(nomeProcurado);
+  let melhor=null, menorDistancia=Infinity;
+  for(const candidato of listaDeNomes){
+    const normalizado=normalizarParaComparar(candidato);
+    if(normalizado===alvo) return candidato; // igual perfeito, nem precisa calcular distância
+    const dist=distanciaDeEdicao(alvo,normalizado);
+    if(dist<=2 && dist<menorDistancia){ menorDistancia=dist; melhor=candidato; }
+  }
+  return melhor;
 }
 // Tira duplicatas de uma lista de nomes/veículos, mantendo a PRIMEIRA
 // grafia encontrada de cada um (não mistura maiúsculas no meio do nome).
@@ -4466,32 +4497,51 @@ async function buscarVeiculoAutomatico(nome,i){
   if(funcSel && nome && nome!=='__custom__'){
     try{
       const supabaseClientFunc=getSupabaseClient();
-      if(supabaseClientFunc){
-        // Busca a lista INTEIRA (nome+função) e compara usando a mesma
-        // função "tolerante" já usada no resto do sistema (normalizarParaComparar)
-        // — evita depender de comparação exata de texto no próprio banco,
-        // que pode falhar silenciosamente com acento/caixa diferentes
-        // (ex: "Ã" pode estar salvo de duas formas diferentes por baixo,
-        // mesmo parecendo idêntico na tela).
+      if(!supabaseClientFunc){
+        console.warn('[busca função] sem cliente Supabase, abortando');
+      }else{
         const{data:todosFunc,error:erroFunc}=await supabaseClientFunc
           .from('funcionarios').select('nome,funcao');
         if(erroFunc){
-          console.error('busca de função error:',erroFunc);
-        }else if(todosFunc){
-          const encontrado=todosFunc.find(f=>f.nome && normalizarParaComparar(f.nome)===normalizarParaComparar(nome));
-          if(encontrado && encontrado.funcao && encontrado.funcao.trim()){
+          console.error('[busca função] erro ao consultar banco:',erroFunc);
+          showToast(`❌ Erro ao buscar função: ${erroFunc.message||erroFunc}`,'#dc2626');
+        }else if(!todosFunc||todosFunc.length===0){
+          console.warn('[busca função] a tabela funcionarios voltou vazia');
+        }else{
+          const nomeParecido=acharNomeParecido(nome, todosFunc.map(f=>f.nome).filter(Boolean));
+          console.log('[busca função] procurando:',nome,'| achou parecido:',nomeParecido);
+          const encontrado=todosFunc.find(f=>f.nome===nomeParecido);
+          if(!encontrado){
+            console.warn('[busca função] nenhum nome parecido o suficiente foi encontrado na tabela');
+          }else if(!encontrado.funcao||!encontrado.funcao.trim()){
+            console.warn('[busca função] encontrou a pessoa ("'+encontrado.nome+'"), mas o campo função dela está vazio no banco');
+          }else{
             const funcaoConhecida=encontrado.funcao.trim();
             funcaoPorFuncionario[normalizarParaComparar(nome)]=funcaoConhecida;
-            if(!funcsList.some(x=>normalizarParaComparar(x)===normalizarParaComparar(funcaoConhecida))){
+            // Se já existir uma versão dessa função na lista (mesmo com
+            // maiúscula/minúscula diferente, tipo "Encanador" x "ENCANADOR"),
+            // usa exatamente a grafia que JÁ ESTÁ na lista — porque o campo
+            // <select> só aceita um valor que bata LETRA POR LETRA com uma
+            // das opções existentes. Foi exatamente isso que estava
+            // quebrando: o banco tinha "ENCANADOR", a lista só tinha
+            // "Encanador", e o navegador não achava a opção, ficando em
+            // branco sem avisar nada.
+            const jaExisteComOutraGrafia=funcsList.find(x=>normalizarParaComparar(x)===normalizarParaComparar(funcaoConhecida));
+            const funcaoParaUsar=jaExisteComOutraGrafia||funcaoConhecida;
+            if(!jaExisteComOutraGrafia){
               funcsList.push(funcaoConhecida);
               salvarListas();
             }
-            funcSel.innerHTML=buildFuncOptions(funcaoConhecida);
-            funcSel.value=funcaoConhecida;
+            funcSel.innerHTML=buildFuncOptions(funcaoParaUsar);
+            funcSel.value=funcaoParaUsar;
+            console.log('[busca função] preenchido com sucesso:',funcaoParaUsar);
           }
         }
       }
-    }catch(e){ console.error('buscarFuncaoAutomatica error:',e); }
+    }catch(e){
+      console.error('[busca função] erro inesperado:',e);
+      showToast(`❌ Erro inesperado ao buscar função: ${e.message||e}`,'#dc2626');
+    }
   }
   // SEMPRE limpa qualquer marcação automática de ausência que tenha ficado
   // de um funcionário anterior nessa mesma linha, antes de qualquer outra
@@ -9977,6 +10027,6 @@ window.addEventListener('beforeinstallprompt',(e)=>{
   };
 });
 </script>
-<div class="no-print" style="position:fixed;bottom:2px;right:4px;font-size:8px;color:rgba(120,120,120,.4);font-family:monospace;pointer-events:none;z-index:5">v2026.08.14-funcao-normalizada</div>
+<div class="no-print" style="position:fixed;bottom:2px;right:4px;font-size:8px;color:rgba(120,120,120,.4);font-family:monospace;pointer-events:none;z-index:5">v2026.08.14-funcao-corrigida-de-vez</div>
 </body>
 </html>
