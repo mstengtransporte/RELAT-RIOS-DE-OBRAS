@@ -1674,7 +1674,7 @@ body.dark #workers-body tr:hover{background-color:rgba(58,110,232,.08)}
      fontes) — os dois sistemas usam a mesma "moldura" de login, só
      o papel de parede muda entre eles. -->
 <div id="login-overlay" style="position:fixed;inset:0;z-index:99999;background:#0b1220 url('login-fundo-rdo.jpg') center center / cover no-repeat;color-scheme:dark">
-  <div style="position:absolute;bottom:6px;right:8px;font-size:9px;color:rgba(255,255,255,.35);font-family:monospace;pointer-events:none">v2026.08.23-limpeza-geral-paginacao-busca</div>
+  <div style="position:absolute;bottom:6px;right:8px;font-size:9px;color:rgba(255,255,255,.35);font-family:monospace;pointer-events:none">v2026.08.23-retry-automatico-listas-nuvem</div>
   <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:calc(100% - 32px);max-width:380px;background:rgb(10,17,32);border:1px solid rgba(255,255,255,.14);border-radius:18px;padding:32px 28px;box-shadow:0 20px 60px rgba(0,0,0,.6);text-transform:none;font-weight:400">
     <h1 style="font-size:20px;margin:0 0 4px;color:#fff;text-align:center;font-weight:700">RDO <span style="color:#3ea6ff">Master Energy</span></h1>
     <p style="margin:0 0 24px;text-align:center;color:#9ca3af;font-size:13px;letter-spacing:.5px;font-weight:600">DIÁRIO DE OBRA PRO</p>
@@ -2585,16 +2585,19 @@ async function carregarClientes(){
   const supabaseClient=getSupabaseClient();
   let nomes=[];
   if(supabaseClient&&usuarioAtual){
-    try{
-      const{data,error}=await supabaseClient.from('clientes').select('nome').eq('ativo',true).order('nome');
-      if(!error&&data){
-        nomes=data.map(c=>c.nome);
-        localStorage.setItem(CHAVE_CACHE_CLIENTES,JSON.stringify(nomes));
-      }
-    }catch(e){console.error('carregarClientes error:',e);}
+    const resultado=await comRetry(async()=>{
+      const r=await supabaseClient.from('clientes').select('nome').eq('ativo',true).order('nome');
+      if(r.error) throw r.error;
+      return r;
+    },{nomeParaLog:'carregar obras/clientes'});
+    if(resultado&&resultado.data){
+      nomes=resultado.data.map(c=>c.nome);
+      localStorage.setItem(CHAVE_CACHE_CLIENTES,JSON.stringify(nomes));
+    }
   }
   if(!nomes.length){
-    // Sem internet ou sem resultado — usa o que tiver salvo de uma consulta anterior
+    // Sem internet ou sem resultado (mesmo depois das tentativas) — usa o que tiver
+    // salvo de uma consulta anterior, em vez de deixar o campo Obra vazio à toa.
     try{ nomes=JSON.parse(localStorage.getItem(CHAVE_CACHE_CLIENTES)||'[]'); }catch(e){}
   }
   const valorAtual=document.getElementById('h-obra')?.value||'';
@@ -2612,10 +2615,16 @@ async function carregarEncarregados(forcar=false){
   if(!forcar&&encarregadosCache.length&&agora-_ultimoCarregarEncarregados<60000){ popularSelectEncarregado(); return; }
   const supabaseClient=getSupabaseClient();
   if(!supabaseClient) return;
-  try{
-    const{data,error}=await supabaseClient.rpc('nomes_encarregados');
-    if(!error&&data){ encarregadosCache=data.map(r=>({nome:r.nome})); _ultimoCarregarEncarregados=agora; }
-  }catch(e){console.error('carregarEncarregados error:',e);}
+  // Nota: se essa RPC (nomes_encarregados) não existir no seu banco, vai sempre falhar
+  // aqui (mesmo com retry) — isso é diferente da falha passageira que o retry resolve.
+  // Se aparecer sempre no console, mesmo depois de recarregar várias vezes, me avisa
+  // que confirmo se essa função existe no Supabase.
+  const resultado=await comRetry(async()=>{
+    const r=await supabaseClient.rpc('nomes_encarregados');
+    if(r.error) throw r.error;
+    return r;
+  },{nomeParaLog:'carregar lista de encarregados'});
+  if(resultado&&resultado.data){ encarregadosCache=resultado.data.map(r=>({nome:r.nome})); _ultimoCarregarEncarregados=agora; }
   popularSelectEncarregado();
 }
 
@@ -4901,6 +4910,34 @@ function aplicarStatusAbsenteismoNaLinha(i,valorVeiculo){
    INTEGRAÇÃO RDO ↔ ESCALA DE TRABALHO
    ============================================================ */
 
+// Utilitário genérico de "tentar de novo sozinho": logo depois do login, é comum a
+// sessão/rede estar "esquentando" ainda — uma consulta que falhar bem nesse instante
+// (rede lenta, timeout passageiro) antes NUNCA tentava de novo sozinha: a lista
+// simplesmente ficava vazia até a pessoa sair e entrar de novo (ou dar F5) sem
+// entender por quê. Agora, qualquer consulta que passar por aqui tenta de novo
+// automaticamente (com uma pequena pausa crescente entre tentativas) antes de
+// desistir de vez — sem exigir nenhuma ação manual da pessoa. Isso vale tanto pra
+// quem loga pela primeira vez quanto pra troca de conta (logout + login de outra
+// pessoa no mesmo aparelho), que passa pela MESMA sequência de carregamento.
+async function comRetry(funcaoAsync,{tentativas=3,esperaBaseMs=600,nomeParaLog='operação'}={}){
+  let ultimoErro=null;
+  for(let tentativa=1;tentativa<=tentativas;tentativa++){
+    try{
+      const resultado=await funcaoAsync();
+      if(tentativa>1) console.log(`[RDO][retry] ${nomeParaLog} funcionou na tentativa ${tentativa}.`);
+      return resultado;
+    }catch(e){
+      ultimoErro=e;
+      console.warn(`[RDO][retry] ${nomeParaLog} falhou na tentativa ${tentativa}/${tentativas}:`,e?.message||e);
+      if(tentativa<tentativas){
+        await new Promise(resolve=>setTimeout(resolve,esperaBaseMs*tentativa)); // 600ms, depois 1200ms...
+      }
+    }
+  }
+  console.error(`[RDO][retry] ${nomeParaLog} desistiu depois de ${tentativas} tentativas.`,ultimoErro);
+  return null; // quem chamou trata "null" como "não deu, mas não travar o app por causa disso"
+}
+
 // Busca os nomes de funcionários cadastrados na Escala de Trabalho (tabela
 // "funcionarios", mesmo banco Supabase) e RECONCILIA com a lista de nomes do
 // RDO: acrescenta quem é novo lá, e REMOVE quem já existiu na Escala antes mas
@@ -4912,8 +4949,13 @@ async function carregarFuncionariosDaEscala(){
   const supabaseClient=getSupabaseClient();
   if(!supabaseClient) return;
   try{
-    const{data,error}=await supabaseClient.from('funcionarios').select('nome').order('nome');
-    if(error||!data) return;
+    const resultado=await comRetry(async()=>{
+      const r=await supabaseClient.from('funcionarios').select('nome').order('nome');
+      if(r.error) throw r.error; // erro real (rede/timeout) — comRetry tenta de novo
+      return r;
+    },{nomeParaLog:'carregar funcionários da Escala'});
+    if(!resultado||!resultado.data) return; // esgotou as tentativas — desiste sem quebrar o resto do app
+    const{data}=resultado;
     const nomesEscala=data.map(f=>f.nome).filter(Boolean);
     let snapshotAnterior=carregarUltimoSnapshotEscala('rdo-ultimo-snapshot-nomes-escala');
     // 1ª vez que essa reconciliação roda neste aparelho (nunca existiu snapshot
@@ -4957,8 +4999,13 @@ async function carregarVeiculosDaEscala(){
   const supabaseClient=getSupabaseClient();
   if(!supabaseClient) return;
   try{
-    const{data,error}=await supabaseClient.from('veiculos').select('nome').order('nome');
-    if(error||!data) return;
+    const resultado=await comRetry(async()=>{
+      const r=await supabaseClient.from('veiculos').select('nome').order('nome');
+      if(r.error) throw r.error;
+      return r;
+    },{nomeParaLog:'carregar veículos da Escala'});
+    if(!resultado||!resultado.data) return;
+    const{data}=resultado;
     const veiculosEscala=data.map(v=>v.nome).filter(Boolean);
     let snapshotAnterior=carregarUltimoSnapshotEscala('rdo-ultimo-snapshot-veiculos-escala');
     if(snapshotAnterior===null) snapshotAnterior=vehiclesList.slice();
@@ -5017,7 +5064,11 @@ async function buscarTabelaFuncionariosComCache(supabaseClient){
   if(_cacheFuncionariosTabela && (agora-_cacheFuncionariosTabela.quando)<TTL_CACHE_FUNCIONARIOS_MS){
     return{data:_cacheFuncionariosTabela.dados,error:null};
   }
-  const resultado=await supabaseClient.from('funcionarios').select('nome,funcao');
+  const resultado=await comRetry(async()=>{
+    const r=await supabaseClient.from('funcionarios').select('nome,funcao');
+    if(r.error) throw r.error;
+    return r;
+  },{nomeParaLog:'carregar tabela de funções'})||{data:null,error:new Error('esgotou tentativas')};
   if(!resultado.error && resultado.data){
     _cacheFuncionariosTabela={dados:resultado.data,quando:agora};
   }
@@ -11318,7 +11369,7 @@ window.addEventListener('beforeinstallprompt',(e)=>{
   };
 });
 </script>
-<div class="no-print" style="position:fixed;bottom:2px;right:4px;font-size:8px;color:rgba(120,120,120,.4);font-family:monospace;pointer-events:none;z-index:5">v2026.08.23-limpeza-geral-paginacao-busca</div>
+<div class="no-print" style="position:fixed;bottom:2px;right:4px;font-size:8px;color:rgba(120,120,120,.4);font-family:monospace;pointer-events:none;z-index:5">v2026.08.23-retry-automatico-listas-nuvem</div>
 
 <!-- MODAL DE ALERTA DE PENDÊNCIAS — substitui o toast/alert escuro de antes. Aparece
      sempre que a validação unificada (validarFormularioRDO) bloqueia uma tentativa de
