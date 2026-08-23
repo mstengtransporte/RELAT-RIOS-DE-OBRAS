@@ -1706,7 +1706,7 @@ body.dark #workers-body tr:hover{background-color:rgba(58,110,232,.08)}
      fontes) — os dois sistemas usam a mesma "moldura" de login, só
      o papel de parede muda entre eles. -->
 <div id="login-overlay" style="position:fixed;inset:0;z-index:99999;background:#0b1220 url('login-fundo-rdo.jpg') center center / cover no-repeat;color-scheme:dark">
-  <div style="position:absolute;bottom:6px;right:8px;font-size:9px;color:rgba(255,255,255,.35);font-family:monospace;pointer-events:none">v2026.08.23-auditoria-barras-mortas-restauradas</div>
+  <div style="position:absolute;bottom:6px;right:8px;font-size:9px;color:rgba(255,255,255,.35);font-family:monospace;pointer-events:none">v2026.08.23-excel-automatico-pos-envio</div>
   <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:calc(100% - 32px);max-width:380px;background:rgb(10,17,32);border:1px solid rgba(255,255,255,.14);border-radius:18px;padding:32px 28px;box-shadow:0 20px 60px rgba(0,0,0,.6);text-transform:none;font-weight:400">
     <h1 style="font-size:20px;margin:0 0 4px;color:#fff;text-align:center;font-weight:700">RDO <span style="color:#3ea6ff">Master Energy</span></h1>
     <p style="margin:0 0 24px;text-align:center;color:#9ca3af;font-size:13px;letter-spacing:.5px;font-weight:600">DIÁRIO DE OBRA PRO</p>
@@ -6225,6 +6225,19 @@ async function salvarRDO(){
       // de verdade — antes disso o app avisava sucesso sem checar, e o RDO podia nunca ter
       // chegado no admin sem ninguém perceber.
       marcarComoEnviado(key);
+      // DOWNLOAD AUTOMÁTICO DO EXCEL: dispara assim que a gravação no Supabase é
+      // confirmada — ANTES de mostrar o toast de sucesso e ANTES do reset da tela (o
+      // Excel lê os dados direto da tela via getFormData(), então precisa rodar
+      // enquanto os campos ainda estão preenchidos). Roda dentro de try/catch: se o
+      // Excel falhar por qualquer motivo (ex.: biblioteca ainda carregando), isso NUNCA
+      // pode impedir o restante do fluxo de envio — o RDO já foi salvo com sucesso de
+      // qualquer jeito, então só avisa e segue.
+      try{
+        await exportarXLSX();
+      }catch(erroExcel){
+        console.error('[RDO] Falha ao gerar o Excel automático pós-envio:',erroExcel);
+        showToast('⚠️ RDO enviado, mas o Excel automático falhou — use o botão "Excel" pra baixar manualmente.','#d97706');
+      }
       const avisoRenumeracao=tentativas>1?` (número final: ${d.header.nrdo}, ajustado automaticamente por causa de outro envio simultâneo)`:'';
       showToast(`✓ RDO salvo e enviado ao admin!${avisoRenumeracao}`,'#16a34a');
       // RESET DA TELA APÓS ENVIO CONFIRMADO: assim que chega na nuvem de verdade — não
@@ -7826,6 +7839,45 @@ function pdfParaWhatsApp(){
 
 // ── CSV ──
 // ── EXCEL XLSX REAL ──
+// Sanitiza um pedaço de texto pra virar parte segura de nome de arquivo — tira
+// caracteres que Windows/Mac/Android não aceitam em nome de arquivo (/ \ : * ? " < > |),
+// sem mexer em acentuação (acento normal no nome do arquivo não é problema).
+function sanitizarNomeArquivo(texto){
+  return String(texto||'').replace(/[\\/:*?"<>|]/g,'').trim();
+}
+
+// Nome PADRÃO do Excel do RDO — mesmo formato usado tanto no botão "Excel" manual
+// quanto no download automático que dispara ao "Salvar e Enviar":
+// RDO-[Número] - [Data] - [Dia da Semana] - Obra [Nome da Obra] - Disciplina [Disciplina] - [Encarregado logado].xlsx
+// Ter as DUAS entradas (manual e automática) sempre gerando o MESMO nome, no MESMO
+// formato, é o que evita "conflito de download" (dois arquivos com nomes diferentes
+// pro mesmo RDO, ou o navegador duplicando com "(1)" no nome por já existir um igual).
+function getNomeArquivoXLSXPadronizado(){
+  const d=getFormData(); const h=d.header;
+  const diasSemana=['domingo','segunda-feira','terça-feira','quarta-feira','quinta-feira','sexta-feira','sábado'];
+  let dataFormatada='', diaSemana='';
+  if(h.data){
+    const[y,m,dd]=h.data.split('-');
+    dataFormatada=`${dd}-${m}-${y}`;
+    diaSemana=diasSemana[new Date(h.data+'T12:00:00').getDay()];
+  }else{
+    const t=new Date();
+    dataFormatada=`${String(t.getDate()).padStart(2,'0')}-${String(t.getMonth()+1).padStart(2,'0')}-${t.getFullYear()}`;
+    diaSemana=diasSemana[t.getDay()];
+  }
+  const numero=sanitizarNomeArquivo(h.nrdo||'RDO-000');
+  const obra=sanitizarNomeArquivo(h.obra||'Obra');
+  const disciplina=sanitizarNomeArquivo(h.disc||'Disciplina');
+  // Nome do ENCARREGADO LOGADO no sistema (não o texto do campo do formulário) — pedido
+  // explícito: o arquivo identifica quem de fato enviou, pelo login, não pelo que foi
+  // digitado na tela (que normalmente é a mesma pessoa, mas nem sempre — ex: admin
+  // enviando em nome de alguém). Se por algum motivo não tiver usuário logado
+  // disponível (nunca deveria acontecer, já que precisa estar logado pra chegar aqui),
+  // cai pro nome digitado no campo Encarregado do próprio RDO como reserva.
+  const encarregadoLogado=sanitizarNomeArquivo((usuarioAtual&&usuarioAtual.nome)||h.enc||'Encarregado');
+  return `${numero} - ${dataFormatada} - ${diaSemana} - Obra ${obra} - Disciplina ${disciplina} - ${encarregadoLogado}.xlsx`;
+}
+
 async function exportarXLSX(){
   if(!travarAcao('exportarXLSX')) return;
   if(typeof ExcelJS==='undefined'){ showToast('Biblioteca de Excel ainda carregando — espera 2 segundos e tenta de novo.','#d97706'); return; }
@@ -8005,7 +8057,7 @@ async function exportarXLSX(){
   const blob=new Blob([buffer],{type:'application/octet-stream'});
   const url=URL.createObjectURL(blob);
   const a=document.createElement('a');
-  a.href=url; a.download=getNomeArquivoRDO('xlsx'); a.click();
+  a.href=url; a.download=getNomeArquivoXLSXPadronizado(); a.click();
   setTimeout(()=>URL.revokeObjectURL(url),3000);
   showToast('📗 Excel (.xlsx) exportado com cores!','#1d6f42');
 }
@@ -11224,7 +11276,7 @@ window.addEventListener('beforeinstallprompt',(e)=>{
   };
 });
 </script>
-<div class="no-print" style="position:fixed;bottom:2px;right:4px;font-size:8px;color:rgba(120,120,120,.4);font-family:monospace;pointer-events:none;z-index:5">v2026.08.23-auditoria-barras-mortas-restauradas</div>
+<div class="no-print" style="position:fixed;bottom:2px;right:4px;font-size:8px;color:rgba(120,120,120,.4);font-family:monospace;pointer-events:none;z-index:5">v2026.08.23-excel-automatico-pos-envio</div>
 
 <!-- MODAL DE ALERTA DE PENDÊNCIAS — substitui o toast/alert escuro de antes. Aparece
      sempre que a validação unificada (validarFormularioRDO) bloqueia uma tentativa de
