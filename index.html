@@ -1706,7 +1706,7 @@ body.dark #workers-body tr:hover{background-color:rgba(58,110,232,.08)}
      fontes) — os dois sistemas usam a mesma "moldura" de login, só
      o papel de parede muda entre eles. -->
 <div id="login-overlay" style="position:fixed;inset:0;z-index:99999;background:#0b1220 url('login-fundo-rdo.jpg') center center / cover no-repeat;color-scheme:dark">
-  <div style="position:absolute;bottom:6px;right:8px;font-size:9px;color:rgba(255,255,255,.35);font-family:monospace;pointer-events:none">v2026.08.23-numeracao-atomica-banco-excel-auto</div>
+  <div style="position:absolute;bottom:6px;right:8px;font-size:9px;color:rgba(255,255,255,.35);font-family:monospace;pointer-events:none">v2026.08.23-busca-ordenada-realtime-delete</div>
   <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:calc(100% - 32px);max-width:380px;background:rgb(10,17,32);border:1px solid rgba(255,255,255,.14);border-radius:18px;padding:32px 28px;box-shadow:0 20px 60px rgba(0,0,0,.6);text-transform:none;font-weight:400">
     <h1 style="font-size:20px;margin:0 0 4px;color:#fff;text-align:center;font-weight:700">RDO <span style="color:#3ea6ff">Master Energy</span></h1>
     <p style="margin:0 0 24px;text-align:center;color:#9ca3af;font-size:13px;letter-spacing:.5px;font-weight:600">DIÁRIO DE OBRA PRO</p>
@@ -3543,7 +3543,13 @@ async function buscarERestaurarDaNuvem(dataDe,dataAte){
   const supabaseClient=getSupabaseClient();
   if(!supabaseClient) return{sucesso:0,falha:0,erro:'Supabase não está configurado.'};
   try{
-    let query=supabaseClient.from('rdos').select('*').limit(5000);
+    // Ordena já na consulta ao Supabase (crescente por nrdo) — texto no formato
+    // "RDO-001".."RDO-999" ordena igual numericamente nesse caso (mesmo tanto de
+    // dígitos sempre), então dá pra usar .order direto sem precisar de função
+    // extra no banco. A ordenação que realmente importa pra tela (agrupada por
+    // obra) acontece depois, em buscarRDOs() — isso aqui só garante que o "meio de
+    // campo" já chega organizado.
+    let query=supabaseClient.from('rdos').select('*').order('nrdo',{ascending:true}).limit(5000);
     if(dataDe) query=query.gte('data',dataDe);
     if(dataAte) query=query.lte('data',dataAte);
     const{data:rdosData,error:erroRdos}=await query;
@@ -4224,9 +4230,67 @@ window.addEventListener('online',atualizarBadgeConexao);
 window.addEventListener('offline',atualizarBadgeConexao);
 setInterval(atualizarBadgeConexao,20000);
 
+// ═══════════════════════════════════════════════════════════════════════════
+// SINCRONIZAÇÃO EM TEMPO REAL (Supabase Realtime) — exclusões feitas pelo admin
+// ═══════════════════════════════════════════════════════════════════════════
+// Escuta o evento DELETE na tabela `rdos`: assim que o admin apagar um RDO (de
+// qualquer aparelho), todo encarregado com o app aberto remove aquele item da
+// tela na hora — sem precisar apertar F5. Precisa que a tabela `rdos` esteja
+// com REPLICA IDENTITY FULL no Supabase (ver instruções SQL em anexo), senão o
+// evento de DELETE só traz o "id" (uuid interno) da linha apagada, sem o
+// "rdo_key" que o app usa pra identificar o RDO — sem isso não dá pra saber
+// QUAL RDO local remover.
+let _canalRealtimeExclusoesRdo=null;
+function iniciarEscutaExclusoesRealtimeRDO(){
+  const supabaseClient=getSupabaseClient();
+  if(!supabaseClient) return;
+  if(_canalRealtimeExclusoesRdo) return; // já está escutando — nunca abre um 2º canal por cima
+  _canalRealtimeExclusoesRdo=supabaseClient
+    .channel('rdos-exclusoes-realtime')
+    .on('postgres_changes',{event:'DELETE',schema:'public',table:'rdos'},(payload)=>{
+      const rdoKeyApagado=payload?.old?.rdo_key;
+      if(!rdoKeyApagado){
+        console.warn('[RDO][realtime] DELETE recebido sem rdo_key — confirme se REPLICA IDENTITY FULL está ativo na tabela rdos.');
+        return;
+      }
+      removerRDOExcluidoRemotamente(rdoKeyApagado);
+    })
+    .subscribe();
+}
+
+// Aplica localmente a exclusão que chegou em tempo real: tira do localStorage,
+// desmarca como enviado, e atualiza qualquer parte da tela que porventura esteja
+// mostrando aquele RDO agora — busca aberta, barra de "RDOs do dia", aviso de
+// "obras paradas" e o resumo de pendências. Se o RDO apagado for EXATAMENTE o
+// que está aberto na tela agora, NÃO mexe no que a pessoa está digitando (só
+// avisa) — apagar o conteúdo da tela no meio do preenchimento seria pior.
+function removerRDOExcluidoRemotamente(rdoKey){
+  const existiaLocal=!!localStorage.getItem(rdoKey);
+  if(!existiaLocal) return; // este aparelho nem tinha esse RDO — nada a fazer
+  const eraORdoAbertoNaTela=localStorage.getItem('rdo-last-key')===rdoKey;
+  localStorage.removeItem(rdoKey);
+  desmarcarComoEnviado(rdoKey);
+
+  // Busca aberta na hora? Atualiza a lista visível imediatamente.
+  if(document.getElementById('search-modal')?.classList.contains('show')){
+    buscarRDOs();
+  }
+  // Outras partes da tela que também listam RDOs.
+  if(typeof renderizarRdosDoDia==='function') renderizarRdosDoDia();
+  if(typeof renderizarObrasParadas==='function') renderizarObrasParadas();
+  if(typeof atualizarAvisoRDOsPendentes==='function') atualizarAvisoRDOsPendentes(true);
+
+  if(eraORdoAbertoNaTela){
+    showToast('⚠️ Este RDO foi excluído pelo admin — os campos na tela continuam preenchidos, mas não existem mais salvos.','#dc2626');
+  }else{
+    showToast('🗑️ Um RDO foi excluído pelo admin — lista atualizada.','#6b7fa0');
+  }
+}
+
 function iniciarAppAposLogin(){
   aplicarPermissoesPorPapel();
   atualizarSeloUsuarioLogado();
+  iniciarEscutaExclusoesRealtimeRDO();
   if(typeof ajustarEspacoTopoTopbar==='function') setTimeout(ajustarEspacoTopoTopbar,50);
   carregarListas();
   atualizarDatalistFuncionarios();
@@ -8641,6 +8705,19 @@ function buscarRDOs(){
     }catch(e){}
   });
 
+  // ORDENAÇÃO SEQUENCIAL: antes a lista saía na ordem "de qualquer jeito" que o
+  // localStorage entregava (nem por data, nem por número) — agora agrupa por Obra
+  // (alfabética) e, dentro de cada obra, mostra sempre 001, 002, 003... em ordem
+  // crescente de verdade (extrai o número de dentro do texto "RDO-003", não faz
+  // comparação de texto simples, que erraria em números com dígitos diferentes).
+  resultados.sort((a,b)=>{
+    const obraCmp=normalizarObra(a.obra).localeCompare(normalizarObra(b.obra));
+    if(obraCmp!==0) return obraCmp;
+    const numA=parseInt((a.nrdo||'').match(/(\d+)/)?.[1]||'0',10);
+    const numB=parseInt((b.nrdo||'').match(/(\d+)/)?.[1]||'0',10);
+    return numA-numB;
+  });
+
   countEl.textContent=resultados.length?`${resultados.length} RDO(s) encontrado(s)`:'';
 
   if(!resultados.length){
@@ -11348,7 +11425,7 @@ window.addEventListener('beforeinstallprompt',(e)=>{
   };
 });
 </script>
-<div class="no-print" style="position:fixed;bottom:2px;right:4px;font-size:8px;color:rgba(120,120,120,.4);font-family:monospace;pointer-events:none;z-index:5">v2026.08.23-numeracao-atomica-banco-excel-auto</div>
+<div class="no-print" style="position:fixed;bottom:2px;right:4px;font-size:8px;color:rgba(120,120,120,.4);font-family:monospace;pointer-events:none;z-index:5">v2026.08.23-busca-ordenada-realtime-delete</div>
 
 <!-- MODAL DE ALERTA DE PENDÊNCIAS — substitui o toast/alert escuro de antes. Aparece
      sempre que a validação unificada (validarFormularioRDO) bloqueia uma tentativa de
