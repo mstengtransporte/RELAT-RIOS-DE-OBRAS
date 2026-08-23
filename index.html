@@ -1706,7 +1706,7 @@ body.dark #workers-body tr:hover{background-color:rgba(58,110,232,.08)}
      fontes) — os dois sistemas usam a mesma "moldura" de login, só
      o papel de parede muda entre eles. -->
 <div id="login-overlay" style="position:fixed;inset:0;z-index:99999;background:#0b1220 url('login-fundo-rdo.jpg') center center / cover no-repeat;color-scheme:dark">
-  <div style="position:absolute;bottom:6px;right:8px;font-size:9px;color:rgba(255,255,255,.35);font-family:monospace;pointer-events:none">v2026.08.23-excel-automatico-pos-envio</div>
+  <div style="position:absolute;bottom:6px;right:8px;font-size:9px;color:rgba(255,255,255,.35);font-family:monospace;pointer-events:none">v2026.08.23-nrdo-sequencia-unica-por-obra</div>
   <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:calc(100% - 32px);max-width:380px;background:rgb(10,17,32);border:1px solid rgba(255,255,255,.14);border-radius:18px;padding:32px 28px;box-shadow:0 20px 60px rgba(0,0,0,.6);text-transform:none;font-weight:400">
     <h1 style="font-size:20px;margin:0 0 4px;color:#fff;text-align:center;font-weight:700">RDO <span style="color:#3ea6ff">Master Energy</span></h1>
     <p style="margin:0 0 24px;text-align:center;color:#9ca3af;font-size:13px;letter-spacing:.5px;font-weight:600">DIÁRIO DE OBRA PRO</p>
@@ -1844,7 +1844,7 @@ body.dark #workers-body tr:hover{background-color:rgba(58,110,232,.08)}
         <div style="flex:1;padding:5px 14px;border-right:2px solid #000;display:flex;flex-direction:column;gap:2px"><label style="font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.8px;color:var(--text3)">Data</label><input type="date" id="h-data" style="background:transparent;border:none;border-bottom:2px solid #000;padding:2px 0;font-size:15px;font-weight:900;color:var(--text);width:100%;outline:none;min-height:28px"></div>
         <div style="flex:1;padding:5px 14px;display:flex;flex-direction:column;gap:2px"><label style="font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.8px;color:var(--text3)">Dia da Semana</label><input type="text" id="h-dia" readonly style="background:transparent;border:none;border-bottom:2px solid #000;padding:2px 0;font-size:15px;font-weight:900;color:var(--text);width:100%;outline:none;min-height:28px"></div>
       </div>
-      <div class="hfield"><label>Obra / Projeto (Cliente)</label><select id="h-obra" onchange="onMudarClienteSelecionado();ajustarFontePorTextoSelect(this)" onblur="revalidarNRDOSeNovo()" style="text-transform:uppercase"><option value="">Selecione...</option></select></div>
+      <div class="hfield"><label>Obra / Projeto (Cliente)</label><select id="h-obra" onchange="onMudarClienteSelecionado();ajustarFontePorTextoSelect(this);revalidarNRDOSeNovo()" style="text-transform:uppercase"><option value="">Selecione...</option></select></div>
       <div class="hfield"><label>Disciplina</label><select id="h-disc" onchange="atualizarBannerObra();ajustarFontePorTextoSelect(this)" style="text-transform:uppercase">
         <option value="">— Selecione —</option>
         <option value="MECÂNICA">MECÂNICA</option>
@@ -4424,26 +4424,85 @@ function gerarProximoNRDO(obra){
   return `RDO-${String(maior+1).padStart(3,'0')}`;
 }
 
+// ACHADO/CORREÇÃO: gerarProximoNRDO (acima) só olha o localStorage DESTE APARELHO —
+// nunca consultava o Supabase. Por isso, se os RDOs 001/002 de uma obra foram
+// enviados de OUTRO aparelho (ou este aparelho nunca guardou eles localmente por
+// qualquer motivo), a tela sugeria "001" de novo mesmo já existindo 001 e 002 na
+// nuvem — o número aparecia certo na Busca/Excel (que leem do banco) mas errado
+// aqui no campo (que só olhava local). Esta versão assíncrona consulta a nuvem
+// PRIMEIRO (fonte de verdade real, funciona em qualquer aparelho), e complementa
+// com o que só existe localmente ainda (rascunho recém-enviado deste aparelho que
+// talvez não tenha voltado da nuvem ainda na mesma consulta). Filtra só por Obra
+// (ignora disciplina de propósito) — a numeração é ÚNICA E SEQUENCIAL por obra,
+// não importa qual disciplina gerou cada RDO: se Mecânica já usou 001 e 002 numa
+// obra, o próximo RDO dessa mesma obra é 003, seja de Elétrica, Tubulação, ou
+// qualquer outra disciplina.
+async function gerarProximoNRDOAsync(obra){
+  let maior=0;
+  const obraTrim=(obra||'').trim();
+  if(!obraTrim) return 'RDO-001'; // sem obra escolhida ainda, nada pra buscar
+  const supabaseClient=getSupabaseClient();
+  if(supabaseClient){
+    try{
+      const{data,error}=await supabaseClient.from('rdos').select('nrdo').ilike('obra',obraTrim);
+      if(!error&&data){
+        data.forEach(row=>{
+          const m=(row.nrdo||'').match(/(\d+)/);
+          if(m){ const v=parseInt(m[1],10); if(v>maior) maior=v; }
+        });
+      }else if(error){
+        console.error('gerarProximoNRDOAsync (nuvem):',error);
+      }
+    }catch(e){ console.error('gerarProximoNRDOAsync (nuvem):',e); }
+  }
+  // Complementa com o que só existe localmente (mesma trava de "só conta enviado").
+  const obraChave=normalizarObra(obraTrim);
+  for(let i=0;i<localStorage.length;i++){
+    const k=localStorage.key(i);
+    if(!k||!k.startsWith('rdo-')||CHAVES_META_BACKUP.includes(k)) continue;
+    if(!estaEnviado(k)) continue;
+    try{
+      const d=JSON.parse(localStorage.getItem(k));
+      if(normalizarObra(d?.header?.obra)!==obraChave) continue;
+      const m=(d?.header?.nrdo||'').match(/(\d+)/);
+      if(m){ const v=parseInt(m[1],10); if(v>maior) maior=v; }
+    }catch(e){}
+  }
+  return `RDO-${String(maior+1).padStart(3,'0')}`;
+}
+
 // true assim que o usuário digita algo por conta própria no campo Nº RDO — a partir daí,
 // o sistema NUNCA mais mexe nesse número sozinho, nem trocando a obra. Só volta a ser
 // "automático" quando um RDO realmente novo é criado (aí sim recebe um número sugerido).
 let nrdoEditadoManualmente=false;
 
-// Se o Nº RDO ainda não foi "travado" por um salvamento anterior (ou seja, este RDO na
-// tela é novo/em rascunho) E o usuário não digitou esse número por conta própria, recalcula
-// automaticamente quando o campo Obra muda — assim, ao digitar "SYENSQO TABOÃO DA SERRA"
-// pela primeira vez, o Nº RDO já vira 001 de verdade, mesmo que ITATIBA já esteja em 015.
-// Um RDO que JÁ foi salvo, OU que teve o número digitado manualmente, nunca tem esse valor
-// apagado ou trocado sozinho — a sequência de cada obra é respeitada, mas o que o usuário
-// escreveu com a própria mão tem prioridade sempre.
-function revalidarNRDOSeNovo(){
+// Dispara toda vez que a Obra muda (event listener "change" no seletor de Obra —
+// Disciplina NÃO dispara mais recálculo, já que a numeração ignora disciplina de
+// propósito) — busca na nuvem o maior número já usado por essa obra e atualiza o
+// campo Nº RDO na tela ANTES do preenchimento, mostrando pro encarregado a
+// sequência real em tempo real (não só quando salvar). Mostra um aviso curto
+// "calculando..." enquanto a consulta roda, já que é uma chamada de rede
+// e pode levar um instante — assim o campo nunca fica com um número desatualizado
+// parecendo definitivo enquanto a busca de verdade ainda está em andamento.
+async function revalidarNRDOSeNovo(){
   if(nrdoEditadoManualmente) return;
   const key=chaveRDO(document.getElementById('h-data')?.value||'');
   const jaSalvo=!!localStorage.getItem(key);
   if(jaSalvo) return;
   const obra=document.getElementById('h-obra')?.value||'';
   const nrdoEl=document.getElementById('h-nrdo');
-  if(nrdoEl) nrdoEl.value=gerarProximoNRDO(obra);
+  if(!nrdoEl) return;
+  if(!obra){ nrdoEl.value=''; nrdoEl.placeholder='RDO-001'; return; }
+  // Chamada de rede tem uma marca (data-calculando) pra impedir 2 consultas simultâneas
+  // pisando uma na outra caso a pessoa troque de Obra rapidinho em sequência — só a
+  // ÚLTIMA chamada disparada tem permissão de escrever o resultado final no campo.
+  const idChamada=Symbol();
+  nrdoEl._ultimaChamadaNrdo=idChamada;
+  nrdoEl.value='calculando...';
+  const proximo=await gerarProximoNRDOAsync(obra);
+  if(nrdoEl._ultimaChamadaNrdo!==idChamada) return; // uma chamada mais nova já assumiu
+  if(nrdoEditadoManualmente) return; // a pessoa digitou manualmente enquanto isso rodava
+  nrdoEl.value=proximo;
 }
 
 // Aviso rápido (sem travar nada) assim que o usuário termina de digitar um Nº RDO —
@@ -11276,7 +11335,7 @@ window.addEventListener('beforeinstallprompt',(e)=>{
   };
 });
 </script>
-<div class="no-print" style="position:fixed;bottom:2px;right:4px;font-size:8px;color:rgba(120,120,120,.4);font-family:monospace;pointer-events:none;z-index:5">v2026.08.23-excel-automatico-pos-envio</div>
+<div class="no-print" style="position:fixed;bottom:2px;right:4px;font-size:8px;color:rgba(120,120,120,.4);font-family:monospace;pointer-events:none;z-index:5">v2026.08.23-nrdo-sequencia-unica-por-obra</div>
 
 <!-- MODAL DE ALERTA DE PENDÊNCIAS — substitui o toast/alert escuro de antes. Aparece
      sempre que a validação unificada (validarFormularioRDO) bloqueia uma tentativa de
