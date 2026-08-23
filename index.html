@@ -1706,7 +1706,7 @@ body.dark #workers-body tr:hover{background-color:rgba(58,110,232,.08)}
      fontes) — os dois sistemas usam a mesma "moldura" de login, só
      o papel de parede muda entre eles. -->
 <div id="login-overlay" style="position:fixed;inset:0;z-index:99999;background:#0b1220 url('login-fundo-rdo.jpg') center center / cover no-repeat;color-scheme:dark">
-  <div style="position:absolute;bottom:6px;right:8px;font-size:9px;color:rgba(255,255,255,.35);font-family:monospace;pointer-events:none">v2026.08.22-compressao-imagem</div>
+  <div style="position:absolute;bottom:6px;right:8px;font-size:9px;color:rgba(255,255,255,.35);font-family:monospace;pointer-events:none">v2026.08.23-auditoria-barras-mortas-restauradas</div>
   <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:calc(100% - 32px);max-width:380px;background:rgb(10,17,32);border:1px solid rgba(255,255,255,.14);border-radius:18px;padding:32px 28px;box-shadow:0 20px 60px rgba(0,0,0,.6);text-transform:none;font-weight:400">
     <h1 style="font-size:20px;margin:0 0 4px;color:#fff;text-align:center;font-weight:700">RDO <span style="color:#3ea6ff">Master Energy</span></h1>
     <p style="margin:0 0 24px;text-align:center;color:#9ca3af;font-size:13px;letter-spacing:.5px;font-weight:600">DIÁRIO DE OBRA PRO</p>
@@ -1798,6 +1798,22 @@ body.dark #workers-body tr:hover{background-color:rgba(58,110,232,.08)}
 </div>
 
 <div class="page" id="rdo-page">
+  <!-- ACHADO DE AUDITORIA: as duas barras abaixo (RDOs do mesmo dia / Obras
+       paradas) já tinham CSS completo e a lógica JS inteira pronta
+       (renderizarRdosDoDia / renderizarObrasParadas), mas o elemento HTML de
+       destino nunca existia na página — as duas funções sempre caíam no
+       "if(!barra||!lista) return;" e nunca desenhavam nada, silenciosamente.
+       Adicionando os containers certos (mesma classe usada no CSS + mesmo id
+       usado no getElementById) pra essas 2 funcionalidades passarem a
+       aparecer de verdade. -->
+  <div class="rdos-do-dia-bar no-print" id="rdos-do-dia-bar" style="display:none">
+    <span class="rdos-do-dia-label" id="rdos-do-dia-label"></span>
+    <div class="rdos-do-dia-lista" id="rdos-do-dia-lista"></div>
+  </div>
+  <div class="obras-paradas-bar no-print" id="obras-paradas-bar" style="display:none">
+    <span class="obras-paradas-label">⚠️ Obras sem RDO há dias:</span>
+    <div class="obras-paradas-lista" id="obras-paradas-lista"></div>
+  </div>
 
   <!-- BANNER -->
   <div class="rdo-banner">
@@ -3649,6 +3665,19 @@ function gerarRdoId(){
 // "SYENSQO/PAULINIA" (sem acento) contariam como obras DIFERENTES por engano, gerando
 // numeração e cadastro de cliente duplicados só por causa de uma diferença de digitação
 // que não muda o significado. Mantém a "/" (separador Cliente/Cidade, que importa).
+// ACHADO DE AUDITORIA (segurança): o app não tinha nenhuma função global de escape de
+// HTML — o Check de Integridade, por exemplo, jogava nome de funcionário e valor
+// digitado (texto livre, digitado por qualquer encarregado) direto num innerHTML sem
+// tratar nada. Um nome com "<" ou ">" (digitado sem querer ou de propósito) executaria
+// como HTML/JS na tela de quem abrisse o Check depois. Usa a técnica padrão e segura:
+// joga o texto num elemento via textContent (nunca interpreta como HTML) e lê de volta
+// o innerHTML resultante, já com tudo convertido pras entidades seguras (&lt; &gt; etc).
+function escapeHtmlGlobal(texto){
+  const d=document.createElement('div');
+  d.textContent=texto==null?'':String(texto);
+  return d.innerHTML;
+}
+
 function normalizarObra(texto){
   return (texto||'')
     .normalize('NFD').replace(/[\u0300-\u036f]/g,'') // remove acentos (á→a, ç→c, ã→a...)
@@ -4927,6 +4956,31 @@ async function carregarVeiculosDaEscala(){
 // (é uma tentativa "silenciosa" de preencher sozinho, não uma etapa obrigatória).
 // Retorna um resultado (nunca lança) pra quem chamar decidir se avisa ou não —
 // mesmo padrão do buscarVeiculoAutomaticoSilencioso/buscarVeiculoAutomatico.
+// Cache curto (TTL) da tabela `funcionarios` inteira — usado tanto por
+// prefetchMapaFuncoes (roda 1x na abertura do app) quanto por
+// buscarFuncaoAutomatica (roda TODA VEZ que qualquer linha do RDO tem um
+// colaborador selecionado). ACHADO DE AUDITORIA (performance): antes, cada
+// seleção de nome disparava um select('nome,funcao') da tabela funcionarios
+// INTEIRA de novo, mesmo já existindo esse mesmo dado buscado poucos
+// segundos antes — numa obra com várias linhas trocando de nome durante o
+// preenchimento, isso virava dezenas de buscas redundantes da mesma tabela
+// completa. Agora as duas funções dividem o mesmo cache: se os dados têm
+// menos de 2 minutos, reusa sem ir na rede; se estão velhos (ou é a
+// primeira vez), busca de novo e atualiza o cache pros dois usarem.
+let _cacheFuncionariosTabela=null; // {dados:[...], quando:timestampMs}
+const TTL_CACHE_FUNCIONARIOS_MS=2*60*1000;
+async function buscarTabelaFuncionariosComCache(supabaseClient){
+  const agora=Date.now();
+  if(_cacheFuncionariosTabela && (agora-_cacheFuncionariosTabela.quando)<TTL_CACHE_FUNCIONARIOS_MS){
+    return{data:_cacheFuncionariosTabela.dados,error:null};
+  }
+  const resultado=await supabaseClient.from('funcionarios').select('nome,funcao');
+  if(!resultado.error && resultado.data){
+    _cacheFuncionariosTabela={dados:resultado.data,quando:agora};
+  }
+  return resultado;
+}
+
 async function buscarFuncaoAutomatica(nome,i){
   const funcSel=document.getElementById(`func-${i}`);
   if(!funcSel||funcSel.tagName!=='SELECT') return{ok:false}; // célula virou <input> (edição manual em andamento) — não mexe
@@ -4942,7 +4996,7 @@ async function buscarFuncaoAutomatica(nome,i){
     // maiúscula, até 2 letras de diferença) — em vez de pedir pro banco achar
     // exatamente esse texto (.ilike sozinho não resolve diferença de
     // acentuação por baixo dos panos, só maiúscula/minúscula).
-    const{data:todosFunc,error}=await supabaseClient.from('funcionarios').select('nome,funcao');
+    const{data:todosFunc,error}=await buscarTabelaFuncionariosComCache(supabaseClient);
     if(error){ console.error('buscarFuncaoAutomatica error:',error); return{ok:false,erro:true,motivo:error.message||String(error)}; }
     if(!todosFunc||todosFunc.length===0){ return{ok:true,tipo:'sem-cadastro'}; }
     const nomeParecido=acharNomeParecido(nome, todosFunc.map(f=>f.nome).filter(Boolean));
@@ -5262,7 +5316,7 @@ async function prefetchMapaFuncoes(){
   const supabaseClient=getSupabaseClient();
   if(!supabaseClient) return;
   try{
-    const{data,error}=await supabaseClient.from('funcionarios').select('nome,funcao');
+    const{data,error}=await buscarTabelaFuncionariosComCache(supabaseClient);
     if(error||!data) return;
     let mudou=false;
     data.forEach(row=>{
@@ -10862,7 +10916,7 @@ function executarCheckIntegridade(){
   }
   wrap.innerHTML=problemas
     .sort((a,b)=>(b.grave?1:0)-(a.grave?1:0))
-    .map(p=>`<div class="check-item${p.grave?' grave':''}"><b>${p.grave?'🔴':'🟡'} ${p.titulo}</b>${p.detalhe}${botaoAcao(p)}</div>`)
+    .map(p=>`<div class="check-item${p.grave?' grave':''}"><b>${p.grave?'🔴':'🟡'} ${escapeHtmlGlobal(p.titulo)}</b>${escapeHtmlGlobal(p.detalhe)}${botaoAcao(p)}</div>`)
     .join('');
 }
 
@@ -11170,7 +11224,7 @@ window.addEventListener('beforeinstallprompt',(e)=>{
   };
 });
 </script>
-<div class="no-print" style="position:fixed;bottom:2px;right:4px;font-size:8px;color:rgba(120,120,120,.4);font-family:monospace;pointer-events:none;z-index:5">v2026.08.22-compressao-imagem</div>
+<div class="no-print" style="position:fixed;bottom:2px;right:4px;font-size:8px;color:rgba(120,120,120,.4);font-family:monospace;pointer-events:none;z-index:5">v2026.08.23-auditoria-barras-mortas-restauradas</div>
 
 <!-- MODAL DE ALERTA DE PENDÊNCIAS — substitui o toast/alert escuro de antes. Aparece
      sempre que a validação unificada (validarFormularioRDO) bloqueia uma tentativa de
