@@ -340,38 +340,6 @@ body.dark #menu-usuario-dropdown{background:#1a2530}
 }
 
 /* ══════════════════════════════════════
-   RDOs DO MESMO DIA (troca rápida)
-   ══════════════════════════════════════ */
-.rdos-do-dia-bar{
-  background:var(--surface);border:2.5px solid #1457c8;
-  padding:9px 14px;margin-bottom:12px;
-  box-shadow:3px 3px 0 #0a3a94;
-  display:flex;align-items:center;gap:10px;flex-wrap:wrap
-}
-.rdos-do-dia-label{font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:1px;color:#1457c8;white-space:nowrap}
-.rdos-do-dia-lista{display:flex;gap:6px;flex-wrap:wrap}
-.rdo-do-dia-pill{
-  display:flex;align-items:center;gap:6px;
-  background:var(--surface2);border:2px solid var(--border2);
-  padding:5px 10px;font-size:11px;font-weight:800;color:var(--text2);
-  cursor:pointer;text-transform:uppercase;white-space:nowrap
-}
-.rdo-do-dia-pill:hover{border-color:#1457c8}
-.rdo-do-dia-pill.ativo{background:#1457c8;color:#fff;border-color:#0a3a94}
-.rdo-do-dia-obra{font-weight:800}
-.rdo-do-dia-nrdo{
-  font-size:9px;font-weight:900;padding:2px 6px;border-radius:3px;
-  background:rgba(0,0,0,.15);letter-spacing:.5px
-}
-.rdo-do-dia-pill.ativo .rdo-do-dia-nrdo{background:rgba(255,255,255,.25)}
-.rdo-do-dia-pill-novo{
-  display:flex;align-items:center;gap:5px;
-  background:#158038;color:#fff;border:2px solid #0d5228;
-  padding:5px 10px;font-size:11px;font-weight:900;
-  cursor:pointer;text-transform:uppercase;white-space:nowrap
-}
-
-/* ══════════════════════════════════════
    OBRAS PARADAS (aviso, dias úteis sem RDO)
    ══════════════════════════════════════ */
 .obras-paradas-bar{
@@ -846,6 +814,12 @@ input.login-input,
 .rdo-result-actions button{padding:5px 10px;border:1.5px solid #000;font-size:10px;font-weight:900;cursor:pointer}
 .btn-open-rdo{background:var(--accent);color:#fff}
 .btn-del-rdo{background:#fee2e2;color:#cc2020}
+.btn-carregar-mais-busca{
+  display:block;width:100%;margin-top:10px;padding:10px;border:2px dashed var(--border2);
+  background:var(--surface2);color:var(--text2);font-size:12px;font-weight:900;
+  text-transform:uppercase;cursor:pointer;border-radius:4px;
+}
+.btn-carregar-mais-busca:hover{background:var(--accent-light);color:var(--accent);border-color:var(--accent)}
 .search-box-footer{padding:11px 16px;border-top:2px solid #000;display:flex;justify-content:space-between;align-items:center}
 .search-footer-info{font-size:10px;color:var(--text3);text-transform:none}
 .search-box-footer button{padding:8px 16px;border:2px solid #000;cursor:pointer;font-size:12px;font-weight:900;background:var(--surface2);color:var(--text2)}
@@ -1069,11 +1043,6 @@ body.dark .aviso-data-divergente .fechar-aviso-divergente{color:#fbbf24;}
   .sum-val{font-size:20px}
   .ose-grid{grid-template-columns:1fr}
 
-  /* RDOs do mesmo dia — barra mais compacta, sem quebrar feio */
-  .rdos-do-dia-bar{padding:8px 10px;gap:6px}
-  .rdos-do-dia-label{font-size:9px;width:100%}
-  .rdo-do-dia-pill,.rdo-do-dia-pill-novo{font-size:10px;padding:6px 9px}
-
   /* Card de OSE: o seletor de status não pode dominar o card inteiro numa tela estreita */
   .ose-status-sel{min-width:0;flex:1;padding:8px 6px;font-size:11px}
   .ose-footer{flex-direction:column;align-items:stretch}
@@ -1154,7 +1123,6 @@ body.dark .aviso-data-divergente .fechar-aviso-divergente{color:#fbbf24;}
   .btn-add-row,.btn-del-row,.btn-manage-list,
   .ose-desc-toolbar,
   .legend-bar,
-  .rdos-do-dia-bar,
   .obras-paradas-bar,
   #toast,#autosave-dot,
   #grafico-modal,#frases-modal,#multipdf-modal,#backup-modal,#novo-rdo-modal,#extra-escopo-modal,#andamento-modal,#projetos-modal,#check-modal,
@@ -1609,8 +1577,8 @@ body.dark .aviso-data-divergente .fechar-aviso-divergente{color:#fbbf24;}
 
 /* Transição suave em tudo que é clicável/interativo — sem exagero de
    duração (150-180ms), sem animar propriedades pesadas (layout). */
-.btn, button, select, input, .ose-card, .sum-item, .rdo-do-dia-pill,
-.rdo-do-dia-pill-novo, .novo-rdo-radio,
+.btn, button, select, input, .ose-card, .sum-item,
+.novo-rdo-radio,
 .absenteismo-periodo-btn, .multipdf-cancel, .multipdf-gerar,
 .vehicle-select, .login-input{
   transition:transform .16s var(--ease),box-shadow .16s var(--ease),
@@ -1706,7 +1674,7 @@ body.dark #workers-body tr:hover{background-color:rgba(58,110,232,.08)}
      fontes) — os dois sistemas usam a mesma "moldura" de login, só
      o papel de parede muda entre eles. -->
 <div id="login-overlay" style="position:fixed;inset:0;z-index:99999;background:#0b1220 url('login-fundo-rdo.jpg') center center / cover no-repeat;color-scheme:dark">
-  <div style="position:absolute;bottom:6px;right:8px;font-size:9px;color:rgba(255,255,255,.35);font-family:monospace;pointer-events:none">v2026.08.23-modelo-dia-usa-numero-async</div>
+  <div style="position:absolute;bottom:6px;right:8px;font-size:9px;color:rgba(255,255,255,.35);font-family:monospace;pointer-events:none">v2026.08.23-limpeza-geral-paginacao-busca</div>
   <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:calc(100% - 32px);max-width:380px;background:rgb(10,17,32);border:1px solid rgba(255,255,255,.14);border-radius:18px;padding:32px 28px;box-shadow:0 20px 60px rgba(0,0,0,.6);text-transform:none;font-weight:400">
     <h1 style="font-size:20px;margin:0 0 4px;color:#fff;text-align:center;font-weight:700">RDO <span style="color:#3ea6ff">Master Energy</span></h1>
     <p style="margin:0 0 24px;text-align:center;color:#9ca3af;font-size:13px;letter-spacing:.5px;font-weight:600">DIÁRIO DE OBRA PRO</p>
@@ -1798,18 +1766,11 @@ body.dark #workers-body tr:hover{background-color:rgba(58,110,232,.08)}
 </div>
 
 <div class="page" id="rdo-page">
-  <!-- ACHADO DE AUDITORIA: as duas barras abaixo (RDOs do mesmo dia / Obras
-       paradas) já tinham CSS completo e a lógica JS inteira pronta
-       (renderizarRdosDoDia / renderizarObrasParadas), mas o elemento HTML de
-       destino nunca existia na página — as duas funções sempre caíam no
-       "if(!barra||!lista) return;" e nunca desenhavam nada, silenciosamente.
-       Adicionando os containers certos (mesma classe usada no CSS + mesmo id
-       usado no getElementById) pra essas 2 funcionalidades passarem a
-       aparecer de verdade. -->
-  <div class="rdos-do-dia-bar no-print" id="rdos-do-dia-bar" style="display:none">
-    <span class="rdos-do-dia-label" id="rdos-do-dia-label"></span>
-    <div class="rdos-do-dia-lista" id="rdos-do-dia-lista"></div>
-  </div>
+  <!-- A barra "RDOs do mesmo dia" (pills acumulando no topo a cada RDO salvo) foi
+       removida de propósito — virava poluição visual acumulando na tela. A troca
+       entre RDOs salvos agora é feita só dentro de "Pesquisar RDOs", concentrada
+       num único lugar. O aviso de "Obras paradas" abaixo é diferente (não é uma
+       lista que cresce a cada envio, é um alerta pontual) e continua normal. -->
   <div class="obras-paradas-bar no-print" id="obras-paradas-bar" style="display:none">
     <span class="obras-paradas-label">⚠️ Obras sem RDO há dias:</span>
     <div class="obras-paradas-lista" id="obras-paradas-lista"></div>
@@ -4204,7 +4165,7 @@ async function reconciliarRDOsApagadosPeloAdmin(){
     localStorage.setItem(CHAVE_SUSPEITOS_ADMIN,JSON.stringify(suspeitosDeAgora));
     if(removidos>0){
       showToast(`🔄 ${removidos} RDO(s) removido(s) deste aparelho — foram excluídos pelo admin.`,'#d97706');
-      renderizarRdosDoDia();renderizarObrasParadas();
+      renderizarObrasParadas();
     }
   }catch(e){ console.error('reconciliarRDOsApagadosPeloAdmin error:',e); }
 }
@@ -4287,7 +4248,6 @@ function removerRDOExcluidoRemotamente(rdoKey){
     buscarRDOs();
   }
   // Outras partes da tela que também listam RDOs.
-  if(typeof renderizarRdosDoDia==='function') renderizarRdosDoDia();
   if(typeof renderizarObrasParadas==='function') renderizarObrasParadas();
   if(typeof atualizarAvisoRDOsPendentes==='function') atualizarAvisoRDOsPendentes(true);
 
@@ -4313,7 +4273,7 @@ function iniciarAppAposLogin(){
     // (da data anterior) órfã, ainda salva sem necessidade — limpa ela aqui, assim
     // não acumula lixo no aparelho nem confunde contagens em nenhum outro lugar.
     const dataAnterior=_lastSaveKey?_lastSaveKey.match(/^rdo-([\d-]+|draft)/)?.[1]:null;
-    updateDiaSemana();renderizarRdosDoDia();renderizarObrasParadas();
+    updateDiaSemana();renderizarObrasParadas();
     autoSilentSave();
     if(dataAnterior&&_lastSaveKey&&!_lastSaveKey.startsWith(`rdo-${dataAnterior}`)){
       localStorage.removeItem(`rdo-${dataAnterior}${rdoAtualId?'__'+rdoAtualId:''}`);
@@ -4597,64 +4557,6 @@ function avisarSeNRDOConflita(){
   if(acharConflitoDeNRDO(obra,nrdo,key)){
     showToast(`⚠️ "${nrdo}" já existe em outro RDO desta obra — ajuste antes de salvar.`,'#dc2626');
   }
-}
-
-// Mostra, logo abaixo do cabeçalho, um atalho pra trocar entre todos os RDOs salvos com a
-// MESMA data que está na tela agora — só aparece quando existe mais de um (ex: uma obra de
-// manhã, outra à tarde, ou RDO de outra equipe no mesmo dia). Clicar troca na hora.
-function renderizarRdosDoDia(){
-  const barra=document.getElementById('rdos-do-dia-bar');
-  const lista=document.getElementById('rdos-do-dia-lista');
-  if(!barra||!lista) return;
-  const dataAtual=document.getElementById('h-data')?.value;
-  if(!dataAtual){ barra.style.display='none'; return; }
-
-  const keys=getAllRDOKeys();
-  const doDia=[];
-  // TRAVA DE SEGURANÇA (computador compartilhado, 2026-08-18): mesma regra do resto do
-  // sistema — encarregado só vê RDOs do dia com o PRÓPRIO nome no campo Encarregado;
-  // Admin Mestre continua vendo todos. Sem isso, essa barra mostrava (e deixava abrir)
-  // rascunhos de OUTRO encarregado que usou o mesmo aparelho antes, no mesmo dia.
-  const ehAdminDia=usuarioAtual&&usuarioAtual.papel==='admin_mestre';
-  const meuNomeNormalizadoDia=usuarioAtual?normalizarObra(usuarioAtual.nome):null;
-  keys.forEach(k=>{
-    try{
-      const d=JSON.parse(localStorage.getItem(k));
-      // Só conta como "outro RDO do dia" quem já tem Obra escolhida — um rascunho ainda
-      // sem Obra definida (ex: RDO que acabou de começar, autosalvo de segurança ao clicar
-      // em Buscar/Novo) não deve aparecer como se fosse um RDO separado e confundir.
-      if(!ehAdminDia&&meuNomeNormalizadoDia&&normalizarObra(d?.header?.enc)!==meuNomeNormalizadoDia) return;
-      if(d?.header?.data===dataAtual && (d?.header?.obra||'').trim()) doDia.push({key:k,header:d.header});
-    }catch(e){}
-  });
-
-  // CORREÇÃO (2026-08-18): baixei o limite de 2 pra 1 — agora que o boot sempre abre uma
-  // tela em branco (não reabre mais o rascunho sozinho), um único rascunho do dia com
-  // Obra já preenchida e ainda não enviado precisa continuar visível aqui, senão fica
-  // sem nenhum jeito óbvio de voltar pra ele. (O botão "Salvar e Enviar" piscando/o
-  // painel de "RDOs pendentes" já cobre isso pra QUALQUER data, não só hoje — esta
-  // barra aqui é só o atalho rápido pro dia que está na tela agora.)
-  if(doDia.length<1){ barra.style.display='none'; return; }
-
-  const chaveAtiva=localStorage.getItem('rdo-last-key');
-  doDia.sort((a,b)=>(a.header.nrdo||'').localeCompare(b.header.nrdo||''));
-  const rotuloBarra=document.getElementById('rdos-do-dia-label');
-  if(rotuloBarra) rotuloBarra.textContent=doDia.length===1?`📋 Já existe 1 RDO salvo hoje — toque pra abrir:`:`📋 ${doDia.length} RDOs salvos hoje — toque pra trocar:`;
-  const esc=s=>{const d=document.createElement('div');d.textContent=s||'';return d.innerHTML;};
-  lista.innerHTML=doDia.map(r=>{
-    // Sempre mostra o nome da obra preenchida no diário + o Nº do RDO como diferenciador —
-    // assim, mesmo que duas obras do mesmo dia tenham o MESMO nome digitado, cada botão
-    // continua identificável e nunca fica igualzinho ao outro.
-    const obraCompleta=(r.header.obra||'SEM OBRA PREENCHIDA').toUpperCase();
-    const obra=obraCompleta.length>34?obraCompleta.substring(0,33)+'…':obraCompleta;
-    const nrdo=(r.header.nrdo||'—').toUpperCase();
-    const enc=(r.header.enc||'').toUpperCase();
-    const ativo=r.key===chaveAtiva;
-    const dica=`${esc(obraCompleta)} — ${ativo?'RDO aberto agora':'Trocar para este RDO'} — Nº ${esc(nrdo)}${enc?' — Encarregado: '+esc(enc):''}`;
-    return `<button type="button" class="rdo-do-dia-pill${ativo?' ativo':''}" onclick="abrirRDOSalvo('${r.key}')" title="${dica}">${ativo?'👁️ ':''}<span class="rdo-do-dia-obra">${esc(obra)}</span><span class="rdo-do-dia-nrdo">${esc(nrdo)}</span></button>`;
-  }).join('')
-  + `<button type="button" class="rdo-do-dia-pill-novo" onclick="novoRDO()" title="Criar outro RDO deste mesmo dia">➕ NOVO DESTE DIA</button>`;
-  barra.style.display='flex';
 }
 
 function updateDiaSemana(){
@@ -6298,7 +6200,6 @@ async function salvarRDO(){
     if(!getSupabaseClient()||!usuarioAtual){
       showToast('✓ RDO salvo neste aparelho. Sem login/internet no momento — envie assim que possível.','#d97706');
       setTimeout(atualizarDatalistNomesProjetos,0);
-      setTimeout(renderizarRdosDoDia,0);
       return;
     }
 
@@ -6394,7 +6295,6 @@ async function salvarRDO(){
     // pesado com muitos RDOs salvos (meses/anos de uso). Adiado pro próximo tick pra não
     // atrasar nem por um instante o retorno visual de "salvo" pro usuário.
     setTimeout(atualizarDatalistNomesProjetos,0);
-    setTimeout(renderizarRdosDoDia,0);
   }catch(e){
     console.error('salvarRDO error:',e);
     if(e && (e.name==='QuotaExceededError' || e.code===22)){
@@ -6658,7 +6558,7 @@ function restaurarEstadoCompleto(d){
   }
   recalcAll();
   ajustarTextareasAuto();
-  renderizarRdosDoDia();renderizarObrasParadas();
+  renderizarObrasParadas();
 }
 
 // ════════════════════════════════════════════════════════════
@@ -6791,7 +6691,7 @@ async function aplicarModeloNovoDia(d,proximoNRDO,manterStatus=true,dataAlvo=nul
 
   recalcAll();
   ajustarTextareasAuto();
-  renderizarRdosDoDia();renderizarObrasParadas();
+  renderizarObrasParadas();
 }
 
 // A data do novo RDO é sempre a mesma que já estava no formulário (a escolha
@@ -6914,57 +6814,26 @@ async function novoRDOComNomes(){
     const proximoNRDO=await gerarProximoNRDOAsync(d.header?.obra);
     const novaData=dataParaNovoRDO();
     const manterDescricoes=!!document.getElementById('chk-manter-descricoes')?.checked;
+    // NUNCA EMPILHA RASCUNHO: se já existia um rascunho NÃO ENVIADO na tela antes deste
+    // clique (seja um rascunho em branco, seja outro criado por um clique anterior em "A
+    // partir do último"), ele é DESCARTADO agora — o clique em "A partir do último"
+    // SUBSTITUI o formulário atual, nunca empilha mais uma gaveta ao lado da anterior.
+    // Só um rascunho por vez fica esperando envio; clicar várias vezes seguidas no botão
+    // nunca deixa "sobras" de rascunhos abandonados acumulando no aparelho.
+    const chaveAntigaEmAndamento=localStorage.getItem('rdo-last-key');
+    if(chaveAntigaEmAndamento && !estaEnviado(chaveAntigaEmAndamento)){
+      localStorage.removeItem(chaveAntigaEmAndamento);
+    }
     await aplicarModeloNovoDia(d,proximoNRDO,false,novaData,manterDescricoes); // false = não mantém o status das OSEs
     rdoAtualId=gerarRdoId(); // identidade própria — nunca sobrescreve o RDO de origem, nem outro do mesmo dia
     localStorage.setItem('rdo-last-key', chaveRDO(novaData));
     showToast(`📄 Novo RDO Nº ${proximoNRDO} criado com os nomes do último diário!`,'#1457c8');
-    renderizarRdosDoDia();renderizarObrasParadas();
   }catch(e){
     console.error('novoRDOComNomes error:',e);
     showToast('Erro ao carregar modelo — criando em branco.','#dc2626');
     criandoNovoRDO=false;
     novoRDOZerado();
     return;
-  }finally{
-    criandoNovoRDO=false;
-  }
-}
-
-// Opção 2: 100% zerado — nenhum dado do RDO anterior é aproveitado.
-// Duplica o ÚLTIMO RDO salvo com TUDO igual — diferente de "a partir do último", aqui
-// nada é limpo: horas, status de cada OSE, descrições de serviço, responsáveis, tudo vem
-// copiado exatamente como estava. Só o Nº do RDO (seguindo a sequência da mesma obra) e a
-// data mudam. Pensado pra quando o dia é muito parecido com o anterior e é mais rápido
-// ajustar o que mudou do que preencher tudo de novo do zero.
-function duplicarUltimoRDO(){
-  if(criandoNovoRDO) return;
-  criandoNovoRDO=true;
-  try{
-    // Mesma trava crítica de novoRDOComNomes: sem isso o número gerado podia sair
-    // duplicado e a edição recente do RDO atual podia se perder ao trocar de tela.
-    clearTimeout(_autoSaveTimer);
-    autoSilentSave();
-    const lastKey=localStorage.getItem('rdo-last-key');
-    const lastRaw=lastKey?localStorage.getItem(lastKey):null;
-    if(!lastRaw){
-      showToast('Nenhum RDO encontrado pra duplicar.','#d97706');
-      return;
-    }
-    salvarSnapshotDesfazer();
-    fecharNovoRDOModal();
-    const d=JSON.parse(lastRaw);
-    const proximoNRDO=gerarProximoNRDO(d.header?.obra);
-    const novaData=dataParaNovoRDO();
-    d.header={...d.header,nrdo:proximoNRDO,data:novaData};
-    restaurarEstadoCompleto(d); // restaura TUDO — horas, status, descrições, responsáveis
-    rdoAtualId=gerarRdoId(); // identidade própria — nunca sobrescreve o RDO original
-    localStorage.setItem('rdo-last-key', chaveRDO(novaData));
-    const msgDia='do mesmo dia';
-    showToast(`🔁 RDO duplicado ${msgDia}! Nº ${proximoNRDO} — ajuste o que precisar.`,'#7c3aed');
-    renderizarRdosDoDia();renderizarObrasParadas();
-  }catch(e){
-    console.error('duplicarUltimoRDO error:',e);
-    showToast('❌ Erro ao duplicar o RDO.','#dc2626');
   }finally{
     criandoNovoRDO=false;
   }
@@ -7045,7 +6914,7 @@ function _criarRDOEmBranco(mensagemToast,focarObra){
   }
   recalcAll();
   showToast(mensagemToast,'#1457c8');
-  renderizarRdosDoDia();renderizarObrasParadas();
+  renderizarObrasParadas();
   if(focarObra) setTimeout(()=>document.getElementById('h-obra')?.focus(),50);
 }
 
@@ -8720,15 +8589,40 @@ function buscarRDOs(){
     return;
   }
 
+  // PERFORMANCE/PAGINAÇÃO: com o tempo, um histórico grande de RDOs enviados podia
+  // deixar a Busca lenta pra abrir — o navegador tinha que montar um HTML gigante de
+  // uma vez só, mesmo quando a pessoa só queria ver os mais recentes. Guarda a lista
+  // completa (já filtrada e ordenada) numa variável, mas RENDERIZA só um pedaço por
+  // vez (60 primeiro) — o resto só é desenhado se a pessoa clicar em "Carregar mais",
+  // então a tela abre rápido mesmo com milhares de RDOs no histórico.
+  _buscaRDOsResultadosCompletos=resultados;
+  _buscaRDOsQtdExibida=Math.min(TAMANHO_PAGINA_BUSCA_RDOS,resultados.length);
+  renderizarPaginaBuscaRDOs();
+}
+
+let _buscaRDOsResultadosCompletos=[];
+let _buscaRDOsQtdExibida=0;
+const TAMANHO_PAGINA_BUSCA_RDOS=60;
+
+function carregarMaisResultadosBuscaRDOs(){
+  _buscaRDOsQtdExibida=Math.min(_buscaRDOsQtdExibida+TAMANHO_PAGINA_BUSCA_RDOS,_buscaRDOsResultadosCompletos.length);
+  renderizarPaginaBuscaRDOs();
+}
+
+function renderizarPaginaBuscaRDOs(){
+  const resultDiv=document.getElementById('search-results');
+  const resultados=_buscaRDOsResultadosCompletos.slice(0,_buscaRDOsQtdExibida);
+
   const dias=['DOM','SEG','TER','QUA','QUI','SEX','SÁB'];
   // Marca como "possível duplicado" quando Obra + Nº RDO + Data são idênticos —
   // ajuda a achar RDOs repetidos criados sem querer (ex: cliques de teste em
   // "Novo RDO") pra facilitar apagar o que sobrou errado. Isso continua fazendo
   // sentido porque o número é ÚNICO por obra (garantido pelo banco) — se dois RDOs
   // aparecem com o MESMO número da MESMA obra, é uma anomalia de verdade, não um
-  // falso positivo.
+  // falso positivo. Calculado sobre a lista COMPLETA (não só a página atual), senão
+  // um duplicado só apareceria marcado se as duas cópias caíssem na mesma página.
   const contagem={};
-  resultados.forEach(r=>{
+  _buscaRDOsResultadosCompletos.forEach(r=>{
     const chave=`${(r.obra||'').trim().toUpperCase()}|${(r.nrdo||'').trim().toUpperCase()}|${r.data}`;
     contagem[chave]=(contagem[chave]||0)+1;
   });
@@ -8760,6 +8654,11 @@ function buscarRDOs(){
       </div>
     </div>`;
   }).join('');
+
+  const restantes=_buscaRDOsResultadosCompletos.length-_buscaRDOsQtdExibida;
+  if(restantes>0){
+    resultDiv.innerHTML+=`<button type="button" class="btn-carregar-mais-busca" onclick="carregarMaisResultadosBuscaRDOs()">⬇️ Carregar mais ${Math.min(TAMANHO_PAGINA_BUSCA_RDOS,restantes)} (${restantes} restante${restantes>1?'s':''})</button>`;
+  }
 }
 
 function abrirRDOSalvo(key){
@@ -8798,11 +8697,15 @@ function deletarRDO(key,btn){
   desmarcarComoEnviado(key);
   syncDeletarSupabase(key); // apaga também no banco de dados (Supabase) — OSEs e horas somem juntas
   btn.closest('.rdo-result-item').remove();
+  // Tira também da lista completa em memória (paginação) — senão "Carregar mais" ficaria
+  // com uma contagem de restantes levemente desatualizada até a próxima busca.
+  _buscaRDOsResultadosCompletos=_buscaRDOsResultadosCompletos.filter(r=>r.key!==key);
+  if(_buscaRDOsQtdExibida>0) _buscaRDOsQtdExibida--;
   const count=document.querySelectorAll('.rdo-result-item').length;
   document.getElementById('search-count').textContent=count?`${count} RDO(s) encontrado(s)`:'';
   if(!count) document.getElementById('search-results').innerHTML='<div class="search-empty">Nenhum RDO encontrado.</div>';
   showToast('🗑 RDO excluído.','#dc2626');
-  renderizarRdosDoDia();renderizarObrasParadas();
+  renderizarObrasParadas();
   // Se o Painel Executivo estiver aberto ao mesmo tempo, recalcula na hora — sem isso ele
   // ficaria mostrando o total antigo até ser fechado e reaberto.
   if(document.getElementById('exec-modal')) renderizarVisaoGeralExecutivo();
@@ -11415,7 +11318,7 @@ window.addEventListener('beforeinstallprompt',(e)=>{
   };
 });
 </script>
-<div class="no-print" style="position:fixed;bottom:2px;right:4px;font-size:8px;color:rgba(120,120,120,.4);font-family:monospace;pointer-events:none;z-index:5">v2026.08.23-modelo-dia-usa-numero-async</div>
+<div class="no-print" style="position:fixed;bottom:2px;right:4px;font-size:8px;color:rgba(120,120,120,.4);font-family:monospace;pointer-events:none;z-index:5">v2026.08.23-limpeza-geral-paginacao-busca</div>
 
 <!-- MODAL DE ALERTA DE PENDÊNCIAS — substitui o toast/alert escuro de antes. Aparece
      sempre que a validação unificada (validarFormularioRDO) bloqueia uma tentativa de
