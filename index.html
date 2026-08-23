@@ -1706,7 +1706,7 @@ body.dark #workers-body tr:hover{background-color:rgba(58,110,232,.08)}
      fontes) — os dois sistemas usam a mesma "moldura" de login, só
      o papel de parede muda entre eles. -->
 <div id="login-overlay" style="position:fixed;inset:0;z-index:99999;background:#0b1220 url('login-fundo-rdo.jpg') center center / cover no-repeat;color-scheme:dark">
-  <div style="position:absolute;bottom:6px;right:8px;font-size:9px;color:rgba(255,255,255,.35);font-family:monospace;pointer-events:none">v2026.08.23-nrdo-sequencia-unica-por-obra</div>
+  <div style="position:absolute;bottom:6px;right:8px;font-size:9px;color:rgba(255,255,255,.35);font-family:monospace;pointer-events:none">v2026.08.23-numeracao-atomica-banco-excel-auto</div>
   <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:calc(100% - 32px);max-width:380px;background:rgb(10,17,32);border:1px solid rgba(255,255,255,.14);border-radius:18px;padding:32px 28px;box-shadow:0 20px 60px rgba(0,0,0,.6);text-transform:none;font-weight:400">
     <h1 style="font-size:20px;margin:0 0 4px;color:#fff;text-align:center;font-weight:700">RDO <span style="color:#3ea6ff">Master Energy</span></h1>
     <p style="margin:0 0 24px;text-align:center;color:#9ca3af;font-size:13px;letter-spacing:.5px;font-weight:600">DIÁRIO DE OBRA PRO</p>
@@ -3476,7 +3476,7 @@ async function _syncSalvarSupabaseReal(d,rdoKey){
         worker_index:idx,nome:w.name||null,funcao:w.func||null,veiculo:w.vehicle||null,hrs:w.hrs||[],hst:w.hst||[],
         status_dia:statusDiaPorRotulo(w.vehicle)
       }));
-    const{data:rpcResultado,error:erroRdo}=await supabaseClient.rpc('salvar_rdo_completo',{
+    const{data:rpcResultado,error:erroRdo}=await supabaseClient.rpc('salvar_rdo_completo_v2',{
       p_rdo_key:rdoKey,
       p_nrdo:h.nrdo||null,
       p_data:h.data||null,
@@ -3492,9 +3492,10 @@ async function _syncSalvarSupabaseReal(d,rdoKey){
       p_workers:workersRows
     });
     if(erroRdo||!rpcResultado){
-      // Código 23505 = violação de índice/constraint único — é exatamente o que a trava
-      // de duplicidade (obra + nº do RDO) do banco dispara quando alguém tenta salvar
-      // um RDO repetido. Mostra uma mensagem clara em vez do erro técnico cru do Postgres.
+      // Código 23505 = violação de índice/constraint único — teoricamente não deveria
+      // mais acontecer POR CAUSA DE NÚMERO (a trava por obra dentro da função do banco
+      // já serializa isso), mas mantém o tratamento aqui como rede de segurança pra
+      // qualquer outro tipo de duplicidade inesperada.
       if(erroRdo?.code==='23505'){
         const msg='Já existe um RDO com esse número nesta obra. Confira o Nº do RDO (campo no topo) antes de salvar de novo.';
         console.error('Supabase erro ao salvar RDO (duplicidade):',erroRdo.message);
@@ -3504,7 +3505,13 @@ async function _syncSalvarSupabaseReal(d,rdoKey){
       console.error('Supabase erro ao salvar RDO (RPC atômica):',msg);
       return{sucesso:false,erro:msg};
     }
-    return{sucesso:true};
+    // NÚMERO FINAL DECIDIDO PELO BANCO: a função salvar_rdo_completo_v2 calcula o
+    // próximo número da obra DENTRO da mesma transação do INSERT, travado por obra
+    // (pg_advisory_xact_lock) — mesmo que dois encarregados enviem no mesmo segundo
+    // pra mesma obra, o banco enfileira e cada um recebe o número real e sequencial
+    // (ex.: 003 pro primeiro, 004 pro segundo), nunca os dois "003". O valor que volta
+    // aqui é sempre o número REAL gravado, não o que o cliente sugeriu.
+    return{sucesso:true,nrdoFinal:rpcResultado?.nrdo||h.nrdo};
   }catch(e){
     const msg=e?.message||JSON.stringify(e);
     console.error('Supabase syncSalvarSupabase error:',msg);
@@ -6220,25 +6227,15 @@ async function salvarRDO(){
       return;
     }
 
-    // NÚMERO 100% AUTOMÁTICO: recalcula o próximo disponível (local + nuvem) e corrige
-    // sozinho, sem perguntar — garante que nunca existe conflito de número entre
-    // encarregados diferentes na mesma obra, mesmo sem ninguém perceber que ia colidir.
-    // CORREÇÃO (auditoria 2026-08-18): só recalcula na PRIMEIRA vez que este RDO é
-    // enviado (estaEnviado(key) ainda false). Antes, isso rodava em TODO clique de
-    // "Salvar e Enviar" — inclusive ao reabrir e reenviar um RDO que já tinha sido
-    // confirmado antes — o que podia trocar o número de um RDO já registrado sem
-    // nenhum motivo real (nenhuma colisão de verdade, só o cálculo rodando de novo).
-    // Depois do primeiro envio confirmado, o número fica fixo; só muda se a pessoa
-    // editar o campo manualmente.
-    if(d.header.obra && !estaEnviado(key)){
-      const numeroCorreto=await resolverNumeroSemConflito(d.header.obra,key);
-      if(numeroCorreto&&numeroCorreto!==d.header.nrdo){
-        d.header.nrdo=numeroCorreto;
-        const campoNrdo=document.getElementById('h-nrdo');
-        if(campoNrdo) campoNrdo.value=numeroCorreto;
-        showToast(`🔢 Número ajustado automaticamente para ${numeroCorreto} (seguindo a sequência da obra).`,'#1457c8');
-      }
-    }
+    // O NÚMERO FINAL agora é decidido DENTRO DO BANCO (função salvar_rdo_completo_v2,
+    // com trava por obra — ver instruções SQL), na mesma transação do INSERT. Não faz
+    // mais sentido pré-calcular aqui no cliente antes de enviar (isso rodava uma
+    // consulta a mais só pra "adivinhar" um número que o banco ia decidir de qualquer
+    // jeito, e ainda por cima podia ficar errado se OUTRO encarregado salvasse entre
+    // esse cálculo e o envio de verdade — exatamente a falha de concorrência que a
+    // trava no banco existe pra eliminar). O campo já mostra uma prévia ao vivo
+    // (revalidarNRDOSeNovo, disparado ao escolher a Obra) — só uma prévia; o valor que
+    // realmente vale é o que volta do banco depois do envio, mais abaixo.
 
     localStorage.setItem(key,JSON.stringify(d));
     localStorage.setItem('rdo-last-key',key);
@@ -6252,14 +6249,14 @@ async function salvarRDO(){
 
     showToast('☁️ Enviando pro admin...','#7c3aed');
 
-    // PROTEÇÃO CONTRA COLISÃO DE VERDADE: se dois encarregados clicarem "Salvar e
-    // Enviar" quase ao mesmo tempo, na mesma obra, existe uma fração de segundo onde os
-    // dois podem calcular o MESMO próximo número — o banco de dados tem uma trava física
-    // que recusa a segunda tentativa duplicada (nunca deixa duas linhas com o mesmo
-    // número na mesma obra). Quando isso acontece, em vez de mostrar erro pra pessoa, o
-    // app recalcula sozinho o próximo número disponível e tenta de novo automaticamente
-    // — assim ninguém pula número, ninguém duplica, e a pessoa nem percebe que existiu
-    // uma disputa por aquele número.
+    // REDE DE SEGURANÇA (não é mais a proteção principal): a trava de verdade contra
+    // colisão de número agora vive DENTRO do banco (função salvar_rdo_completo_v2, com
+    // pg_advisory_xact_lock por obra — ver instruções SQL), na MESMA transação do
+    // INSERT — dois encarregados salvando a mesma obra no mesmo segundo são
+    // automaticamente enfileirados pelo próprio Postgres, cada um recebendo seu número
+    // real e sequencial (nunca os dois "003"). Este loop aqui só continua existindo
+    // como reforço pra qualquer OUTRO tipo raro de erro de unicidade que porventura
+    // aconteça (ex.: um retry de rede duplicando o rdo_key), não pela numeração em si.
     let resultado;
     let tentativas=0;
     const MAX_TENTATIVAS=5;
@@ -6284,20 +6281,36 @@ async function salvarRDO(){
       // de verdade — antes disso o app avisava sucesso sem checar, e o RDO podia nunca ter
       // chegado no admin sem ninguém perceber.
       marcarComoEnviado(key);
+      // APLICA O NÚMERO FINAL DECIDIDO PELO BANCO: a função salvar_rdo_completo_v2 (com
+      // trava por obra) pode ter atribuído um número diferente do que estava na tela —
+      // isso é ESPERADO e correto quando outro encarregado salvou um RDO da mesma obra
+      // bem perto no tempo (ex.: a tela mostrava a prévia "003", mas alguém já tinha
+      // acabado de pegar o 003 um instante antes, então o banco corretamente atribuiu
+      // "004" pra este envio). Atualiza a tela, o objeto em memória e o localStorage com
+      // esse número real ANTES de gerar o Excel e mostrar a confirmação — pra nunca gerar
+      // um arquivo ou avisar a pessoa com um número que não é o que ficou gravado de
+      // verdade.
+      let avisoRenumeracao='';
+      if(resultado.nrdoFinal && resultado.nrdoFinal!==d.header.nrdo){
+        avisoRenumeracao=` (número final: ${resultado.nrdoFinal}, ajustado automaticamente por causa de outro envio simultâneo)`;
+        d.header.nrdo=resultado.nrdoFinal;
+        const campoNrdo=document.getElementById('h-nrdo');
+        if(campoNrdo) campoNrdo.value=resultado.nrdoFinal;
+        localStorage.setItem(key,JSON.stringify(d));
+      }
       // DOWNLOAD AUTOMÁTICO DO EXCEL: dispara assim que a gravação no Supabase é
-      // confirmada — ANTES de mostrar o toast de sucesso e ANTES do reset da tela (o
-      // Excel lê os dados direto da tela via getFormData(), então precisa rodar
-      // enquanto os campos ainda estão preenchidos). Roda dentro de try/catch: se o
-      // Excel falhar por qualquer motivo (ex.: biblioteca ainda carregando), isso NUNCA
-      // pode impedir o restante do fluxo de envio — o RDO já foi salvo com sucesso de
-      // qualquer jeito, então só avisa e segue.
+      // confirmada (já com o número final aplicado acima) — ANTES de mostrar o toast de
+      // sucesso e ANTES do reset da tela (o Excel lê os dados direto da tela via
+      // getFormData(), então precisa rodar enquanto os campos ainda estão preenchidos).
+      // Roda dentro de try/catch: se o Excel falhar por qualquer motivo (ex.: biblioteca
+      // ainda carregando), isso NUNCA pode impedir o restante do fluxo de envio — o RDO
+      // já foi salvo com sucesso de qualquer jeito, então só avisa e segue.
       try{
         await exportarXLSX();
       }catch(erroExcel){
         console.error('[RDO] Falha ao gerar o Excel automático pós-envio:',erroExcel);
         showToast('⚠️ RDO enviado, mas o Excel automático falhou — use o botão "Excel" pra baixar manualmente.','#d97706');
       }
-      const avisoRenumeracao=tentativas>1?` (número final: ${d.header.nrdo}, ajustado automaticamente por causa de outro envio simultâneo)`:'';
       showToast(`✓ RDO salvo e enviado ao admin!${avisoRenumeracao}`,'#16a34a');
       // RESET DA TELA APÓS ENVIO CONFIRMADO: assim que chega na nuvem de verdade — não
       // importa se quem enviou é encarregado ou admin_mestre, o comportamento é o mesmo
@@ -11335,7 +11348,7 @@ window.addEventListener('beforeinstallprompt',(e)=>{
   };
 });
 </script>
-<div class="no-print" style="position:fixed;bottom:2px;right:4px;font-size:8px;color:rgba(120,120,120,.4);font-family:monospace;pointer-events:none;z-index:5">v2026.08.23-nrdo-sequencia-unica-por-obra</div>
+<div class="no-print" style="position:fixed;bottom:2px;right:4px;font-size:8px;color:rgba(120,120,120,.4);font-family:monospace;pointer-events:none;z-index:5">v2026.08.23-numeracao-atomica-banco-excel-auto</div>
 
 <!-- MODAL DE ALERTA DE PENDÊNCIAS — substitui o toast/alert escuro de antes. Aparece
      sempre que a validação unificada (validarFormularioRDO) bloqueia uma tentativa de
