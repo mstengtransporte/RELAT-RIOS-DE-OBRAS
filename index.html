@@ -1674,7 +1674,7 @@ body.dark #workers-body tr:hover{background-color:rgba(58,110,232,.08)}
      fontes) — os dois sistemas usam a mesma "moldura" de login, só
      o papel de parede muda entre eles. -->
 <div id="login-overlay" style="position:fixed;inset:0;z-index:99999;background:#0b1220 url('login-fundo-rdo.jpg') center center / cover no-repeat;color-scheme:dark">
-  <div style="position:absolute;bottom:6px;right:8px;font-size:9px;color:rgba(255,255,255,.35);font-family:monospace;pointer-events:none">v2026.08.23-retry-automatico-listas-nuvem</div>
+  <div style="position:absolute;bottom:6px;right:8px;font-size:9px;color:rgba(255,255,255,.35);font-family:monospace;pointer-events:none">v2026.08.23-andamento-extra-escopo-nunca-mistura-rdos</div>
   <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:calc(100% - 32px);max-width:380px;background:rgb(10,17,32);border:1px solid rgba(255,255,255,.14);border-radius:18px;padding:32px 28px;box-shadow:0 20px 60px rgba(0,0,0,.6);text-transform:none;font-weight:400">
     <h1 style="font-size:20px;margin:0 0 4px;color:#fff;text-align:center;font-weight:700">RDO <span style="color:#3ea6ff">Master Energy</span></h1>
     <p style="margin:0 0 24px;text-align:center;color:#9ca3af;font-size:13px;letter-spacing:.5px;font-weight:600">DIÁRIO DE OBRA PRO</p>
@@ -9314,6 +9314,12 @@ function coletarDadosExtraEscopo(dataInicio,dataFim){
         const horas=parseHrs(horaTxt||'');
         if(horas>0){
           registros.push({
+            rdoKey:k, // chave REAL e única deste RDO específico — essencial pra nunca misturar
+                      // dois RDOs diferentes que por coincidência têm a mesma data e mesmo
+                      // número de OSE (ex: 4 encarregados que todos usaram "OSE 01" no mesmo
+                      // dia, cada um no seu próprio RDO — sem isso, os agrupamentos abaixo
+                      // colidiam e juntavam gente/horas de RDOs diferentes debaixo de um só
+                      // cabeçalho, mostrando só o primeiro nome/RDO encontrado).
             data:h.data,
             dataFmt:formatarDataBR(h.data),
             obra:h.obra||'—',
@@ -9431,10 +9437,16 @@ function renderizarExtraEscopo(){
     return;
   }
 
-  // 1º agrupa por dia+OSE — descrição do serviço uma vez, com funcionários/horas embaixo
+  // 1º agrupa por RDO+OSE — descrição do serviço uma vez, com funcionários/horas embaixo.
+  // CORREÇÃO: antes agrupava só por data+OSE (ex: "23/08|OSE 01") — se VÁRIOS
+  // encarregados diferentes usaram "OSE 01" no MESMO dia (super comum, cada um no seu
+  // próprio RDO), as entradas colidiam e misturavam gente/horas de RDOs diferentes
+  // debaixo de um cabeçalho só (mostrando só o primeiro RDO encontrado, com todo mundo
+  // junto). Agora usa a chave REAL do RDO (rdoKey) — nunca mais colide entre RDOs
+  // diferentes, não importa quantos usem o mesmo número de OSE no mesmo dia.
   const grupos={};
   dados.forEach(r=>{
-    const chave=`${r.data}|${r.ose}`;
+    const chave=`${r.rdoKey}|${r.ose}`;
     if(!grupos[chave]) grupos[chave]={chave,data:r.data,obra:r.obra,disc:r.disc,nrdo:r.nrdo,encarregado:r.encarregado,ose:r.ose,servico:r.servico,descricao:r.descricao,trabalhadores:[]};
     grupos[chave].trabalhadores.push({nome:r.funcionario,funcao:r.funcao,horas:r.horas});
   });
@@ -9656,21 +9668,30 @@ function desfazerAcaoPainel(){
 // "Deletar" aqui não apaga as horas do RDO (isso corromperia o H.H do dia) — muda o
 // status daquela OSE naquele dia de volta pra "Sem Atividade", tirando-a do controle de
 // Extra Escopo. As horas continuam registradas normalmente no RDO original.
+// Extrai a chave REAL do RDO (localStorage) e o índice da OSE a partir da chave de
+// agrupamento "rdoKey|OSE NN". CORREÇÃO: antes devolvia "data" (só a data, tipo
+// "2026-08-23") em vez da chave de verdade do RDO, e removerExtraEscopoDoRDO
+// reconstruía a chave como "rdo-2026-08-23" — SEM o identificador único que toda
+// chave de RDO real tem (formato de verdade é "rdo-2026-08-23__idúnico"). Ou seja,
+// isso quase nunca encontrava o RDO de verdade pra editar (só por acaso, no raríssimo
+// caso de um RDO sem identificador). Agora usa a chave real armazenada no próprio
+// agrupamento, sem precisar reconstruir nada.
 function localizarOsePorChave(chave){
-  const [data,oseLbl]=chave.split('|');
+  const idxSeparador=chave.lastIndexOf('|');
+  const rdoKey=chave.substring(0,idxSeparador);
+  const oseLbl=chave.substring(idxSeparador+1);
   const idx=parseInt(oseLbl.replace('OSE ',''),10)-1;
-  return {data,idx};
+  return {rdoKey,idx};
 }
 
-function removerExtraEscopoDoRDO(data,idx){
-  const key=`rdo-${data}`;
-  const raw=localStorage.getItem(key);
+function removerExtraEscopoDoRDO(rdoKey,idx){
+  const raw=localStorage.getItem(rdoKey);
   if(!raw) return false;
   try{
     const d=JSON.parse(raw);
     if(d.oses&&d.oses[idx]){
       d.oses[idx].status='sem';
-      localStorage.setItem(key,JSON.stringify(d));
+      localStorage.setItem(rdoKey,JSON.stringify(d));
       return true;
     }
   }catch(e){ console.error('removerExtraEscopoDoRDO error:',e); }
@@ -9680,14 +9701,14 @@ function removerExtraEscopoDoRDO(data,idx){
 function deletarExtraEscopoIndividual(chave){
   const g=extraEscopoGruposAtuais[chave];
   if(!g) return;
-  const dataFmt=chave.split('|')[0].split('-').reverse().join('/');
+  const dataFmt=formatarDataBR(g.data);
   const ok=confirm(`Remover o Extra Escopo de ${dataFmt} — ${g.ose} (${g.servico||'sem nome'})?\n\nO status dessa OSE volta pra "Sem Atividade" nesse dia. As horas dos funcionários continuam registradas no RDO — só deixam de contar como Extra Escopo neste controle.`);
   if(!ok) return;
-  const {data,idx}=localizarOsePorChave(chave);
-  salvarSnapshotPainel(`Extra Escopo de ${dataFmt} — ${g.ose}`,[`rdo-${data}`]);
-  if(removerExtraEscopoDoRDO(data,idx)){
+  const {rdoKey,idx}=localizarOsePorChave(chave);
+  salvarSnapshotPainel(`Extra Escopo de ${dataFmt} — ${g.ose}`,[rdoKey]);
+  if(removerExtraEscopoDoRDO(rdoKey,idx)){
     // Se o RDO afetado é o que está aberto na tela agora, atualiza a tela também
-    if(document.getElementById('h-data').value===data){
+    if(localStorage.getItem('rdo-last-key')===rdoKey){
       const sel=document.getElementById(`ose-status-${idx+1}`);
       if(sel){ sel.value='sem'; updateOSEStatus(idx+1); }
     }
@@ -9701,9 +9722,8 @@ function deletarExtraEscopoIndividual(chave){
 // Remove só as horas de UM funcionário específico dentro de um registro de Extra Escopo
 // (dia+OSE) — os demais funcionários daquele mesmo grupo continuam intactos. Útil quando
 // só um lançamento estava errado, sem precisar apagar o registro inteiro do dia.
-function removerTrabalhadorDoExtraEscopo(data,idx,nomeFuncionario){
-  const key=`rdo-${data}`;
-  const raw=localStorage.getItem(key);
+function removerTrabalhadorDoExtraEscopo(rdoKey,idx,nomeFuncionario){
+  const raw=localStorage.getItem(rdoKey);
   if(!raw) return false;
   try{
     const d=JSON.parse(raw);
@@ -9711,7 +9731,7 @@ function removerTrabalhadorDoExtraEscopo(data,idx,nomeFuncionario){
     if(w&&w.hrs){
       w.hrs[idx]='';
       if(w.hst) w.hst[idx]='normal';
-      localStorage.setItem(key,JSON.stringify(d));
+      localStorage.setItem(rdoKey,JSON.stringify(d));
       return true;
     }
   }catch(e){ console.error('removerTrabalhadorDoExtraEscopo error:',e); }
@@ -9721,14 +9741,14 @@ function removerTrabalhadorDoExtraEscopo(data,idx,nomeFuncionario){
 function deletarTrabalhadorExtraEscopo(chave,nomeFuncionario){
   const g=extraEscopoGruposAtuais[chave];
   if(!g) return;
-  const dataFmt=chave.split('|')[0].split('-').reverse().join('/');
+  const dataFmt=formatarDataBR(g.data);
   const ok=confirm(`Remover só ${nomeFuncionario} deste registro (${dataFmt} — ${g.ose})?\n\nAs horas dele(a) nessa OSE, nesse dia, serão zeradas. Os outros funcionários do mesmo registro continuam normalmente.`);
   if(!ok) return;
-  const {data,idx}=localizarOsePorChave(chave);
-  salvarSnapshotPainel(`${nomeFuncionario} removido de ${dataFmt} — ${g.ose}`,[`rdo-${data}`]);
-  if(removerTrabalhadorDoExtraEscopo(data,idx,nomeFuncionario)){
+  const {rdoKey,idx}=localizarOsePorChave(chave);
+  salvarSnapshotPainel(`${nomeFuncionario} removido de ${dataFmt} — ${g.ose}`,[rdoKey]);
+  if(removerTrabalhadorDoExtraEscopo(rdoKey,idx,nomeFuncionario)){
     // Sincroniza a tela se o RDO afetado é o que está aberto agora
-    if(document.getElementById('h-data').value===data){
+    if(localStorage.getItem('rdo-last-key')===rdoKey){
       document.querySelectorAll('select.cell-name').forEach(sel=>{
         if((sel.value||'').trim().toUpperCase()===nomeFuncionario){
           const i=sel.id.replace('name-','');
@@ -9753,15 +9773,15 @@ function deletarExtraEscopoTodos(){
   if(!ok) return;
   // Autobackup de segurança — baixa uma cópia de tudo ANTES de mexer em qualquer coisa
   exportarBackupCompleto();
-  const chavesLS=[...new Set(chaves.map(c=>`rdo-${localizarOsePorChave(c).data}`))];
+  const chavesLS=[...new Set(chaves.map(c=>localizarOsePorChave(c).rdoKey))];
   salvarSnapshotPainel(`Deletar Todos — Extra Escopo (${chaves.length} registros)`,chavesLS);
-  const dataAberta=document.getElementById('h-data').value;
+  const chaveRdoAberto=localStorage.getItem('rdo-last-key');
   let removidos=0;
   chaves.forEach(chave=>{
-    const {data,idx}=localizarOsePorChave(chave);
-    if(removerExtraEscopoDoRDO(data,idx)){
+    const {rdoKey,idx}=localizarOsePorChave(chave);
+    if(removerExtraEscopoDoRDO(rdoKey,idx)){
       removidos++;
-      if(data===dataAberta){
+      if(rdoKey===chaveRdoAberto){
         const sel=document.getElementById(`ose-status-${idx+1}`);
         if(sel){ sel.value='sem'; updateOSEStatus(idx+1); }
       }
@@ -9901,6 +9921,12 @@ function coletarDadosAndamento(dataInicio,dataFim){
         const horas=parseHrs(horaTxt||'');
         if(horas>0){
           registros.push({
+            rdoKey:k, // chave REAL e única deste RDO específico — essencial pra nunca misturar
+                      // dois RDOs diferentes que por coincidência têm a mesma data e mesmo
+                      // número de OSE (ex: 4 encarregados que todos usaram "OSE 01" no mesmo
+                      // dia, cada um no seu próprio RDO — sem isso, os agrupamentos abaixo
+                      // colidiam e juntavam gente/horas de RDOs diferentes debaixo de um só
+                      // cabeçalho, mostrando só o primeiro nome/RDO encontrado).
             data:h.data,
             dataFmt:formatarDataBR(h.data),
             obra:h.obra||'—',
@@ -9963,11 +9989,15 @@ function renderizarAndamento(){
     return;
   }
 
-  // 1º agrupa por dia+OSE (mesmo formato do Extra Escopo, pra reaproveitar as mesmas
-  // funções de deletar/desagrupar por funcionário)
+  // 1º agrupa por RDO+OSE — CORREÇÃO (mesmo bug do Extra Escopo): antes agrupava só
+  // por data+OSE, e VÁRIOS encarregados diferentes usando "OSE 01" no MESMO dia (super
+  // comum, cada um no seu próprio RDO) colidiam e misturavam gente/horas de RDOs
+  // diferentes debaixo de um cabeçalho só — abria o RDO de um só encarregado, mas com
+  // todo mundo dos outros RDOs junto. Agora usa a chave REAL do RDO (rdoKey), nunca
+  // mais colide entre RDOs diferentes.
   const dias={};
   dados.forEach(r=>{
-    const chave=`${r.data}|${r.ose}`;
+    const chave=`${r.rdoKey}|${r.ose}`;
     if(!dias[chave]) dias[chave]={chave,data:r.data,obra:r.obra,disc:r.disc,nrdo:r.nrdo,encarregado:r.encarregado,ose:r.ose,servico:r.servico,descricao:r.descricao,trabalhadores:[]};
     dias[chave].trabalhadores.push({nome:r.funcionario,funcao:r.funcao,horas:r.horas});
   });
@@ -10060,13 +10090,13 @@ function renderizarAndamento(){
 function deletarAndamentoDia(chave){
   const g=andamentoGruposAtuais[chave];
   if(!g) return;
-  const dataFmt=chave.split('|')[0].split('-').reverse().join('/');
+  const dataFmt=formatarDataBR(g.data);
   const ok=confirm(`Remover o Andamento de ${dataFmt} — ${g.ose} (${g.servico})?\n\nO status dessa OSE volta pra "Sem Atividade" nesse dia. As horas continuam no RDO — só deixam de contar como Andamento deste projeto.`);
   if(!ok) return;
-  const {data,idx}=localizarOsePorChave(chave);
-  salvarSnapshotPainel(`Andamento de ${dataFmt} — ${g.ose}`,[`rdo-${data}`]);
-  if(removerExtraEscopoDoRDO(data,idx)){
-    if(document.getElementById('h-data').value===data){
+  const {rdoKey,idx}=localizarOsePorChave(chave);
+  salvarSnapshotPainel(`Andamento de ${dataFmt} — ${g.ose}`,[rdoKey]);
+  if(removerExtraEscopoDoRDO(rdoKey,idx)){
+    if(localStorage.getItem('rdo-last-key')===rdoKey){
       const sel=document.getElementById(`ose-status-${idx+1}`);
       if(sel){ sel.value='sem'; updateOSEStatus(idx+1); }
     }
@@ -10080,13 +10110,13 @@ function deletarAndamentoDia(chave){
 function deletarAndamentoTrabalhador(chave,nomeFuncionario){
   const g=andamentoGruposAtuais[chave];
   if(!g) return;
-  const dataFmt=chave.split('|')[0].split('-').reverse().join('/');
+  const dataFmt=formatarDataBR(g.data);
   const ok=confirm(`Remover só ${nomeFuncionario} deste registro (${dataFmt} — ${g.ose})?\n\nAs horas dele(a) nessa OSE, nesse dia, serão zeradas. Os outros funcionários continuam normalmente.`);
   if(!ok) return;
-  const {data,idx}=localizarOsePorChave(chave);
-  salvarSnapshotPainel(`${nomeFuncionario} removido de ${dataFmt} — ${g.ose}`,[`rdo-${data}`]);
-  if(removerTrabalhadorDoExtraEscopo(data,idx,nomeFuncionario)){
-    if(document.getElementById('h-data').value===data){
+  const {rdoKey,idx}=localizarOsePorChave(chave);
+  salvarSnapshotPainel(`${nomeFuncionario} removido de ${dataFmt} — ${g.ose}`,[rdoKey]);
+  if(removerTrabalhadorDoExtraEscopo(rdoKey,idx,nomeFuncionario)){
+    if(localStorage.getItem('rdo-last-key')===rdoKey){
       document.querySelectorAll('select.cell-name').forEach(sel=>{
         if((sel.value||'').trim().toUpperCase()===nomeFuncionario){
           const i=sel.id.replace('name-','');
@@ -10110,15 +10140,15 @@ function deletarAndamentoTodos(){
   const ok=confirm(`Remover TODOS os ${chaves.length} registro(s) de Andamento ${escopoTxto}?\n\nCada OSE volta pra "Sem Atividade" no dia correspondente. As horas continuam nos RDOs. Um backup automático de segurança será baixado antes, e dá pra usar "↩️ Desfazer" logo em seguida se for engano.`);
   if(!ok) return;
   exportarBackupCompleto();
-  const chavesLS=[...new Set(chaves.map(c=>`rdo-${localizarOsePorChave(c).data}`))];
+  const chavesLS=[...new Set(chaves.map(c=>localizarOsePorChave(c).rdoKey))];
   salvarSnapshotPainel(`Deletar Todos — Andamento (${chaves.length} registros)`,chavesLS);
-  const dataAberta=document.getElementById('h-data').value;
+  const chaveRdoAberto=localStorage.getItem('rdo-last-key');
   let removidos=0;
   chaves.forEach(chave=>{
-    const {data,idx}=localizarOsePorChave(chave);
-    if(removerExtraEscopoDoRDO(data,idx)){
+    const {rdoKey,idx}=localizarOsePorChave(chave);
+    if(removerExtraEscopoDoRDO(rdoKey,idx)){
       removidos++;
-      if(data===dataAberta){
+      if(rdoKey===chaveRdoAberto){
         const sel=document.getElementById(`ose-status-${idx+1}`);
         if(sel){ sel.value='sem'; updateOSEStatus(idx+1); }
       }
@@ -11369,7 +11399,7 @@ window.addEventListener('beforeinstallprompt',(e)=>{
   };
 });
 </script>
-<div class="no-print" style="position:fixed;bottom:2px;right:4px;font-size:8px;color:rgba(120,120,120,.4);font-family:monospace;pointer-events:none;z-index:5">v2026.08.23-retry-automatico-listas-nuvem</div>
+<div class="no-print" style="position:fixed;bottom:2px;right:4px;font-size:8px;color:rgba(120,120,120,.4);font-family:monospace;pointer-events:none;z-index:5">v2026.08.23-andamento-extra-escopo-nunca-mistura-rdos</div>
 
 <!-- MODAL DE ALERTA DE PENDÊNCIAS — substitui o toast/alert escuro de antes. Aparece
      sempre que a validação unificada (validarFormularioRDO) bloqueia uma tentativa de
