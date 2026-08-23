@@ -1674,7 +1674,7 @@ body.dark #workers-body tr:hover{background-color:rgba(58,110,232,.08)}
      fontes) — os dois sistemas usam a mesma "moldura" de login, só
      o papel de parede muda entre eles. -->
 <div id="login-overlay" style="position:fixed;inset:0;z-index:99999;background:#0b1220 url('login-fundo-rdo.jpg') center center / cover no-repeat;color-scheme:dark">
-  <div style="position:absolute;bottom:6px;right:8px;font-size:9px;color:rgba(255,255,255,.35);font-family:monospace;pointer-events:none">v2026.08.23-perf-dashboard-reenviar-corrigido</div>
+  <div style="position:absolute;bottom:6px;right:8px;font-size:9px;color:rgba(255,255,255,.35);font-family:monospace;pointer-events:none">v2026.08.23-dashboard-executivo-mais-rapidos</div>
   <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:calc(100% - 32px);max-width:380px;background:rgb(10,17,32);border:1px solid rgba(255,255,255,.14);border-radius:18px;padding:32px 28px;box-shadow:0 20px 60px rgba(0,0,0,.6);text-transform:none;font-weight:400">
     <h1 style="font-size:20px;margin:0 0 4px;color:#fff;text-align:center;font-weight:700">RDO <span style="color:#3ea6ff">Master Energy</span></h1>
     <p style="margin:0 0 24px;text-align:center;color:#9ca3af;font-size:13px;letter-spacing:.5px;font-weight:600">DIÁRIO DE OBRA PRO</p>
@@ -2768,7 +2768,26 @@ function onMudarClienteSelecionado(){
 // Varre todos os RDOs (já sincronizados do Supabase) e monta um resumo por
 // encarregado: quantos RDOs, quantas obras diferentes, e o total de horas
 // separado por status (Andamento, Extra Escopo, Concluído, Paralisado).
+// CACHE curto (8s) do resumo por encarregado — usado tanto pelo Dashboard Ao Vivo
+// quanto pelo Painel Executivo. ACHADO DE AUDITORIA (performance): esse cálculo varre
+// TODO o localStorage, faz JSON.parse de cada RDO e roda um loop OSE×funcionário
+// dentro de cada um — pesado o bastante pra ser perceptível quando o histórico
+// acumula com o tempo. Sem cache, abrir Dashboard e, na sequência, abrir Executivo
+// (bem comum) refazia esse trabalho pesado inteiro DUAS VEZES seguidas, mesmo sem
+// nada ter mudado entre as duas aberturas. O cache expira sozinho em 8s (tempo curto
+// o bastante pra nunca mostrar dado desatualizado de verdade) e também é invalidado
+// na hora sempre que uma sincronização com a nuvem termina ou uma exclusão acontece
+// dentro do próprio Executivo (função invalidarCacheResumoEncarregado()).
+let _cacheResumoEncarregado=null;
+let _cacheResumoEncarregadoQuando=0;
+const TTL_CACHE_RESUMO_MS=8000;
+function invalidarCacheResumoEncarregado(){ _cacheResumoEncarregado=null; }
+
 function coletarResumoPorEncarregado(){
+  const agora=Date.now();
+  if(_cacheResumoEncarregado && (agora-_cacheResumoEncarregadoQuando)<TTL_CACHE_RESUMO_MS){
+    return _cacheResumoEncarregado;
+  }
   const porEnc={};
   for(let i=0;i<localStorage.length;i++){
     const k=localStorage.key(i);
@@ -2815,7 +2834,10 @@ function coletarResumoPorEncarregado(){
     });
     r.rdosDetalhe.push({key:k,data:h.data,obra:h.obra||'—',nrdo:h.nrdo||'—',disc:h.disc||'—',totalHoras:totalRDO,atividades});
   }
-  return Object.values(porEnc).map(r=>({...r,rdos:r.rdos.size,obras:r.obras.size,rdosDetalhe:r.rdosDetalhe.sort((a,b)=>b.data.localeCompare(a.data))}));
+  const resultado=Object.values(porEnc).map(r=>({...r,rdos:r.rdos.size,obras:r.obras.size,rdosDetalhe:r.rdosDetalhe.sort((a,b)=>b.data.localeCompare(a.data))}));
+  _cacheResumoEncarregado=resultado;
+  _cacheResumoEncarregadoQuando=agora;
+  return resultado;
 }
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -2828,14 +2850,6 @@ let _intervalDashboardAoVivo=null;
 
 async function abrirDashboardAoVivo(){
   if(!exigirAdmin()) return;
-  // ACHADO DE AUDITORIA (performance): antes usava sincronizarSeAdmin(true) — o "true"
-  // força ignorar o cache de 30s e busca TUDO de novo na nuvem (até 5000 RDOs + todas as
-  // OSEs + todos os funcionários) toda vez que o Dashboard é aberto, mesmo que os dados já
-  // tivessem sido buscados há poucos segundos (ex: admin tinha acabado de abrir Extra
-  // Escopo ou Andamento). Sem o "true", respeita o cache — só busca de novo se realmente
-  // já passaram 30s, deixando a abertura bem mais rápida no caso comum.
-  await sincronizarSeAdmin();
-  await carregarEncarregados();
   autoSilentSave();
   document.getElementById('dash-modal')?.remove();
   const ov=document.createElement('div');
@@ -2881,12 +2895,24 @@ async function abrirDashboardAoVivo(){
       <img class="dash-logo" src="${LOGO_SRC}" alt="Master Energy">
       <div>
         <div class="dash-title">Dashboard Ao Vivo — Master Energy</div>
-        <div class="dash-subtitle"><span class="dash-live-dot"></span>Atualiza sozinho a cada 45 segundos · <span id="dash-ultima-att">agora</span></div>
+        <div class="dash-subtitle"><span class="dash-live-dot"></span>Atualiza sozinho a cada 90 segundos · <span id="dash-ultima-att">agora</span></div>
       </div>
       <button class="dash-btn-fechar" onclick="fecharDashboardAoVivo()">✕ Fechar</button>
     </div>
-    <div class="dash-body" id="dash-body"></div>`;
+    <div class="dash-body" id="dash-body">
+      <div style="text-align:center;padding:60px 20px;color:#7c9cc4">
+        <div style="font-size:13px;font-weight:800">⏳ Carregando dados...</div>
+      </div>
+    </div>`;
+  // ACHADO DE AUDITORIA (performance percebida): antes, a modal só aparecia na tela
+  // DEPOIS de esperar a sincronização com a nuvem inteira terminar — a pessoa clicava
+  // no botão e não via NADA acontecer até tudo estar pronto, parecendo travado. Agora a
+  // modal abre IMEDIATAMENTE (com um aviso de "Carregando..."), e só depois disso é que
+  // busca os dados e desenha o conteúdo de verdade — sem mudar quanto tempo o
+  // processamento leva, mas dando feedback visual instantâneo de que o clique funcionou.
   document.body.appendChild(ov);
+  await sincronizarSeAdmin();
+  await carregarEncarregados();
   renderizarDashboardAoVivo();
   clearInterval(_intervalDashboardAoVivo);
   // ACHADO DE AUDITORIA (performance): o auto-refresh ficava forçando ignorar o cache
@@ -3085,8 +3111,6 @@ function renderizarDashboardAoVivo(){
 
 async function abrirPainelExecutivo(){
   if(!exigirAdmin()) return;
-  await sincronizarSeAdmin();
-  await carregarEncarregados();
   autoSilentSave();
   document.getElementById('exec-modal')?.remove();
   const ov=document.createElement('div');
@@ -3116,7 +3140,11 @@ async function abrirPainelExecutivo(){
         <button class="exec-btn-fechar" onclick="document.getElementById('exec-modal').remove()">✕ Fechar</button>
       </div>
       <div class="exec-body">
-        <div id="exec-conteudo" class="exec-conteudo"></div>
+        <div id="exec-conteudo" class="exec-conteudo">
+          <div style="text-align:center;padding:60px 20px;color:var(--text3)">
+            <div style="font-size:13px;font-weight:800">⏳ Carregando dados...</div>
+          </div>
+        </div>
         <div class="exec-sidebar">
           <div style="font-size:10px;font-weight:900;text-transform:uppercase;color:var(--text3);padding:4px 6px 8px">Encarregados</div>
           <button onclick="renderizarVisaoGeralExecutivo()" id="exec-btn-geral" class="exec-sidebar-btn" style="display:block;width:100%;text-align:left;padding:9px 8px;border:none;background:#9d174d;color:#fff;border-radius:8px;font-size:12px;font-weight:900;cursor:pointer;margin-bottom:6px">📊 Visão Geral</button>
@@ -3125,7 +3153,13 @@ async function abrirPainelExecutivo(){
         </div>
       </div>
     </div>`;
+  // Mesma correção de percepção de velocidade do Dashboard: a modal aparece na hora
+  // (com "Carregando..."), e só depois disso busca os dados de verdade — clique
+  // sempre dá feedback visual instantâneo, mesmo que a busca em si leve alguns
+  // instantes.
   document.body.appendChild(ov);
+  await sincronizarSeAdmin();
+  await carregarEncarregados();
   renderizarVisaoGeralExecutivo();
 }
 
@@ -3230,6 +3264,7 @@ async function deletarAtividadeExecutivo(rdoKey,oseIndex,nomeEncarregado){
       }
     }
     showToast('🗑 Atividade removida.','#dc2626');
+    invalidarCacheResumoEncarregado(); // o total de horas mudou — a próxima leitura já reflete isso
     selecionarEncarregadoExecutivo(nomeEncarregado);
   }catch(e){
     console.error('deletarAtividadeExecutivo error:',e);
@@ -3541,7 +3576,10 @@ async function buscarERestaurarDaNuvem(dataDe,dataAte){
     // extra no banco. A ordenação que realmente importa pra tela (agrupada por
     // obra) acontece depois, em buscarRDOs() — isso aqui só garante que o "meio de
     // campo" já chega organizado.
-    let query=supabaseClient.from('rdos').select('*').order('nrdo',{ascending:true}).limit(5000);
+    // Pede só as colunas realmente usadas (em vez de select('*')) — corta o tamanho do
+    // que trafega pela rede e o quanto o navegador tem que processar, principalmente
+    // relevante em rdo_workers, que costuma ter MUITO mais linhas que rdos/rdo_oses.
+    let query=supabaseClient.from('rdos').select('id,rdo_key,nrdo,data,obra,disciplina,encarregado,row_counter,names_list,funcs_list,vehicles_list').order('nrdo',{ascending:true}).limit(5000);
     if(dataDe) query=query.gte('data',dataDe);
     if(dataAte) query=query.lte('data',dataAte);
     const{data:rdosData,error:erroRdos}=await query;
@@ -3553,8 +3591,8 @@ async function buscarERestaurarDaNuvem(dataDe,dataAte){
     // vez de uma esperar a outra terminar) corta bastante o tempo total de espera,
     // principalmente em internet mais lenta ou com muitos RDOs acumulados.
     const[{data:osesData,error:erroOses},{data:workersData,error:erroWorkers}]=await Promise.all([
-      supabaseClient.from('rdo_oses').select('*').in('rdo_id',rdoIds),
-      supabaseClient.from('rdo_workers').select('*').in('rdo_id',rdoIds)
+      supabaseClient.from('rdo_oses').select('rdo_id,ose_numero,nome,status,descricao,responsavel').in('rdo_id',rdoIds),
+      supabaseClient.from('rdo_workers').select('rdo_id,worker_index,nome,funcao,veiculo,hrs,hst').in('rdo_id',rdoIds)
     ]);
     if(erroOses) return{sucesso:0,falha:0,erro:erroOses.message};
     if(erroWorkers) return{sucesso:0,falha:0,erro:erroWorkers.message};
@@ -3606,6 +3644,7 @@ async function buscarERestaurarDaNuvem(dataDe,dataAte){
       }
     }
 
+    invalidarCacheResumoEncarregado(); // dados da nuvem podem ter mudado — próxima leitura do resumo já reflete isso, sem esperar o TTL de 8s
     return{sucesso,falha,erro:null};
   }catch(e){
     console.error('buscarERestaurarDaNuvem error:',e);
@@ -11410,7 +11449,7 @@ window.addEventListener('beforeinstallprompt',(e)=>{
   };
 });
 </script>
-<div class="no-print" style="position:fixed;bottom:2px;right:4px;font-size:8px;color:rgba(120,120,120,.4);font-family:monospace;pointer-events:none;z-index:5">v2026.08.23-perf-dashboard-reenviar-corrigido</div>
+<div class="no-print" style="position:fixed;bottom:2px;right:4px;font-size:8px;color:rgba(120,120,120,.4);font-family:monospace;pointer-events:none;z-index:5">v2026.08.23-dashboard-executivo-mais-rapidos</div>
 
 <!-- MODAL DE ALERTA DE PENDÊNCIAS — substitui o toast/alert escuro de antes. Aparece
      sempre que a validação unificada (validarFormularioRDO) bloqueia uma tentativa de
