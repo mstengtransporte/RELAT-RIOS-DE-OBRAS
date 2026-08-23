@@ -9,6 +9,9 @@
   "background_color": "#010d24",
   "theme_color": "#010d24",
   "lang": "pt-BR",
+  "launch_handler": {
+    "client_mode": "focus-existing"
+  },
   "icons": [
     {
       "src": "./icon-192.png",
