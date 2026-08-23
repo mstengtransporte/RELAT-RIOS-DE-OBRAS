@@ -1674,7 +1674,7 @@ body.dark #workers-body tr:hover{background-color:rgba(58,110,232,.08)}
      fontes) — os dois sistemas usam a mesma "moldura" de login, só
      o papel de parede muda entre eles. -->
 <div id="login-overlay" style="position:fixed;inset:0;z-index:99999;background:#0b1220 url('login-fundo-rdo.jpg') center center / cover no-repeat;color-scheme:dark">
-  <div style="position:absolute;bottom:6px;right:8px;font-size:9px;color:rgba(255,255,255,.35);font-family:monospace;pointer-events:none">v2026.08.23-auditoria-completa-todas-caixas</div>
+  <div style="position:absolute;bottom:6px;right:8px;font-size:9px;color:rgba(255,255,255,.35);font-family:monospace;pointer-events:none">v2026.08.23-perf-dashboard-reenviar-corrigido</div>
   <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:calc(100% - 32px);max-width:380px;background:rgb(10,17,32);border:1px solid rgba(255,255,255,.14);border-radius:18px;padding:32px 28px;box-shadow:0 20px 60px rgba(0,0,0,.6);text-transform:none;font-weight:400">
     <h1 style="font-size:20px;margin:0 0 4px;color:#fff;text-align:center;font-weight:700">RDO <span style="color:#3ea6ff">Master Energy</span></h1>
     <p style="margin:0 0 24px;text-align:center;color:#9ca3af;font-size:13px;letter-spacing:.5px;font-weight:600">DIÁRIO DE OBRA PRO</p>
@@ -2828,7 +2828,13 @@ let _intervalDashboardAoVivo=null;
 
 async function abrirDashboardAoVivo(){
   if(!exigirAdmin()) return;
-  await sincronizarSeAdmin(true);
+  // ACHADO DE AUDITORIA (performance): antes usava sincronizarSeAdmin(true) — o "true"
+  // força ignorar o cache de 30s e busca TUDO de novo na nuvem (até 5000 RDOs + todas as
+  // OSEs + todos os funcionários) toda vez que o Dashboard é aberto, mesmo que os dados já
+  // tivessem sido buscados há poucos segundos (ex: admin tinha acabado de abrir Extra
+  // Escopo ou Andamento). Sem o "true", respeita o cache — só busca de novo se realmente
+  // já passaram 30s, deixando a abertura bem mais rápida no caso comum.
+  await sincronizarSeAdmin();
   await carregarEncarregados();
   autoSilentSave();
   document.getElementById('dash-modal')?.remove();
@@ -2883,11 +2889,16 @@ async function abrirDashboardAoVivo(){
   document.body.appendChild(ov);
   renderizarDashboardAoVivo();
   clearInterval(_intervalDashboardAoVivo);
+  // ACHADO DE AUDITORIA (performance): o auto-refresh ficava forçando ignorar o cache
+  // a cada 45s, com o Dashboard aberto — cada ciclo repetia a busca pesada (até 5000
+  // RDOs + OSEs + funcionários) mesmo sem nada ter mudado na maioria das vezes. Subi
+  // pra 90s, cortando pela metade a carga de fundo enquanto a tela fica aberta, sem
+  // deixar de ser "ao vivo" (ainda atualiza sozinho, só que com menos frequência).
   _intervalDashboardAoVivo=setInterval(async()=>{
     if(!document.getElementById('dash-modal')) { clearInterval(_intervalDashboardAoVivo); return; }
     await sincronizarSeAdmin(true);
     renderizarDashboardAoVivo();
-  },45000);
+  },90000);
 }
 
 function fecharDashboardAoVivo(){
@@ -11399,7 +11410,7 @@ window.addEventListener('beforeinstallprompt',(e)=>{
   };
 });
 </script>
-<div class="no-print" style="position:fixed;bottom:2px;right:4px;font-size:8px;color:rgba(120,120,120,.4);font-family:monospace;pointer-events:none;z-index:5">v2026.08.23-auditoria-completa-todas-caixas</div>
+<div class="no-print" style="position:fixed;bottom:2px;right:4px;font-size:8px;color:rgba(120,120,120,.4);font-family:monospace;pointer-events:none;z-index:5">v2026.08.23-perf-dashboard-reenviar-corrigido</div>
 
 <!-- MODAL DE ALERTA DE PENDÊNCIAS — substitui o toast/alert escuro de antes. Aparece
      sempre que a validação unificada (validarFormularioRDO) bloqueia uma tentativa de
