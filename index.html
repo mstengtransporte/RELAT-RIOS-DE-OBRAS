@@ -1706,7 +1706,7 @@ body.dark #workers-body tr:hover{background-color:rgba(58,110,232,.08)}
      fontes) — os dois sistemas usam a mesma "moldura" de login, só
      o papel de parede muda entre eles. -->
 <div id="login-overlay" style="position:fixed;inset:0;z-index:99999;background:#0b1220 url('login-fundo-rdo.jpg') center center / cover no-repeat;color-scheme:dark">
-  <div style="position:absolute;bottom:6px;right:8px;font-size:9px;color:rgba(255,255,255,.35);font-family:monospace;pointer-events:none">v2026.08.22-sessao-auth-reforcada</div>
+  <div style="position:absolute;bottom:6px;right:8px;font-size:9px;color:rgba(255,255,255,.35);font-family:monospace;pointer-events:none">v2026.08.22-compressao-imagem</div>
   <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:calc(100% - 32px);max-width:380px;background:rgb(10,17,32);border:1px solid rgba(255,255,255,.14);border-radius:18px;padding:32px 28px;box-shadow:0 20px 60px rgba(0,0,0,.6);text-transform:none;font-weight:400">
     <h1 style="font-size:20px;margin:0 0 4px;color:#fff;text-align:center;font-weight:700">RDO <span style="color:#3ea6ff">Master Energy</span></h1>
     <p style="margin:0 0 24px;text-align:center;color:#9ca3af;font-size:13px;letter-spacing:.5px;font-weight:600">DIÁRIO DE OBRA PRO</p>
@@ -8059,6 +8059,61 @@ function execFmt(cmd,val){
   document.execCommand(cmd,false,val||null);
 }
 
+/**
+ * Comprime e redimensiona uma imagem no navegador ANTES de guardar/enviar pro banco —
+ * funciona com foto de celular (geralmente vários MB), arquivo do computador, foto
+ * 4K/HD ou PNG baixado da internet. Devolve uma Data URL já pequena (poucos KBs em vez
+ * de vários MBs), sem perda perceptível de leitura visual.
+ * @param {File|Blob} arquivo
+ * @param {Object}   [opcoes]
+ * @param {number}   [opcoes.maxLado=1600]     Maior lado final, em pixels.
+ * @param {number}   [opcoes.qualidade=0.75]   Qualidade de compressão, 0 a 1.
+ * @param {boolean}  [opcoes.preservarTransparencia=false]  true pra manter fundo
+ *        transparente de PNG (usa WebP em vez de achatar em fundo branco).
+ * @returns {Promise<string>} Data URL da imagem já comprimida.
+ */
+function comprimirImagem(arquivo, opcoes = {}) {
+  const { maxLado = 1600, qualidade = 0.75, preservarTransparencia = false } = opcoes;
+  return new Promise((resolve, reject) => {
+    if (!arquivo || !arquivo.type || !arquivo.type.startsWith('image/')) {
+      reject(new Error('Arquivo selecionado não é uma imagem.'));
+      return;
+    }
+    const leitor = new FileReader();
+    leitor.onerror = () => reject(new Error('Não foi possível ler o arquivo.'));
+    leitor.onload = () => {
+      const img = new Image();
+      img.onerror = () => reject(new Error('Não foi possível abrir essa imagem.'));
+      img.onload = () => {
+        let largura = img.naturalWidth || img.width;
+        let altura = img.naturalHeight || img.height;
+        if (largura > maxLado || altura > maxLado) {
+          if (largura >= altura) { altura = Math.round(altura * (maxLado / largura)); largura = maxLado; }
+          else { largura = Math.round(largura * (maxLado / altura)); altura = maxLado; }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = largura; canvas.height = altura;
+        const ctx = canvas.getContext('2d');
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+        if (!preservarTransparencia) {
+          ctx.fillStyle = '#FFFFFF'; // fundo branco atrás de PNG transparente (senão vira preto no JPEG)
+          ctx.fillRect(0, 0, largura, altura);
+        }
+        ctx.drawImage(img, 0, 0, largura, altura);
+        if (preservarTransparencia) {
+          const webp = canvas.toDataURL('image/webp', qualidade);
+          resolve(webp.startsWith('data:image/webp') ? webp : canvas.toDataURL('image/png')); // navegador sem suporte a WebP cai pra PNG
+          return;
+        }
+        resolve(canvas.toDataURL('image/jpeg', qualidade));
+      };
+      img.src = leitor.result;
+    };
+    leitor.readAsDataURL(arquivo);
+  });
+}
+
 function toggleCase(o){
   const el=document.getElementById(`ose-desc-${o}`);
   if(!el) return;
@@ -8083,11 +8138,11 @@ function handlePaste(e){
     if(item.type.startsWith('image/')){
       e.preventDefault();
       const file=item.getAsFile();
-      const reader=new FileReader();
-      reader.onload=ev=>{
-        document.execCommand('insertHTML',false,`<img src="${ev.target.result}" style="max-width:100%;max-height:100px;border-radius:4px;margin:2px">`);
-      };
-      reader.readAsDataURL(file);
+      comprimirImagem(file,{maxLado:1600,qualidade:0.75}).then(dataUrl=>{
+        document.execCommand('insertHTML',false,`<img src="${dataUrl}" style="max-width:100%;max-height:100px;border-radius:4px;margin:2px">`);
+      }).catch(()=>{
+        showToast('⚠️ Não foi possível processar essa imagem colada.','#dc2626');
+      });
       return;
     }
   }
@@ -8111,12 +8166,12 @@ function inserirImagem(o){
   input.type='file'; input.accept='image/*';
   input.onchange=()=>{
     const file=input.files[0]; if(!file) return;
-    const reader=new FileReader();
-    reader.onload=ev=>{
+    comprimirImagem(file,{maxLado:1600,qualidade:0.75}).then(dataUrl=>{
       const el=document.getElementById(`ose-desc-${o}`);
-      if(el){ el.focus(); document.execCommand('insertHTML',false,`<img src="${ev.target.result}" style="max-width:100%;max-height:100px;border-radius:4px;margin:2px">`); }
-    };
-    reader.readAsDataURL(file);
+      if(el){ el.focus(); document.execCommand('insertHTML',false,`<img src="${dataUrl}" style="max-width:100%;max-height:100px;border-radius:4px;margin:2px">`); }
+    }).catch(()=>{
+      showToast('⚠️ Não foi possível processar essa imagem.','#dc2626');
+    });
   };
   input.click();
 }
@@ -11115,7 +11170,7 @@ window.addEventListener('beforeinstallprompt',(e)=>{
   };
 });
 </script>
-<div class="no-print" style="position:fixed;bottom:2px;right:4px;font-size:8px;color:rgba(120,120,120,.4);font-family:monospace;pointer-events:none;z-index:5">v2026.08.22-sessao-auth-reforcada</div>
+<div class="no-print" style="position:fixed;bottom:2px;right:4px;font-size:8px;color:rgba(120,120,120,.4);font-family:monospace;pointer-events:none;z-index:5">v2026.08.22-compressao-imagem</div>
 
 <!-- MODAL DE ALERTA DE PENDÊNCIAS — substitui o toast/alert escuro de antes. Aparece
      sempre que a validação unificada (validarFormularioRDO) bloqueia uma tentativa de
