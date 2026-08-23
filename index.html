@@ -1706,7 +1706,7 @@ body.dark #workers-body tr:hover{background-color:rgba(58,110,232,.08)}
      fontes) — os dois sistemas usam a mesma "moldura" de login, só
      o papel de parede muda entre eles. -->
 <div id="login-overlay" style="position:fixed;inset:0;z-index:99999;background:#0b1220 url('login-fundo-rdo.jpg') center center / cover no-repeat;color-scheme:dark">
-  <div style="position:absolute;bottom:6px;right:8px;font-size:9px;color:rgba(255,255,255,.35);font-family:monospace;pointer-events:none">v2026.08.23-busca-ordenada-realtime-delete</div>
+  <div style="position:absolute;bottom:6px;right:8px;font-size:9px;color:rgba(255,255,255,.35);font-family:monospace;pointer-events:none">v2026.08.23-nome-encarregado-corrigido-sem-falso-duplicado</div>
   <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:calc(100% - 32px);max-width:380px;background:rgb(10,17,32);border:1px solid rgba(255,255,255,.14);border-radius:18px;padding:32px 28px;box-shadow:0 20px 60px rgba(0,0,0,.6);text-transform:none;font-weight:400">
     <h1 style="font-size:20px;margin:0 0 4px;color:#fff;text-align:center;font-weight:700">RDO <span style="color:#3ea6ff">Master Energy</span></h1>
     <p style="margin:0 0 24px;text-align:center;color:#9ca3af;font-size:13px;letter-spacing:.5px;font-weight:600">DIÁRIO DE OBRA PRO</p>
@@ -2667,28 +2667,39 @@ function popularFiltroEncarregado(selectId){
     encarregadosCache.map(e=>`<option value="${(e.nome||'').toUpperCase()}">${e.nome}</option>`).join('');
 }
 
-// Preenche o campo Encarregado do próprio RDO — pré-seleciona automaticamente o nome de
-// quem está logado (mais prático), mas deixa trocar se precisar (ex: admin preenchendo
-// em nome de outra pessoa). Compara de forma tolerante, mesmo esquema da Obra.
-// O campo Encarregado sempre mostra o nome de quem está logado agora — não dá mais pra
-// escolher outra pessoa, porque o login já É a identidade de quem está preenchendo o
-// RDO. Isso vale tanto pra um RDO novo quanto pra um já salvo (mesmo que tenha sido
-// criado com um nome digitado diferente antes, ele sempre aparece com o nome atual).
+// Preenche o campo Encarregado do próprio RDO. Tem 2 comportamentos bem diferentes,
+// que não podem ser confundidos:
+//  - RDO NOVO (ainda não existia): mostra o nome de quem está logado agora — faz
+//    sentido, é a pessoa preenchendo o relatório pela primeira vez.
+//  - RDO JÁ EXISTENTE (abrindo pra visualizar/editar um que já foi salvo antes):
+//    tem que mostrar o nome de quem REALMENTE CRIOU aquele RDO, não de quem está
+//    logado agora — senão um admin abrindo o RDO de um encarregado pra revisar via
+//    o nome dele SUBSTITUÍDO pelo nome do admin na tela, e se salvar de novo
+//    (mesmo só corrigindo outra coisa), esse nome errado ia pro banco PRA SEMPRE,
+//    apagando o encarregado de verdade daquele relatório. Esse era o bug real:
+//    "sempre trava no nome de quem está logado" ignorava completamente o nome
+//    salvo, não importava de quem fosse o RDO.
 function popularSelectEncarregado(){
+  if(!usuarioAtual) return;
+  aplicarNomeEncarregadoNoCampo((usuarioAtual.nome||'').toUpperCase());
+}
+
+// Mostra o nome do encarregado QUE REALMENTE CONSTA nesse RDO (o que já estava
+// gravado) — usado ao restaurar/abrir um RDO já existente. Nunca troca pelo nome
+// de quem está logado agora — é o nome de quem criou aquele relatório específico.
+function setEncarregadoSelecionado(valor){
+  if(!valor) { popularSelectEncarregado(); return; } // sem valor salvo (RDO muito antigo) — cai no padrão
+  aplicarNomeEncarregadoNoCampo(String(valor).toUpperCase());
+}
+
+function aplicarNomeEncarregadoNoCampo(nome){
   const campo=document.getElementById('h-enc');
-  if(!campo||!usuarioAtual) return;
-  const nome=(usuarioAtual.nome||'').toUpperCase();
+  if(!campo) return;
   campo.textContent=nome;
   let fs=13;
   if(nome.length>34) fs=10.5;
   else if(nome.length>24) fs=11.5;
   campo.style.fontSize=fs+'px';
-}
-
-// Mantido só por compatibilidade com chamadas antigas (ex: ao restaurar um RDO salvo) —
-// sempre trava no nome de quem está logado, não importa o que estava gravado antes.
-function setEncarregadoSelecionado(valor){
-  popularSelectEncarregado();
 }
 
 function popularSelectObra(nomes,valorParaManter){
@@ -6252,36 +6263,16 @@ async function salvarRDO(){
       return;
     }
 
-    // TRAVA CONTRA DUPLICADO ANTES DE ENVIAR — bloqueio DE VERDADE, sem opção de burlar.
-    // Checa direto na nuvem, ANTES da confirmação de envio, se já existe outro RDO
-    // enviado com a MESMA obra + data + encarregado + disciplina (só isso junto conta
-    // como duplicado de verdade — obra/data/encarregado repetidos com disciplina
-    // DIFERENTE é uso normal, cada disciplina tem seu próprio RDO, e a numeração
-    // continua a MESMA sequência da obra independente da disciplina). Se achar,
-    // BLOQUEIA o envio (nunca deixa "enviar mesmo assim") e mostra o número do RDO já
-    // existente, pra pessoa ir editar aquele em vez de criar um novo igual.
-    const supabaseClientParaChecagem=getSupabaseClient();
-    if(supabaseClientParaChecagem && usuarioAtual && d.header.obra && d.header.data && d.header.enc){
-      try{
-        const{data:possiveisDuplicados}=await supabaseClientParaChecagem
-          .from('rdos')
-          .select('nrdo,rdo_key')
-          .eq('data',d.header.data)
-          .ilike('obra',(d.header.obra||'').trim())
-          .ilike('encarregado',(d.header.enc||'').trim())
-          .ilike('disciplina',(d.header.disc||'').trim())
-          .neq('rdo_key',key);
-        if(possiveisDuplicados && possiveisDuplicados.length){
-          const numeros=possiveisDuplicados.map(r=>r.nrdo||'(sem número)').join(', ');
-          abrirModalPendenciasRDO([
-            `Já existe um RDO enviado com a MESMA obra, data, encarregado e disciplina — Nº ${numeros}.`,
-            `Envio bloqueado pra nunca duplicar um RDO. Abra o RDO ${numeros} em "Pesquisar RDOs" e edite ele em vez de criar um novo.`
-          ]);
-          showToast('❌ Envio bloqueado — RDO duplicado. Abra o RDO já existente em "Pesquisar RDOs".','#dc2626');
-          return;
-        }
-      }catch(e){ console.error('Checagem de duplicado antes de enviar:',e); } // se a checagem falhar, não bloqueia o envio por causa disso — só não avisa
-    }
+    // CHECAGEM DE "DUPLICADO" REMOVIDA DE PROPÓSITO (pedido explícito): cada RDO já
+    // tem um número (nrdo) sequencial e único POR OBRA, atribuído de forma atômica
+    // pelo próprio banco (função salvar_rdo_completo_v2) — dois RDOs nunca podem ter
+    // o mesmo número na mesma obra, então numericamente já não existe duplicata
+    // possível. A checagem antiga (obra+data+encarregado+disciplina batendo)
+    // dava falso positivo com frequência — dois RDOs LEGÍTIMOS e diferentes (ex:
+    // dois turnos, ou um RDO complementar no mesmo dia) tinham esse "heurística"
+    // batendo sem serem duplicata nenhuma. Retirada por completo — o número
+    // sequencial único já é a garantia real contra duplicidade.
+
 
     // CONFIRMAÇÃO EXPLÍCITA: nunca envia pro admin sem a pessoa confirmar de propósito —
     // clicar no botão sozinho não basta, precisa confirmar aqui também.
@@ -8728,23 +8719,21 @@ function buscarRDOs(){
   const dias=['DOM','SEG','TER','QUA','QUI','SEX','SÁB'];
   // Marca como "possível duplicado" quando Obra + Nº RDO + Data são idênticos —
   // ajuda a achar RDOs repetidos criados sem querer (ex: cliques de teste em
-  // "Novo RDO") pra facilitar apagar o que sobrou errado.
+  // "Novo RDO") pra facilitar apagar o que sobrou errado. Isso continua fazendo
+  // sentido porque o número é ÚNICO por obra (garantido pelo banco) — se dois RDOs
+  // aparecem com o MESMO número da MESMA obra, é uma anomalia de verdade, não um
+  // falso positivo.
   const contagem={};
   resultados.forEach(r=>{
     const chave=`${(r.obra||'').trim().toUpperCase()}|${(r.nrdo||'').trim().toUpperCase()}|${r.data}`;
     contagem[chave]=(contagem[chave]||0)+1;
   });
-  // CORREÇÃO (auditoria 2026-08-18): a checagem acima só pega duplicado quando o
-  // NÚMERO também bate. O caso real que aconteceu (falha no meio do envio seguida de
-  // reenvio) gera dois RDOs pra mesma obra+data+encarregado só que com NÚMEROS
-  // DIFERENTES — esse padrão passava batido antes. Contagem separada, sem o número,
-  // pra pegar esse caso também (aviso mais brando, cor diferente, já que aqui não dá
-  // pra saber de cara qual dos dois está certo).
-  const contagemSemNumero={};
-  resultados.forEach(r=>{
-    const chave=`${(r.obra||'').trim().toUpperCase()}|${(r.enc||'').trim().toUpperCase()}|${r.data}`;
-    contagemSemNumero[chave]=(contagemSemNumero[chave]||0)+1;
-  });
+  // REMOVIDO (pedido explícito — falso positivo): existia um segundo aviso, mais brando,
+  // pra "mesma obra+data+encarregado com número DIFERENTE" — isso disparava toda vez
+  // que dois RDOs LEGÍTIMOS e diferentes coincidiam nesses 3 campos (ex: dois turnos
+  // no mesmo dia), sem serem duplicata nenhuma de verdade. Como cada RDO já tem um
+  // número sequencial único garantido pelo banco, números diferentes já provam que
+  // não é duplicata — não precisa de mais nenhuma heurística em cima disso.
   resultDiv.innerHTML=resultados.map(r=>{
     let diaStr='';
     if(r.data){
@@ -8755,11 +8744,8 @@ function buscarRDOs(){
     const isCurrent=localStorage.getItem('rdo-last-key')===r.key;
     const chave=`${(r.obra||'').trim().toUpperCase()}|${(r.nrdo||'').trim().toUpperCase()}|${r.data}`;
     const possivelDuplicado=r.nrdo&&contagem[chave]>1;
-    const chaveSemNumero=`${(r.obra||'').trim().toUpperCase()}|${(r.enc||'').trim().toUpperCase()}|${r.data}`;
-    const possivelDuplicadoSemNumero=!possivelDuplicado&&r.enc&&contagemSemNumero[chaveSemNumero]>1;
-    return `<div class="rdo-result-item" style="${isCurrent?'border-color:#16a34a;':''}${possivelDuplicado?'border-color:#d97706;background:rgba(217,119,6,.08);':''}${possivelDuplicadoSemNumero?'border-color:#d97706;background:rgba(217,119,6,.04);':''}">
+    return `<div class="rdo-result-item" style="${isCurrent?'border-color:#16a34a;':''}${possivelDuplicado?'border-color:#d97706;background:rgba(217,119,6,.08);':''}">
       ${possivelDuplicado?'<div style="font-size:10px;font-weight:900;color:#d97706;margin-bottom:2px">⚠️ POSSÍVEL DUPLICADO — mesma obra, número e data de outro RDO</div>':''}
-      ${possivelDuplicadoSemNumero?'<div style="font-size:10px;font-weight:900;color:#d97706;margin-bottom:2px">⚠️ Existe outro RDO da mesma obra/data/encarregado com número diferente — confira se não é duplicado antes de manter os dois</div>':''}
       <div class="rdo-result-main">
         <span class="rdo-result-date">📅 ${dataFmt}${diaStr} ${isCurrent?'<span style="background:#16a34a;color:#fff;font-size:9px;padding:1px 5px;border-radius:8px;margin-left:4px">ABERTO</span>':''}</span>
         <span class="rdo-result-info">${r.obra||'—'} ${r.nrdo?'| '+r.nrdo:''} ${r.enc?'| '+r.enc:''}</span>
@@ -11425,7 +11411,7 @@ window.addEventListener('beforeinstallprompt',(e)=>{
   };
 });
 </script>
-<div class="no-print" style="position:fixed;bottom:2px;right:4px;font-size:8px;color:rgba(120,120,120,.4);font-family:monospace;pointer-events:none;z-index:5">v2026.08.23-busca-ordenada-realtime-delete</div>
+<div class="no-print" style="position:fixed;bottom:2px;right:4px;font-size:8px;color:rgba(120,120,120,.4);font-family:monospace;pointer-events:none;z-index:5">v2026.08.23-nome-encarregado-corrigido-sem-falso-duplicado</div>
 
 <!-- MODAL DE ALERTA DE PENDÊNCIAS — substitui o toast/alert escuro de antes. Aparece
      sempre que a validação unificada (validarFormularioRDO) bloqueia uma tentativa de
