@@ -1674,7 +1674,7 @@ body.dark #workers-body tr:hover{background-color:rgba(58,110,232,.08)}
      fontes) — os dois sistemas usam a mesma "moldura" de login, só
      o papel de parede muda entre eles. -->
 <div id="login-overlay" style="position:fixed;inset:0;z-index:99999;background:#0b1220 url('login-fundo-rdo.jpg') center center / cover no-repeat;color-scheme:dark">
-  <div style="position:absolute;bottom:6px;right:8px;font-size:9px;color:rgba(255,255,255,.35);font-family:monospace;pointer-events:none">v2026.08.23-retry-nao-insiste-em-erro-permanente</div>
+  <div style="position:absolute;bottom:6px;right:8px;font-size:9px;color:rgba(255,255,255,.35);font-family:monospace;pointer-events:none">v2026.08.23-restaura-rascunho-mais-recente-do-dia</div>
   <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:calc(100% - 32px);max-width:380px;background:rgb(10,17,32);border:1px solid rgba(255,255,255,.14);border-radius:18px;padding:32px 28px;box-shadow:0 20px 60px rgba(0,0,0,.6);text-transform:none;font-weight:400">
     <h1 style="font-size:20px;margin:0 0 4px;color:#fff;text-align:center;font-weight:700">RDO <span style="color:#3ea6ff">Master Energy</span></h1>
     <p style="margin:0 0 24px;text-align:center;color:#9ca3af;font-size:13px;letter-spacing:.5px;font-weight:600">DIÁRIO DE OBRA PRO</p>
@@ -6479,7 +6479,16 @@ function iniciarRDOEmBrancoNoBoot(){
       candidatosHoje.push({key:k,id:idDaChave,dados:d});
     }catch(e){}
   }
-  if(candidatosHoje.length===1){
+  if(candidatosHoje.length>=1){
+    // CORREÇÃO: antes só restaurava sozinho quando achava EXATAMENTE 1 candidato — se
+    // existisse 2 (ex: a pessoa testou/começou duas vezes sem querer) ou o Encarregado
+    // não batesse por algum motivo, o app desistia e abria uma tela em branco, SEM
+    // avisar nada — o rascunho continuava salvo, só não tinha jeito de encontrar ele
+    // de volta na tela. Agora, com 1 ou mais candidatos, sempre reabre o mais RECENTE
+    // deles (pelo horário da última edição local) — nunca mais fica em branco à toa
+    // quando existe algo preenchido de hoje esperando. Não muda nada na tela nem cria
+    // elemento novo nenhum — só troca o critério de qual rascunho escolher.
+    candidatosHoje.sort((a,b)=>(b.dados._ultimaEdicaoLocal||0)-(a.dados._ultimaEdicaoLocal||0));
     rdoAtualId=candidatosHoje[0].id;
     localStorage.setItem('rdo-last-key',candidatosHoje[0].key);
     restaurarEstadoCompleto(candidatosHoje[0].dados);
@@ -8200,6 +8209,10 @@ function autoSilentSave(){
     const temObra=(d.header.obra||'').trim().length>0;
     const temFuncionario=(d.workers||[]).some(w=>(w.name||'').trim().length>0);
     if(!temObra && !temFuncionario) return;
+    // Marca quando foi a última edição local — usado só pra escolher qual rascunho é
+    // "o mais recente" quando existe mais de um do mesmo dia (ver iniciarRDOEmBrancoNoBoot),
+    // nunca aparece na tela nem em nenhum lugar visível pro usuário.
+    d._ultimaEdicaoLocal=Date.now();
     const key=chaveRDO(d.header.data);
     localStorage.setItem(key,JSON.stringify(d));
     localStorage.setItem('rdo-last-key',key);
@@ -11464,7 +11477,7 @@ window.addEventListener('beforeinstallprompt',(e)=>{
   };
 });
 </script>
-<div class="no-print" style="position:fixed;bottom:2px;right:4px;font-size:8px;color:rgba(120,120,120,.4);font-family:monospace;pointer-events:none;z-index:5">v2026.08.23-retry-nao-insiste-em-erro-permanente</div>
+<div class="no-print" style="position:fixed;bottom:2px;right:4px;font-size:8px;color:rgba(120,120,120,.4);font-family:monospace;pointer-events:none;z-index:5">v2026.08.23-restaura-rascunho-mais-recente-do-dia</div>
 
 <!-- MODAL DE ALERTA DE PENDÊNCIAS — substitui o toast/alert escuro de antes. Aparece
      sempre que a validação unificada (validarFormularioRDO) bloqueia uma tentativa de
