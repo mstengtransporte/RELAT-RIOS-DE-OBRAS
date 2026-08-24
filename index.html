@@ -1674,7 +1674,7 @@ body.dark #workers-body tr:hover{background-color:rgba(58,110,232,.08)}
      fontes) — os dois sistemas usam a mesma "moldura" de login, só
      o papel de parede muda entre eles. -->
 <div id="login-overlay" style="position:fixed;inset:0;z-index:99999;background:#0b1220 url('login-fundo-rdo.jpg') center center / cover no-repeat;color-scheme:dark">
-  <div style="position:absolute;bottom:6px;right:8px;font-size:9px;color:rgba(255,255,255,.35);font-family:monospace;pointer-events:none">v2026.08.23-busca-nuvem-com-retry-automatico</div>
+  <div style="position:absolute;bottom:6px;right:8px;font-size:9px;color:rgba(255,255,255,.35);font-family:monospace;pointer-events:none">v2026.08.23-abre-instantaneo-atualiza-em-fundo</div>
   <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:calc(100% - 32px);max-width:380px;background:rgb(10,17,32);border:1px solid rgba(255,255,255,.14);border-radius:18px;padding:32px 28px;box-shadow:0 20px 60px rgba(0,0,0,.6);text-transform:none;font-weight:400">
     <h1 style="font-size:20px;margin:0 0 4px;color:#fff;text-align:center;font-weight:700">RDO <span style="color:#3ea6ff">Master Energy</span></h1>
     <p style="margin:0 0 24px;text-align:center;color:#9ca3af;font-size:13px;letter-spacing:.5px;font-weight:600">DIÁRIO DE OBRA PRO</p>
@@ -2895,7 +2895,7 @@ async function abrirDashboardAoVivo(){
       <img class="dash-logo" src="${LOGO_SRC}" alt="Master Energy">
       <div>
         <div class="dash-title">Dashboard Ao Vivo — Master Energy</div>
-        <div class="dash-subtitle"><span class="dash-live-dot"></span>Atualiza sozinho a cada 90 segundos · <span id="dash-ultima-att">agora</span></div>
+        <div class="dash-subtitle"><span class="dash-live-dot"></span><span id="dash-status-sync">Atualiza sozinho a cada 90 segundos</span> · <span id="dash-ultima-att">agora</span></div>
       </div>
       <button class="dash-btn-fechar" onclick="fecharDashboardAoVivo()">✕ Fechar</button>
     </div>
@@ -2904,16 +2904,21 @@ async function abrirDashboardAoVivo(){
         <div style="font-size:13px;font-weight:800">⏳ Carregando dados...</div>
       </div>
     </div>`;
-  // ACHADO DE AUDITORIA (performance percebida): antes, a modal só aparecia na tela
-  // DEPOIS de esperar a sincronização com a nuvem inteira terminar — a pessoa clicava
-  // no botão e não via NADA acontecer até tudo estar pronto, parecendo travado. Agora a
-  // modal abre IMEDIATAMENTE (com um aviso de "Carregando..."), e só depois disso é que
-  // busca os dados e desenha o conteúdo de verdade — sem mudar quanto tempo o
-  // processamento leva, mas dando feedback visual instantâneo de que o clique funcionou.
+  // TÉCNICA "mostra o que já tem, atualiza depois" (melhor dos dois mundos): em vez de
+  // deixar a tela travada em "Carregando..." até a busca na nuvem terminar (correto,
+  // mas lento de perceber), desenha JÁ o que já existir salvo neste aparelho — mesmo
+  // que seja de antes da troca de conta (bem rápido, é só processamento local) — e só
+  // DEPOIS busca a versão atualizada da nuvem e redesenha de novo com o dado fresco.
+  // A pessoa vê alguma coisa quase instantaneamente, e o conteúdo se atualiza sozinho
+  // assim que a busca de verdade terminar — sem travar a abertura esperando a rede.
   document.body.appendChild(ov);
+  renderizarDashboardAoVivo();
+  const statusSync=document.getElementById('dash-status-sync');
+  if(statusSync) statusSync.textContent='🔄 Confirmando com a nuvem...';
   await sincronizarSeAdmin(true);
   await carregarEncarregados();
   renderizarDashboardAoVivo();
+  if(statusSync) statusSync.textContent='Atualiza sozinho a cada 90 segundos';
   clearInterval(_intervalDashboardAoVivo);
   // ACHADO DE AUDITORIA (performance): o auto-refresh ficava forçando ignorar o cache
   // a cada 45s, com o Dashboard aberto — cada ciclo repetia a busca pesada (até 5000
@@ -3136,7 +3141,7 @@ async function abrirPainelExecutivo(){
     <div class="exec-box">
       <div class="exec-header">
         <button class="exec-btn-voltar" id="exec-btn-voltar" style="display:none" onclick="renderizarVisaoGeralExecutivo()">🔙 Voltar</button>
-        <span class="exec-header-title">🎯 Painel Executivo</span>
+        <span class="exec-header-title">🎯 Painel Executivo <span id="exec-status-sync" style="font-size:10px;font-weight:700;opacity:.75"></span></span>
         <button class="exec-btn-fechar" onclick="document.getElementById('exec-modal').remove()">✕ Fechar</button>
       </div>
       <div class="exec-body">
@@ -3153,14 +3158,17 @@ async function abrirPainelExecutivo(){
         </div>
       </div>
     </div>`;
-  // Mesma correção de percepção de velocidade do Dashboard: a modal aparece na hora
-  // (com "Carregando..."), e só depois disso busca os dados de verdade — clique
-  // sempre dá feedback visual instantâneo, mesmo que a busca em si leve alguns
-  // instantes.
+  // Mesma técnica "mostra o que já tem, atualiza depois" do Dashboard: desenha JÁ com o
+  // que existir localmente (rápido), e só depois busca a versão fresca da nuvem e
+  // redesenha de novo — a pessoa vê algo na hora, sem a tela travada esperando a rede.
   document.body.appendChild(ov);
+  renderizarVisaoGeralExecutivo();
+  const statusSyncExec=document.getElementById('exec-status-sync');
+  if(statusSyncExec) statusSyncExec.textContent='🔄 confirmando com a nuvem...';
   await sincronizarSeAdmin(true);
   await carregarEncarregados();
   renderizarVisaoGeralExecutivo();
+  if(statusSyncExec) statusSyncExec.textContent='';
 }
 
 function renderizarVisaoGeralExecutivo(){
@@ -11510,7 +11518,7 @@ window.addEventListener('beforeinstallprompt',(e)=>{
   };
 });
 </script>
-<div class="no-print" style="position:fixed;bottom:2px;right:4px;font-size:8px;color:rgba(120,120,120,.4);font-family:monospace;pointer-events:none;z-index:5">v2026.08.23-busca-nuvem-com-retry-automatico</div>
+<div class="no-print" style="position:fixed;bottom:2px;right:4px;font-size:8px;color:rgba(120,120,120,.4);font-family:monospace;pointer-events:none;z-index:5">v2026.08.23-abre-instantaneo-atualiza-em-fundo</div>
 
 <!-- MODAL DE ALERTA DE PENDÊNCIAS — substitui o toast/alert escuro de antes. Aparece
      sempre que a validação unificada (validarFormularioRDO) bloqueia uma tentativa de
