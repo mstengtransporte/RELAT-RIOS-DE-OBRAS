@@ -1674,7 +1674,7 @@ body.dark #workers-body tr:hover{background-color:rgba(58,110,232,.08)}
      fontes) — os dois sistemas usam a mesma "moldura" de login, só
      o papel de parede muda entre eles. -->
 <div id="login-overlay" style="position:fixed;inset:0;z-index:99999;background:#0b1220 url('login-fundo-rdo.jpg') center center / cover no-repeat;color-scheme:dark">
-  <div style="position:absolute;bottom:6px;right:8px;font-size:9px;color:rgba(255,255,255,.35);font-family:monospace;pointer-events:none">v2026.08.23-restaura-rascunho-mais-recente-do-dia</div>
+  <div style="position:absolute;bottom:6px;right:8px;font-size:9px;color:rgba(255,255,255,.35);font-family:monospace;pointer-events:none">v2026.08.23-sync-sempre-fresco-ao-abrir-painel</div>
   <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:calc(100% - 32px);max-width:380px;background:rgb(10,17,32);border:1px solid rgba(255,255,255,.14);border-radius:18px;padding:32px 28px;box-shadow:0 20px 60px rgba(0,0,0,.6);text-transform:none;font-weight:400">
     <h1 style="font-size:20px;margin:0 0 4px;color:#fff;text-align:center;font-weight:700">RDO <span style="color:#3ea6ff">Master Energy</span></h1>
     <p style="margin:0 0 24px;text-align:center;color:#9ca3af;font-size:13px;letter-spacing:.5px;font-weight:600">DIÁRIO DE OBRA PRO</p>
@@ -2911,7 +2911,7 @@ async function abrirDashboardAoVivo(){
   // busca os dados e desenha o conteúdo de verdade — sem mudar quanto tempo o
   // processamento leva, mas dando feedback visual instantâneo de que o clique funcionou.
   document.body.appendChild(ov);
-  await sincronizarSeAdmin();
+  await sincronizarSeAdmin(true);
   await carregarEncarregados();
   renderizarDashboardAoVivo();
   clearInterval(_intervalDashboardAoVivo);
@@ -3158,7 +3158,7 @@ async function abrirPainelExecutivo(){
   // sempre dá feedback visual instantâneo, mesmo que a busca em si leve alguns
   // instantes.
   document.body.appendChild(ov);
-  await sincronizarSeAdmin();
+  await sincronizarSeAdmin(true);
   await carregarEncarregados();
   renderizarVisaoGeralExecutivo();
 }
@@ -8629,7 +8629,7 @@ async function abrirBuscaRDO(){
   // num aparelho novo (ou que nunca sincronizou) veria a Busca vazia, mesmo tendo os
   // mesmos acessos de outro admin cujo aparelho já tinha dados salvos localmente.
   if(usuarioAtual&&usuarioAtual.papel==='admin_mestre'){
-    await sincronizarSeAdmin();
+    await sincronizarSeAdmin(true);
   } else if(usuarioAtual){
     // Encarregado: "Buscar todos RDOs" precisa mostrar o HISTÓRICO COMPLETO criado por
     // ele, não só o que sobrou salvo neste aparelho específico — sincroniza com a nuvem
@@ -8992,7 +8992,7 @@ function deletarFrase(idx){
 // ════════════════════════════════════════════════════════════
 async function abrirMultiPDF(){
   if(!exigirAdmin()) return;
-  await sincronizarSeAdmin(); // mesmo problema do Buscar: sem isso, um admin em aparelho sem dados locais gerava relatório vazio
+  await sincronizarSeAdmin(true); // mesmo problema do Buscar: sem isso, um admin em aparelho sem dados locais gerava relatório vazio
   autoSilentSave(); // garante que o RDO de hoje entra na lista com as horas mais recentes
   popularListaMultiPDF();
   document.getElementById('multipdf-modal').classList.add('show');
@@ -9427,11 +9427,18 @@ function coletarDadosExtraEscopo(dataInicio,dataFim){
 let _ultimaSincronizacaoAdmin=0;
 async function sincronizarSeAdmin(forcar=false){
   if(!usuarioAtual||usuarioAtual.papel!=='admin_mestre') return;
-  // Evita buscar tudo de novo na nuvem se o admin acabou de trocar de painel há poucos
-  // segundos (ex: Extra Escopo → Andamento → Horas/Projeto em sequência) — usa o que já
-  // foi buscado há pouco, bem mais rápido pra navegar entre os painéis.
+  // ACHADO DE AUDITORIA (correção de um efeito colateral): antes, ABRIR qualquer painel
+  // (Dashboard, Executivo, Busca, Extra Escopo, Andamento, Horas/Projeto, Check de
+  // Integridade) respeitava um cache de 30s pra evitar buscas repetidas — bom pra
+  // performance, mas causava exatamente o problema reportado: um admin testando rápido
+  // (ex: mandando um RDO como encarregado e trocando pra conta admin em seguida, no
+  // mesmo computador) via dado desatualizado até precisar dar F5 pra forçar. Corrigido:
+  // agora TODA abertura de painel busca de verdade (forçado) — o cache de 500ms abaixo
+  // só evita disparar a MESMA busca 2x em milissegundos (ex: dois cliques rápidos sem
+  // querer), não impede ver dado novo enviado há poucos segundos.
   const agora=Date.now();
   if(!forcar&&agora-_ultimaSincronizacaoAdmin<30000) return;
+  if(forcar&&agora-_ultimaSincronizacaoAdmin<500) return;
   showToast('☁️ Atualizando com dados de todos os encarregados...','#7c3aed');
   const{erro}=await buscarERestaurarDaNuvem(null,null);
   if(erro) showToast('⚠️ Não foi possível atualizar da nuvem agora — mostrando os dados que já estão neste aparelho.','#d97706');
@@ -9479,7 +9486,7 @@ async function forcarAtualizacaoBusca(btn){
 
 async function abrirExtraEscopo(){
   if(!exigirAdmin()) return;
-  await sincronizarSeAdmin();
+  await sincronizarSeAdmin(true);
   autoSilentSave(); // ESSENCIAL: garante que o Extra Escopo lançado agora na tela (ainda não salvo)
                      // entra na soma — sem isso, o total podia ficar diferente do que está na tela
   document.getElementById('ee-de').value='';
@@ -10028,7 +10035,7 @@ function coletarDadosAndamento(dataInicio,dataFim){
 
 async function abrirAndamento(){
   if(!exigirAdmin()) return;
-  await sincronizarSeAdmin();
+  await sincronizarSeAdmin(true);
   autoSilentSave(); // ESSENCIAL: garante que o Andamento lançado agora na tela entra na soma
   document.getElementById('an-de').value='';
   document.getElementById('an-ate').value='';
@@ -10390,7 +10397,7 @@ function coletarDadosProjeto(dataInicio,dataFim){
 
 async function abrirProjetos(){
   if(!exigirAdmin()) return;
-  await sincronizarSeAdmin();
+  await sincronizarSeAdmin(true);
   autoSilentSave(); // ESSENCIAL: garante que as horas lançadas agora entram no total do projeto
   document.getElementById('pj-de').value='';
   document.getElementById('pj-ate').value='';
@@ -11042,7 +11049,7 @@ async function exportarProjetosExcel(){
 // ════════════════════════════════════════════════════════════
 async function abrirCheckIntegridade(){
   if(!exigirAdmin()) return;
-  await sincronizarSeAdmin(); // essencial: sem isso, um admin em aparelho sem dados locais via "tudo certo" só por falta de dado, não por estar tudo certo mesmo
+  await sincronizarSeAdmin(true); // essencial: sem isso, um admin em aparelho sem dados locais via "tudo certo" só por falta de dado, não por estar tudo certo mesmo
   autoSilentSave(); // ESSENCIAL: o check precisa analisar o estado ATUAL da tela, não uma versão desatualizada
   executarCheckIntegridade();
   document.getElementById('check-modal').classList.add('show');
@@ -11477,7 +11484,7 @@ window.addEventListener('beforeinstallprompt',(e)=>{
   };
 });
 </script>
-<div class="no-print" style="position:fixed;bottom:2px;right:4px;font-size:8px;color:rgba(120,120,120,.4);font-family:monospace;pointer-events:none;z-index:5">v2026.08.23-restaura-rascunho-mais-recente-do-dia</div>
+<div class="no-print" style="position:fixed;bottom:2px;right:4px;font-size:8px;color:rgba(120,120,120,.4);font-family:monospace;pointer-events:none;z-index:5">v2026.08.23-sync-sempre-fresco-ao-abrir-painel</div>
 
 <!-- MODAL DE ALERTA DE PENDÊNCIAS — substitui o toast/alert escuro de antes. Aparece
      sempre que a validação unificada (validarFormularioRDO) bloqueia uma tentativa de
