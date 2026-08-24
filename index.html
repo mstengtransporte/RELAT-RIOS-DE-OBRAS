@@ -1674,7 +1674,7 @@ body.dark #workers-body tr:hover{background-color:rgba(58,110,232,.08)}
      fontes) — os dois sistemas usam a mesma "moldura" de login, só
      o papel de parede muda entre eles. -->
 <div id="login-overlay" style="position:fixed;inset:0;z-index:99999;background:#0b1220 url('login-fundo-rdo.jpg') center center / cover no-repeat;color-scheme:dark">
-  <div style="position:absolute;bottom:6px;right:8px;font-size:9px;color:rgba(255,255,255,.35);font-family:monospace;pointer-events:none">v2026.08.23-busca-encarregado-sempre-fresca</div>
+  <div style="position:absolute;bottom:6px;right:8px;font-size:9px;color:rgba(255,255,255,.35);font-family:monospace;pointer-events:none">v2026.08.23-busca-nuvem-com-retry-automatico</div>
   <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:calc(100% - 32px);max-width:380px;background:rgb(10,17,32);border:1px solid rgba(255,255,255,.14);border-radius:18px;padding:32px 28px;box-shadow:0 20px 60px rgba(0,0,0,.6);text-transform:none;font-weight:400">
     <h1 style="font-size:20px;margin:0 0 4px;color:#fff;text-align:center;font-weight:700">RDO <span style="color:#3ea6ff">Master Energy</span></h1>
     <p style="margin:0 0 24px;text-align:center;color:#9ca3af;font-size:13px;letter-spacing:.5px;font-weight:600">DIÁRIO DE OBRA PRO</p>
@@ -3582,20 +3582,42 @@ async function buscarERestaurarDaNuvem(dataDe,dataAte){
     let query=supabaseClient.from('rdos').select('id,rdo_key,nrdo,data,obra,disciplina,encarregado,row_counter,names_list,funcs_list,vehicles_list').order('nrdo',{ascending:true}).limit(5000);
     if(dataDe) query=query.gte('data',dataDe);
     if(dataAte) query=query.lte('data',dataAte);
-    const{data:rdosData,error:erroRdos}=await query;
+    // ACHADO DE AUDITORIA (causa real do "precisa dar F5 na troca de login"): ao trocar
+    // de conta no mesmo aparelho, o login já limpa os RDOs salvos localmente da conta
+    // anterior (por segurança, de propósito — nunca mistura dado de contas diferentes).
+    // Essa era a ÚNICA busca de nuvem "grande" do sistema que não tinha o retry
+    // automático — se ela falhasse por qualquer instabilidade passageira bem naquele
+    // instante logo após o login (a sessão nova do Supabase ainda "assentando", rede
+    // engasgando um instante), o app desistia na hora e mostrava a versão local — que
+    // tinha ACABADO de ser esvaziada pela troca de conta. Resultado: tela vazia até
+    // dar F5 (que dá um tempo maior e tenta tudo de novo do zero). Agora tenta de novo
+    // sozinha, igual as outras buscas já corrigidas antes.
+    const resultado=await comRetry(async()=>{
+      const r=await query;
+      if(r.error) throw r.error;
+      return r;
+    },{nomeParaLog:'buscar RDOs da nuvem'});
+    if(!resultado) return{sucesso:0,falha:0,erro:'Não foi possível buscar os RDOs da nuvem depois de várias tentativas.'};
+    const{data:rdosData,error:erroRdos}=resultado;
     if(erroRdos) return{sucesso:0,falha:0,erro:erroRdos.message};
     if(!rdosData||!rdosData.length) return{sucesso:0,falha:0,erro:null,vazio:true};
 
     const rdoIds=rdosData.map(r=>r.id);
     // As duas buscas abaixo são independentes uma da outra — rodando ao mesmo tempo (em
     // vez de uma esperar a outra terminar) corta bastante o tempo total de espera,
-    // principalmente em internet mais lenta ou com muitos RDOs acumulados.
-    const[{data:osesData,error:erroOses},{data:workersData,error:erroWorkers}]=await Promise.all([
-      supabaseClient.from('rdo_oses').select('rdo_id,ose_numero,nome,status,descricao,responsavel').in('rdo_id',rdoIds),
-      supabaseClient.from('rdo_workers').select('rdo_id,worker_index,nome,funcao,veiculo,hrs,hst').in('rdo_id',rdoIds)
-    ]);
-    if(erroOses) return{sucesso:0,falha:0,erro:erroOses.message};
-    if(erroWorkers) return{sucesso:0,falha:0,erro:erroWorkers.message};
+    // principalmente em internet mais lenta ou com muitos RDOs acumulados. Também
+    // protegidas com retry, pelo mesmo motivo da busca acima.
+    const resultadoFilhos=await comRetry(async()=>{
+      const[oses,workers]=await Promise.all([
+        supabaseClient.from('rdo_oses').select('rdo_id,ose_numero,nome,status,descricao,responsavel').in('rdo_id',rdoIds),
+        supabaseClient.from('rdo_workers').select('rdo_id,worker_index,nome,funcao,veiculo,hrs,hst').in('rdo_id',rdoIds)
+      ]);
+      if(oses.error) throw oses.error;
+      if(workers.error) throw workers.error;
+      return{osesData:oses.data,workersData:workers.data};
+    },{nomeParaLog:'buscar OSEs/funcionários da nuvem'});
+    if(!resultadoFilhos) return{sucesso:0,falha:0,erro:'Não foi possível buscar OSEs/funcionários da nuvem depois de várias tentativas.'};
+    const{osesData,workersData}=resultadoFilhos;
 
     // Agrupa OSEs e funcionários pelo RDO a que pertencem, pra montar cada RDO de volta
     // no mesmo formato que o app usa localmente (header + oses[6] + workers[]).
@@ -11488,7 +11510,7 @@ window.addEventListener('beforeinstallprompt',(e)=>{
   };
 });
 </script>
-<div class="no-print" style="position:fixed;bottom:2px;right:4px;font-size:8px;color:rgba(120,120,120,.4);font-family:monospace;pointer-events:none;z-index:5">v2026.08.23-busca-encarregado-sempre-fresca</div>
+<div class="no-print" style="position:fixed;bottom:2px;right:4px;font-size:8px;color:rgba(120,120,120,.4);font-family:monospace;pointer-events:none;z-index:5">v2026.08.23-busca-nuvem-com-retry-automatico</div>
 
 <!-- MODAL DE ALERTA DE PENDÊNCIAS — substitui o toast/alert escuro de antes. Aparece
      sempre que a validação unificada (validarFormularioRDO) bloqueia uma tentativa de
