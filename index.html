@@ -9690,16 +9690,37 @@ function compartilharExtraEscopoProjeto(nomeProjeto){
 async function exportarExtraEscopoExcel(){
   const de=document.getElementById('ee-de').value||null;
   const ate=document.getElementById('ee-ate').value||null;
-  const dados=coletarDadosExtraEscopo(de,ate);
+  // MELHORIA: passa a respeitar também o filtro de encarregado já existente no painel
+  // (antes a tela filtrava mas o Excel exportado sempre trazia TODOS os encarregados do
+  // período — inconsistência entre o que o admin via na tela e o que baixava).
+  const encFiltro=document.getElementById('ee-encarregado')?.value||'';
+  let dados=coletarDadosExtraEscopo(de,ate);
+  if(encFiltro) dados=dados.filter(r=>r.encarregado===encFiltro);
   if(!dados.length){ showToast('Nenhum Extra Escopo encontrado pra exportar.','#d97706'); return; }
   if(typeof ExcelJS==='undefined'){ showToast('Biblioteca de Excel ainda carregando — espera 2 segundos e tenta de novo.','#d97706'); return; }
+
+  // MELHORIA: agrupa por RDO de origem (rdoKey real, o mesmo já usado no painel pra nunca
+  // misturar RDOs diferentes) — cada RDO vira um bloco separado na planilha, com
+  // subtotal próprio, preservando o Nº do RDO exatamente como o sistema gerou (nenhum
+  // número novo é inventado aqui, só reaproveitado do que já existe).
+  const gruposPorRdo={};
+  dados.forEach(r=>{
+    if(!gruposPorRdo[r.rdoKey]){
+      gruposPorRdo[r.rdoKey]={nrdo:r.nrdo,data:r.data,dataFmt:r.dataFmt,obra:r.obra,encarregado:r.encarregado,registros:[],totalHoras:0};
+    }
+    gruposPorRdo[r.rdoKey].registros.push(r);
+    gruposPorRdo[r.rdoKey].totalHoras+=r.horas;
+  });
+  const gruposOrdenados=Object.values(gruposPorRdo).sort((a,b)=>
+    a.data===b.data ? String(a.nrdo).localeCompare(String(b.nrdo)) : a.data.localeCompare(b.data)
+  );
 
   const totalHoras=dados.reduce((s,r)=>s+r.horas,0);
   const wb=new ExcelJS.Workbook();
   wb.creator='Master Energy — Sistema de RDO';
   wb.created=new Date();
   const ws=wb.addWorksheet('Extra Escopo',{properties:{tabColor:{argb:'FF158038'}}});
-  const LARG=9;
+  const LARG=11;
 
   ws.mergeCells(1,1,3,LARG);
   const titulo=ws.getCell(1,1);
@@ -9709,13 +9730,15 @@ async function exportarExtraEscopoExcel(){
   for(let r=1;r<=3;r++) for(let c=1;c<=LARG;c++) ws.getCell(r,c).fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF158038'}};
 
   ws.mergeCells(4,1,4,LARG);
-  ws.getCell(4,1).value=`CONTROLE CONSOLIDADO DE EXTRA ESCOPO / ADICIONAL — Período: ${de?formatarDataBR(de):'início'} até ${ate?formatarDataBR(ate):'hoje'}`;
+  let subtitulo=`CONTROLE DE EXTRA ESCOPO / ADICIONAL — Período: ${de?formatarDataBR(de):'início'} até ${ate?formatarDataBR(ate):'hoje'}`;
+  if(encFiltro) subtitulo+=` — Encarregado: ${encFiltro}`;
+  ws.getCell(4,1).value=subtitulo;
   ws.getCell(4,1).font={italic:true,bold:true,size:11,color:{argb:'FF158038'}};
   ws.getCell(4,1).alignment={horizontal:'center'};
   ws.getRow(4).height=20;
 
   const headerRow=6;
-  const headers=['DATA','OBRA','OSE','SERVIÇO','DESCRIÇÃO DO QUE FOI FEITO','FUNCIONÁRIO','FUNÇÃO','VEÍCULO','HORAS'];
+  const headers=['Nº RDO','DATA','OBRA','ENCARREGADO','OSE','SERVIÇO','DESCRIÇÃO DO QUE FOI FEITO','FUNCIONÁRIO','FUNÇÃO','VEÍCULO','HORAS'];
   headers.forEach((h,ci)=>{
     const c=ws.getCell(headerRow,ci+1);
     c.value=h; c.font={bold:true,color:{argb:'FFFFFFFF'},size:10};
@@ -9724,40 +9747,88 @@ async function exportarExtraEscopoExcel(){
   });
   ws.getRow(headerRow).height=24;
 
-  dados.forEach((r,idx)=>{
-    const row=headerRow+1+idx;
-    const valores=[r.dataFmt,r.obra,r.ose,r.servico,r.descricao,r.funcionario,r.funcao,r.veiculo,Number(r.horas.toFixed(1))];
-    valores.forEach((v,ci)=>{
-      const c=ws.getCell(row,ci+1);
-      c.value=v;
-      c.fill={type:'pattern',pattern:'solid',fgColor:{argb:idx%2===0?'FFFFFFFF':'FFEAF5EE'}};
-      c.border={bottom:{style:'thin',color:{argb:'FFEEEEEE'}}};
-      if(typeof v==='number'){ c.numFmt='0.0'; c.font={bold:true,size:10}; c.alignment={horizontal:'center'}; }
-      else{ c.font={size:10}; c.alignment={horizontal:'left',vertical:'middle',indent:1,wrapText:ci===4}; }
+  let linhaAtual=headerRow+1;
+  gruposOrdenados.forEach(g=>{
+    // Barra separadora do RDO — identifica de relance de qual RDO/obra/encarregado vieram
+    // as linhas logo abaixo, sem precisar ler coluna por coluna (rastreabilidade).
+    ws.mergeCells(linhaAtual,1,linhaAtual,LARG);
+    const cBarra=ws.getCell(linhaAtual,1);
+    cBarra.value=`🟢 ${g.nrdo} — ${g.obra} — Encarregado: ${g.encarregado} — ${g.dataFmt}`;
+    cBarra.font={bold:true,size:10,color:{argb:'FF0D5228'}};
+    cBarra.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFD6EFE0'}};
+    cBarra.alignment={horizontal:'left',vertical:'middle',indent:1};
+    ws.getRow(linhaAtual).height=18;
+    linhaAtual++;
+
+    g.registros.forEach((r,idx)=>{
+      const valores=[r.nrdo,r.dataFmt,r.obra,r.encarregado,r.ose,r.servico,r.descricao,r.funcionario,r.funcao,r.veiculo,Number(r.horas.toFixed(1))];
+      valores.forEach((v,ci)=>{
+        const c=ws.getCell(linhaAtual,ci+1);
+        c.value=v;
+        c.fill={type:'pattern',pattern:'solid',fgColor:{argb:idx%2===0?'FFFFFFFF':'FFEAF5EE'}};
+        c.border={bottom:{style:'thin',color:{argb:'FFEEEEEE'}}};
+        if(typeof v==='number'){ c.numFmt='0.0'; c.font={bold:true,size:10}; c.alignment={horizontal:'center'}; }
+        else{ c.font={size:10}; c.alignment={horizontal:'left',vertical:'middle',indent:1,wrapText:ci===6}; }
+      });
+      linhaAtual++;
     });
+
+    // Subtotal deste RDO — soma só as horas daquele RDO específico, útil quando o
+    // período/filtro junta vários RDOs numa mesma exportação.
+    ws.mergeCells(linhaAtual,1,linhaAtual,LARG-1);
+    const cSub=ws.getCell(linhaAtual,1);
+    cSub.value=`Subtotal — ${g.nrdo} (${g.obra})`;
+    cSub.font={bold:true,size:10,color:{argb:'FF0D5228'}};
+    cSub.alignment={horizontal:'right',vertical:'middle'};
+    const cSubVal=ws.getCell(linhaAtual,LARG);
+    cSubVal.value=Number(g.totalHoras.toFixed(1));
+    cSubVal.numFmt='0.0';
+    cSubVal.font={bold:true,size:10,color:{argb:'FF0D5228'}};
+    cSubVal.alignment={horizontal:'center'};
+    for(let c=1;c<=LARG;c++) ws.getCell(linhaAtual,c).fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFEFF9F2'}};
+    ws.getRow(linhaAtual).height=16;
+    linhaAtual++;
+    linhaAtual++; // linha em branco separando o próximo RDO
   });
 
-  const linhaTotal=headerRow+1+dados.length+1;
-  ws.mergeCells(linhaTotal,1,linhaTotal,8);
-  ws.getCell(linhaTotal,1).value='TOTAL DE HORAS EXTRAS (EXTRA ESCOPO)';
+  const linhaTotal=linhaAtual;
+  ws.mergeCells(linhaTotal,1,linhaTotal,LARG-1);
+  ws.getCell(linhaTotal,1).value='TOTAL GERAL DE HORAS EXTRAS (EXTRA ESCOPO)';
   ws.getCell(linhaTotal,1).font={bold:true,size:11,color:{argb:'FFFFFFFF'}};
   ws.getCell(linhaTotal,1).alignment={horizontal:'right',vertical:'middle'};
-  ws.getCell(linhaTotal,9).value=Number(totalHoras.toFixed(1));
-  ws.getCell(linhaTotal,9).numFmt='0.0';
-  ws.getCell(linhaTotal,9).font={bold:true,size:12,color:{argb:'FFFFFFFF'}};
-  ws.getCell(linhaTotal,9).alignment={horizontal:'center'};
+  ws.getCell(linhaTotal,LARG).value=Number(totalHoras.toFixed(1));
+  ws.getCell(linhaTotal,LARG).numFmt='0.0';
+  ws.getCell(linhaTotal,LARG).font={bold:true,size:12,color:{argb:'FFFFFFFF'}};
+  ws.getCell(linhaTotal,LARG).alignment={horizontal:'center'};
   for(let c=1;c<=LARG;c++) ws.getCell(linhaTotal,c).fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF158038'}};
 
-  ws.autoFilter={from:{row:headerRow,column:1},to:{row:headerRow,column:LARG}};
-  ws.getColumn(1).width=12; ws.getColumn(2).width=24; ws.getColumn(3).width=9; ws.getColumn(4).width=26;
-  ws.getColumn(5).width=50; ws.getColumn(6).width=24; ws.getColumn(7).width=16; ws.getColumn(8).width=16; ws.getColumn(9).width=11;
+  ws.getColumn(1).width=12; ws.getColumn(2).width=12; ws.getColumn(3).width=24; ws.getColumn(4).width=22;
+  ws.getColumn(5).width=9; ws.getColumn(6).width=26; ws.getColumn(7).width=46; ws.getColumn(8).width=24;
+  ws.getColumn(9).width=16; ws.getColumn(10).width=16; ws.getColumn(11).width=11;
 
   const buffer=await wb.xlsx.writeBuffer();
   const blob=new Blob([buffer],{type:'application/octet-stream'});
   const url=URL.createObjectURL(blob);
   const a=document.createElement('a');
   const carimbo=hojeLocal();
-  a.href=url; a.download=`Extra_Escopo_MasterEnergy_${carimbo}.xlsx`; a.click();
+
+  // MELHORIA: nome do arquivo mais informativo. Se a exportação corresponde a um único
+  // RDO (ex: filtro de um dia específico onde só um RDO teve Extra Escopo), o nome já
+  // identifica Nº RDO + Obra + Data + Encarregado — mesmo padrão usado no "Salvar e
+  // Enviar". Se junta vários RDOs (período maior), mantém o nome consolidado de sempre,
+  // só acrescentando o encarregado quando esse filtro estiver ativo.
+  let nomeArquivo;
+  if(gruposOrdenados.length===1){
+    const g=gruposOrdenados[0];
+    const[y,m,dd]=g.data.split('-');
+    nomeArquivo=`${sanitizarNomeArquivo(g.nrdo)} - Extra Escopo - ${dd}-${m}-${y} - Obra ${sanitizarNomeArquivo(g.obra)} - ${sanitizarNomeArquivo(g.encarregado)}.xlsx`;
+  }else if(encFiltro){
+    nomeArquivo=`Extra_Escopo_MasterEnergy_${sanitizarNomeArquivo(encFiltro)}_${carimbo}.xlsx`;
+  }else{
+    nomeArquivo=`Extra_Escopo_MasterEnergy_${carimbo}.xlsx`;
+  }
+
+  a.href=url; a.download=nomeArquivo; a.click();
   setTimeout(()=>URL.revokeObjectURL(url),3000);
   showToast('📥 Controle de Extra Escopo exportado com formatação!','#158038');
 }
