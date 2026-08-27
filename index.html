@@ -9582,7 +9582,7 @@ function renderizarExtraEscopo(){
   dados.forEach(r=>{
     const chave=`${r.rdoKey}|${r.ose}`;
     if(!grupos[chave]) grupos[chave]={chave,data:r.data,obra:r.obra,disc:r.disc,nrdo:r.nrdo,encarregado:r.encarregado,ose:r.ose,servico:r.servico,descricao:r.descricao,trabalhadores:[]};
-    grupos[chave].trabalhadores.push({nome:r.funcionario,funcao:r.funcao,horas:r.horas});
+    grupos[chave].trabalhadores.push({nome:r.funcionario,funcao:r.funcao,veiculo:r.veiculo,horas:r.horas});
   });
   extraEscopoGruposAtuais=grupos; // pros botões de deletar/compartilhar por dia e por funcionário
 
@@ -9643,6 +9643,7 @@ function renderizarExtraEscopo(){
             <div style="text-align:right;white-space:nowrap">
               <div style="font-weight:900;color:#158038;margin-bottom:3px">${fmt(totalDia)}h</div>
               <button onclick="compartilharExtraEscopoIndividual('${g.chave}')" title="PDF só deste dia" style="background:#0a6080;color:#fff;border:none;padding:2px 5px;font-size:10px;cursor:pointer;margin-bottom:2px">📤</button>
+              <button onclick="exportarExtraEscopoExcelIndividual('${g.chave}')" title="Excel só deste dia" style="background:#158038;color:#fff;border:none;padding:2px 5px;font-size:10px;cursor:pointer;margin-bottom:2px">📥</button>
               <button onclick="deletarExtraEscopoIndividual('${g.chave}')" title="Remover só este dia" style="background:#fee2e2;color:#dc2626;border:1px solid #dc2626;padding:2px 5px;font-size:10px;cursor:pointer">🗑️</button>
             </div>
           </div>
@@ -9666,6 +9667,7 @@ function renderizarExtraEscopo(){
         ${disciplinasHtml}
         <div style="display:flex;justify-content:flex-end;gap:6px;margin-top:6px">
           <button onclick="compartilharExtraEscopoProjeto('${chaveSegura}')" style="background:#0a6080;color:#fff;border:none;padding:4px 10px;font-size:10px;font-weight:900;cursor:pointer">📤 PDF deste Extra Escopo</button>
+          <button onclick="exportarExtraEscopoExcelProjeto('${chaveSegura}')" style="background:#158038;color:#fff;border:none;padding:4px 10px;font-size:10px;font-weight:900;cursor:pointer">📥 Excel deste Extra Escopo</button>
         </div>
       </div>
     </div>`;
@@ -9687,35 +9689,12 @@ function compartilharExtraEscopoProjeto(nomeProjeto){
   compartilharOuBaixarPdfExtraEscopo(doc,`Extra_Escopo_${nomeArquivo}.pdf`,`Extra Escopo — ${p.nome}`);
 }
 
-async function exportarExtraEscopoExcel(){
-  const de=document.getElementById('ee-de').value||null;
-  const ate=document.getElementById('ee-ate').value||null;
-  // MELHORIA: passa a respeitar também o filtro de encarregado já existente no painel
-  // (antes a tela filtrava mas o Excel exportado sempre trazia TODOS os encarregados do
-  // período — inconsistência entre o que o admin via na tela e o que baixava).
-  const encFiltro=document.getElementById('ee-encarregado')?.value||'';
-  let dados=coletarDadosExtraEscopo(de,ate);
-  if(encFiltro) dados=dados.filter(r=>r.encarregado===encFiltro);
-  if(!dados.length){ showToast('Nenhum Extra Escopo encontrado pra exportar.','#d97706'); return; }
-  if(typeof ExcelJS==='undefined'){ showToast('Biblioteca de Excel ainda carregando — espera 2 segundos e tenta de novo.','#d97706'); return; }
-
-  // MELHORIA: agrupa por RDO de origem (rdoKey real, o mesmo já usado no painel pra nunca
-  // misturar RDOs diferentes) — cada RDO vira um bloco separado na planilha, com
-  // subtotal próprio, preservando o Nº do RDO exatamente como o sistema gerou (nenhum
-  // número novo é inventado aqui, só reaproveitado do que já existe).
-  const gruposPorRdo={};
-  dados.forEach(r=>{
-    if(!gruposPorRdo[r.rdoKey]){
-      gruposPorRdo[r.rdoKey]={nrdo:r.nrdo,data:r.data,dataFmt:r.dataFmt,obra:r.obra,encarregado:r.encarregado,registros:[],totalHoras:0};
-    }
-    gruposPorRdo[r.rdoKey].registros.push(r);
-    gruposPorRdo[r.rdoKey].totalHoras+=r.horas;
-  });
-  const gruposOrdenados=Object.values(gruposPorRdo).sort((a,b)=>
-    a.data===b.data ? String(a.nrdo).localeCompare(String(b.nrdo)) : a.data.localeCompare(b.data)
-  );
-
-  const totalHoras=dados.reduce((s,r)=>s+r.horas,0);
+// ── MONTAGEM DA PLANILHA DE EXTRA ESCOPO — função única e reutilizável ─────────────────
+// Usada pelas 3 formas de exportar (tudo / só um dia-RDO / só um projeto-OSE), pra nunca
+// ter 3 cópias divergentes da mesma lógica. Recebe um array de "grupos" no MESMO formato
+// que o painel já usa pra tela e pro PDF (extraEscopoGruposAtuais / extraEscopoProjetosAtuais),
+// então o Excel SEMPRE bate com o que está sendo mostrado na tela.
+async function construirWorkbookExtraEscopo(grupos,subtitulo){
   const wb=new ExcelJS.Workbook();
   wb.creator='Master Energy — Sistema de RDO';
   wb.created=new Date();
@@ -9730,8 +9709,6 @@ async function exportarExtraEscopoExcel(){
   for(let r=1;r<=3;r++) for(let c=1;c<=LARG;c++) ws.getCell(r,c).fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF158038'}};
 
   ws.mergeCells(4,1,4,LARG);
-  let subtitulo=`CONTROLE DE EXTRA ESCOPO / ADICIONAL — Período: ${de?formatarDataBR(de):'início'} até ${ate?formatarDataBR(ate):'hoje'}`;
-  if(encFiltro) subtitulo+=` — Encarregado: ${encFiltro}`;
   ws.getCell(4,1).value=subtitulo;
   ws.getCell(4,1).font={italic:true,bold:true,size:11,color:{argb:'FF158038'}};
   ws.getCell(4,1).alignment={horizontal:'center'};
@@ -9748,20 +9725,26 @@ async function exportarExtraEscopoExcel(){
   ws.getRow(headerRow).height=24;
 
   let linhaAtual=headerRow+1;
-  gruposOrdenados.forEach(g=>{
-    // Barra separadora do RDO — identifica de relance de qual RDO/obra/encarregado vieram
-    // as linhas logo abaixo, sem precisar ler coluna por coluna (rastreabilidade).
+  let totalHoras=0;
+  grupos.forEach(g=>{
+    const totalGrupo=g.trabalhadores.reduce((s,t)=>s+t.horas,0);
+    totalHoras+=totalGrupo;
+    const[yy,mm,dd]=g.data.split('-');
+    const dataFmt=`${dd}/${mm}/${yy}`;
+
+    // Barra separadora — identifica de relance de qual RDO/obra/encarregado/OSE vieram as
+    // linhas logo abaixo, sem precisar ler coluna por coluna (rastreabilidade).
     ws.mergeCells(linhaAtual,1,linhaAtual,LARG);
     const cBarra=ws.getCell(linhaAtual,1);
-    cBarra.value=`🟢 ${g.nrdo} — ${g.obra} — Encarregado: ${g.encarregado} — ${g.dataFmt}`;
+    cBarra.value=`🟢 ${g.nrdo} — ${g.obra} — Encarregado: ${g.encarregado} — ${g.ose} — ${dataFmt}`;
     cBarra.font={bold:true,size:10,color:{argb:'FF0D5228'}};
     cBarra.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFD6EFE0'}};
     cBarra.alignment={horizontal:'left',vertical:'middle',indent:1};
     ws.getRow(linhaAtual).height=18;
     linhaAtual++;
 
-    g.registros.forEach((r,idx)=>{
-      const valores=[r.nrdo,r.dataFmt,r.obra,r.encarregado,r.ose,r.servico,r.descricao,r.funcionario,r.funcao,r.veiculo,Number(r.horas.toFixed(1))];
+    g.trabalhadores.forEach((t,idx)=>{
+      const valores=[g.nrdo,dataFmt,g.obra,g.encarregado,g.ose,g.servico,g.descricao,t.nome,t.funcao,t.veiculo||'—',Number(t.horas.toFixed(1))];
       valores.forEach((v,ci)=>{
         const c=ws.getCell(linhaAtual,ci+1);
         c.value=v;
@@ -9773,22 +9756,21 @@ async function exportarExtraEscopoExcel(){
       linhaAtual++;
     });
 
-    // Subtotal deste RDO — soma só as horas daquele RDO específico, útil quando o
-    // período/filtro junta vários RDOs numa mesma exportação.
+    // Subtotal deste bloco (RDO+OSE) — útil quando a exportação junta mais de um.
     ws.mergeCells(linhaAtual,1,linhaAtual,LARG-1);
     const cSub=ws.getCell(linhaAtual,1);
-    cSub.value=`Subtotal — ${g.nrdo} (${g.obra})`;
+    cSub.value=`Subtotal — ${g.nrdo} (${g.ose})`;
     cSub.font={bold:true,size:10,color:{argb:'FF0D5228'}};
     cSub.alignment={horizontal:'right',vertical:'middle'};
     const cSubVal=ws.getCell(linhaAtual,LARG);
-    cSubVal.value=Number(g.totalHoras.toFixed(1));
+    cSubVal.value=Number(totalGrupo.toFixed(1));
     cSubVal.numFmt='0.0';
     cSubVal.font={bold:true,size:10,color:{argb:'FF0D5228'}};
     cSubVal.alignment={horizontal:'center'};
     for(let c=1;c<=LARG;c++) ws.getCell(linhaAtual,c).fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFEFF9F2'}};
     ws.getRow(linhaAtual).height=16;
     linhaAtual++;
-    linhaAtual++; // linha em branco separando o próximo RDO
+    linhaAtual++; // linha em branco separando o próximo bloco
   });
 
   const linhaTotal=linhaAtual;
@@ -9806,20 +9788,41 @@ async function exportarExtraEscopoExcel(){
   ws.getColumn(5).width=9; ws.getColumn(6).width=26; ws.getColumn(7).width=46; ws.getColumn(8).width=24;
   ws.getColumn(9).width=16; ws.getColumn(10).width=16; ws.getColumn(11).width=11;
 
+  return {wb,totalHoras};
+}
+
+// Efetua o download do workbook já pronto — usado pelas 3 formas de exportar.
+async function baixarWorkbookExtraEscopo(wb,nomeArquivo){
   const buffer=await wb.xlsx.writeBuffer();
   const blob=new Blob([buffer],{type:'application/octet-stream'});
   const url=URL.createObjectURL(blob);
   const a=document.createElement('a');
-  const carimbo=hojeLocal();
+  a.href=url; a.download=nomeArquivo; a.click();
+  setTimeout(()=>URL.revokeObjectURL(url),3000);
+}
 
-  // MELHORIA: nome do arquivo mais informativo. Se a exportação corresponde a um único
-  // RDO (ex: filtro de um dia específico onde só um RDO teve Extra Escopo), o nome já
-  // identifica Nº RDO + Obra + Data + Encarregado — mesmo padrão usado no "Salvar e
-  // Enviar". Se junta vários RDOs (período maior), mantém o nome consolidado de sempre,
-  // só acrescentando o encarregado quando esse filtro estiver ativo.
+// Exporta TUDO que está filtrado no painel no momento (botão principal "📥 Exportar Excel").
+// MELHORIA: agora reaproveita direto o extraEscopoGruposAtuais (o mesmo que já monta a
+// tela) em vez de recalcular os grupos do zero — elimina de vez qualquer chance de o
+// Excel divergir do filtro de encarregado que está sendo visto na tela.
+async function exportarExtraEscopoExcel(){
+  const de=document.getElementById('ee-de').value||null;
+  const ate=document.getElementById('ee-ate').value||null;
+  const encFiltro=document.getElementById('ee-encarregado')?.value||'';
+  const grupos=Object.values(extraEscopoGruposAtuais).sort((a,b)=>
+    a.data===b.data ? String(a.nrdo).localeCompare(String(b.nrdo)) : a.data.localeCompare(b.data)
+  );
+  if(!grupos.length){ showToast('Nenhum Extra Escopo encontrado pra exportar.','#d97706'); return; }
+  if(typeof ExcelJS==='undefined'){ showToast('Biblioteca de Excel ainda carregando — espera 2 segundos e tenta de novo.','#d97706'); return; }
+
+  let subtitulo=`CONTROLE DE EXTRA ESCOPO / ADICIONAL — Período: ${de?formatarDataBR(de):'início'} até ${ate?formatarDataBR(ate):'hoje'}`;
+  if(encFiltro) subtitulo+=` — Encarregado: ${encFiltro}`;
+  const {wb}=await construirWorkbookExtraEscopo(grupos,subtitulo);
+
+  const carimbo=hojeLocal();
   let nomeArquivo;
-  if(gruposOrdenados.length===1){
-    const g=gruposOrdenados[0];
+  if(grupos.length===1){
+    const g=grupos[0];
     const[y,m,dd]=g.data.split('-');
     nomeArquivo=`${sanitizarNomeArquivo(g.nrdo)} - Extra Escopo - ${dd}-${m}-${y} - Obra ${sanitizarNomeArquivo(g.obra)} - ${sanitizarNomeArquivo(g.encarregado)}.xlsx`;
   }else if(encFiltro){
@@ -9827,10 +9830,37 @@ async function exportarExtraEscopoExcel(){
   }else{
     nomeArquivo=`Extra_Escopo_MasterEnergy_${carimbo}.xlsx`;
   }
-
-  a.href=url; a.download=nomeArquivo; a.click();
-  setTimeout(()=>URL.revokeObjectURL(url),3000);
+  await baixarWorkbookExtraEscopo(wb,nomeArquivo);
   showToast('📥 Controle de Extra Escopo exportado com formatação!','#158038');
+}
+
+// NOVO: Excel de um único registro (um RDO + uma OSE, um dia específico) — botão "📥" ao
+// lado do "📤" (PDF) de cada card de dia no painel.
+async function exportarExtraEscopoExcelIndividual(chave){
+  const g=extraEscopoGruposAtuais[chave];
+  if(!g){ showToast('Registro não encontrado — filtre de novo e tente outra vez.','#d97706'); return; }
+  if(typeof ExcelJS==='undefined'){ showToast('Biblioteca de Excel ainda carregando — espera 2 segundos e tenta de novo.','#d97706'); return; }
+  const[y,m,dd]=g.data.split('-');
+  const subtitulo=`CONTROLE DE EXTRA ESCOPO / ADICIONAL — Registro individual — ${dd}/${m}/${y} — ${g.ose}`;
+  const {wb}=await construirWorkbookExtraEscopo([g],subtitulo);
+  const nomeArquivo=`${sanitizarNomeArquivo(g.nrdo)} - Extra Escopo - ${dd}-${m}-${y} - Obra ${sanitizarNomeArquivo(g.obra)} - ${sanitizarNomeArquivo(g.encarregado)}.xlsx`;
+  await baixarWorkbookExtraEscopo(wb,nomeArquivo);
+  showToast('📥 Excel deste dia exportado!','#158038');
+}
+
+// NOVO: Excel de um projeto/OSE inteiro (todos os dias/RDOs daquele serviço, mesmo que em
+// datas diferentes) — botão "📥 Excel deste Extra Escopo" ao lado do "📤 PDF deste Extra
+// Escopo", no cabeçalho de cada projeto do painel.
+async function exportarExtraEscopoExcelProjeto(nomeProjeto){
+  const p=extraEscopoProjetosAtuais[nomeProjeto];
+  if(!p){ showToast('Registro não encontrado — filtre de novo e tente outra vez.','#d97706'); return; }
+  if(typeof ExcelJS==='undefined'){ showToast('Biblioteca de Excel ainda carregando — espera 2 segundos e tenta de novo.','#d97706'); return; }
+  const grupos=[...p.dias].sort((a,b)=>a.data.localeCompare(b.data));
+  const subtitulo=`CONTROLE DE EXTRA ESCOPO / ADICIONAL — Extra Escopo: ${p.nome}`;
+  const {wb}=await construirWorkbookExtraEscopo(grupos,subtitulo);
+  const nomeArquivo=`Extra_Escopo_${p.nome.replace(/[^A-Z0-9]+/gi,'_').slice(0,40)}.xlsx`;
+  await baixarWorkbookExtraEscopo(wb,nomeArquivo);
+  showToast('📥 Excel deste Extra Escopo exportado!','#158038');
 }
 
 // ── DESFAZER — específico pras ações dos painéis (Extra Escopo/Andamento) ──────────────
@@ -10025,8 +10055,18 @@ function gerarPdfExtraEscopo(grupos,subtitulo,tituloPrincipal,corTema){
     totalGeral+=totalGrupo;
     doc.setFont('helvetica','normal'); doc.setFontSize(7.5);
     const descLinhas=doc.splitTextToSize(g.descricao||'', CW-4);
-    const trabTextos=g.trabalhadores.map(t=>`• ${t.nome} (${t.funcao}) — ${fmt(t.horas)}h`);
-    const alturaBloco=15+descLinhas.length*3.6+trabTextos.length*3.8+4;
+    // MELHORIA: cada trabalhador passa a mostrar também o veículo usado, quando o grupo
+    // tiver essa informação (Extra Escopo tem; Andamento, que também usa esta mesma
+    // função, não tem — nesse caso simplesmente não aparece, sem quebrar nada). Quebra de
+    // linha automática evita estourar a largura da página com nomes/veículos longos.
+    doc.setFont('helvetica','normal'); doc.setFontSize(7.2);
+    const trabLinhas=g.trabalhadores.map(t=>{
+      const veicTxt=(t.veiculo&&t.veiculo!=='—')?`  —  🚐 ${t.veiculo}`:'';
+      return doc.splitTextToSize(`• ${t.nome} (${t.funcao}) — ${fmt(t.horas)}h${veicTxt}`, CW-4);
+    });
+    const totalLinhasTrab=trabLinhas.reduce((s,arr)=>s+arr.length,0);
+    // +3.6 de altura pra caber a nova linha de Nº RDO + Encarregado
+    const alturaBloco=15+3.6+descLinhas.length*3.6+totalLinhasTrab*3.8+4;
     newPage(alturaBloco+3);
 
     doc.setFillColor(...corClara); doc.setDrawColor(...corTema); doc.setLineWidth(.3);
@@ -10035,14 +10075,21 @@ function gerarPdfExtraEscopo(grupos,subtitulo,tituloPrincipal,corTema){
     const [yy,mm,dd]=g.data.split('-');
     doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(corTema[0]*0.6,corTema[1]*0.6,corTema[2]*0.6);
     doc.text(`${dd}/${mm}/${yy}  —  ${g.obra}  —  ${g.ose}`, M+2, y+5.5);
+    // MELHORIA: linha com Nº do RDO e Encarregado — mesma informação que já existe no
+    // Excel, garante rastreabilidade até o RDO exato de onde veio o registro.
+    doc.setFont('helvetica','normal'); doc.setFontSize(7); doc.setTextColor(100,100,100);
+    doc.text(`RDO: ${g.nrdo||'—'}   |   Encarregado: ${g.encarregado||'—'}`, M+2, y+9.1);
     doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(0,0,0);
-    doc.text((g.servico||'').toUpperCase(), M+2, y+10);
+    doc.text((g.servico||'').toUpperCase(), M+2, y+13.6);
     doc.setFont('helvetica','normal'); doc.setFontSize(7); doc.setTextColor(70,70,70);
-    doc.text(descLinhas, M+2, y+13.8);
+    doc.text(descLinhas, M+2, y+17.4);
 
-    let yTrab=y+13.8+descLinhas.length*3.6+3;
+    let yTrab=y+17.4+descLinhas.length*3.6+3;
     doc.setFont('helvetica','normal'); doc.setFontSize(7.2); doc.setTextColor(0,0,0);
-    trabTextos.forEach(t=>{ doc.text(t, M+2, yTrab); yTrab+=3.8; });
+    trabLinhas.forEach(linhasDoTrabalhador=>{
+      doc.text(linhasDoTrabalhador, M+2, yTrab);
+      yTrab+=linhasDoTrabalhador.length*3.8;
+    });
 
     doc.setFont('helvetica','bold'); doc.setFontSize(8.5); doc.setTextColor(corTema[0]*0.6,corTema[1]*0.6,corTema[2]*0.6);
     doc.text(`Total do dia: ${fmt(totalGrupo)}h`, M+CW-2, y+alturaBloco-2, {align:'right'});
