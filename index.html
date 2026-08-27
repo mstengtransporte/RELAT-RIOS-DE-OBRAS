@@ -2133,7 +2133,7 @@ body.dark #workers-body tr:hover{background-color:rgba(58,110,232,.08)}
 <!-- CONTROLE DE EXTRA ESCOPO — consolida todo o Extra Escopo/Adicional já registrado em
      qualquer RDO salvo (data, serviço, quem trabalhou, quantas horas), sempre disponível -->
 <div id="extra-escopo-modal">
-  <div class="multipdf-box" style="max-width:1180px;width:90vw;height:92vh;max-height:92vh">
+  <div class="multipdf-box" style="max-width:1180px;width:90vw;max-height:92vh">
     <div class="multipdf-header" style="background:linear-gradient(135deg,#158038,#0d5228)">
       <span>🟢 Controle de Extra Escopo / Adicional</span>
       <button onclick="document.getElementById('extra-escopo-modal').classList.remove('show')" style="background:none;border:none;color:#fff;font-size:20px;cursor:pointer">✕</button>
@@ -2145,11 +2145,13 @@ body.dark #workers-body tr:hover{background-color:rgba(58,110,232,.08)}
         <select id="ee-encarregado" onchange="renderizarExtraEscopo()" title="Ver só de um encarregado" style="flex:1.6;min-width:150px;padding:6px"><option value="">— Todos os encarregados —</option></select>
         <button type="button" onclick="renderizarExtraEscopo()" style="background:#158038;color:#fff;border:2px solid #0d5228;padding:6px 12px;font-size:11px;font-weight:900;cursor:pointer;white-space:nowrap">🔍 Filtrar</button>
         <button type="button" onclick="forcarAtualizacaoPainel('extraescopo',this)" style="background:#0d5228;color:#fff;border:2px solid #063d1c;padding:6px 12px;font-size:11px;font-weight:900;cursor:pointer;white-space:nowrap">🔄 Atualizar da nuvem</button>
-        <button type="button" onclick="toggleTodosExtraEscopo(true)" style="background:#fff;color:#158038;border:2px solid #158038;padding:6px 10px;font-size:11px;font-weight:900;cursor:pointer;white-space:nowrap">⬇️ Abrir todos</button>
-        <button type="button" onclick="toggleTodosExtraEscopo(false)" style="background:#fff;color:#158038;border:2px solid #158038;padding:6px 10px;font-size:11px;font-weight:900;cursor:pointer;white-space:nowrap">⬆️ Fechar todos</button>
+      </div>
+      <div style="flex-shrink:0;display:flex;justify-content:flex-end;gap:6px">
+        <button type="button" onclick="toggleTodosExtraEscopo(true)" style="background:#fff;color:#158038;border:2px solid #158038;padding:5px 10px;font-size:11px;font-weight:900;cursor:pointer;white-space:nowrap">⬇️ Abrir todos</button>
+        <button type="button" onclick="toggleTodosExtraEscopo(false)" style="background:#fff;color:#158038;border:2px solid #158038;padding:5px 10px;font-size:11px;font-weight:900;cursor:pointer;white-space:nowrap">⬆️ Fechar todos</button>
       </div>
       <div id="ee-resumo" style="flex-shrink:0;display:grid;grid-template-columns:repeat(4,1fr);gap:6px"></div>
-      <div id="ee-lista-wrap" style="flex:1;min-height:380px;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;scroll-behavior:smooth;border:2px solid #000;padding:14px 14px 34px"></div>
+      <div id="ee-lista-wrap" style="flex:1;min-height:160px;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;scroll-behavior:smooth;border:2px solid #000;padding:14px 14px 34px"></div>
     </div>
     <div class="multipdf-footer" style="flex-wrap:wrap">
       <button class="multipdf-cancel" onclick="document.getElementById('extra-escopo-modal').classList.remove('show')">Fechar</button>
@@ -2165,7 +2167,7 @@ body.dark #workers-body tr:hover{background-color:rgba(58,110,232,.08)}
      projeto/OSE (que pode se repetir em vários dias), consolidando quantas horas cada
      projeto já recebeu ao longo do tempo -->
 <div id="andamento-modal">
-  <div class="multipdf-box" style="max-width:1180px;width:90vw;height:92vh;max-height:92vh">
+  <div class="multipdf-box" style="max-width:1180px;width:90vw;max-height:92vh">
     <div class="multipdf-header" style="background:linear-gradient(135deg,#1a52c8,#0e3a9a)">
       <span>🔵 Controle de Andamento por Projeto</span>
       <button onclick="document.getElementById('andamento-modal').classList.remove('show')" style="background:none;border:none;color:#fff;font-size:20px;cursor:pointer">✕</button>
@@ -2177,11 +2179,13 @@ body.dark #workers-body tr:hover{background-color:rgba(58,110,232,.08)}
         <select id="an-encarregado" onchange="renderizarAndamento()" title="Ver só de um encarregado" style="flex:1.6;min-width:150px;padding:6px"><option value="">— Todos os encarregados —</option></select>
         <button type="button" onclick="renderizarAndamento()" style="background:#1a52c8;color:#fff;border:2px solid #0e3a9a;padding:6px 12px;font-size:11px;font-weight:900;cursor:pointer;white-space:nowrap">🔍 Filtrar</button>
         <button type="button" onclick="forcarAtualizacaoPainel('andamento',this)" style="background:#0e3a9a;color:#fff;border:2px solid #082763;padding:6px 12px;font-size:11px;font-weight:900;cursor:pointer;white-space:nowrap">🔄 Atualizar da nuvem</button>
-        <button type="button" onclick="toggleTodosAndamento(true)" style="background:#fff;color:#1a52c8;border:2px solid #1a52c8;padding:6px 10px;font-size:11px;font-weight:900;cursor:pointer;white-space:nowrap">⬇️ Abrir todos</button>
-        <button type="button" onclick="toggleTodosAndamento(false)" style="background:#fff;color:#1a52c8;border:2px solid #1a52c8;padding:6px 10px;font-size:11px;font-weight:900;cursor:pointer;white-space:nowrap">⬆️ Fechar todos</button>
+      </div>
+      <div style="flex-shrink:0;display:flex;justify-content:flex-end;gap:6px">
+        <button type="button" onclick="toggleTodosAndamento(true)" style="background:#fff;color:#1a52c8;border:2px solid #1a52c8;padding:5px 10px;font-size:11px;font-weight:900;cursor:pointer;white-space:nowrap">⬇️ Abrir todos</button>
+        <button type="button" onclick="toggleTodosAndamento(false)" style="background:#fff;color:#1a52c8;border:2px solid #1a52c8;padding:5px 10px;font-size:11px;font-weight:900;cursor:pointer;white-space:nowrap">⬆️ Fechar todos</button>
       </div>
       <div id="an-resumo" style="flex-shrink:0;display:grid;grid-template-columns:repeat(4,1fr);gap:6px"></div>
-      <div id="an-lista-wrap" style="flex:1;min-height:380px;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;scroll-behavior:smooth;border:2px solid #000;padding:14px 14px 34px"></div>
+      <div id="an-lista-wrap" style="flex:1;min-height:160px;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;scroll-behavior:smooth;border:2px solid #000;padding:14px 14px 34px"></div>
     </div>
     <div class="multipdf-footer" style="flex-wrap:wrap">
       <button class="multipdf-cancel" onclick="document.getElementById('andamento-modal').classList.remove('show')">Fechar</button>
@@ -9712,7 +9716,10 @@ async function construirWorkbookExtraEscopo(grupos,subtitulo){
   wb.creator='Master Energy — Sistema de RDO';
   wb.created=new Date();
   const ws=wb.addWorksheet('Extra Escopo',{properties:{tabColor:{argb:'FF158038'}}});
-  const LARG=11;
+  const LARG=4; // Funcionário | Função | Veículo | Horas — o resto (Nº RDO, Obra,
+  // Encarregado, OSE, Data, Descrição) é fixo pra todo mundo daquele bloco, então vai só
+  // UMA VEZ na barra + linha de descrição do bloco, em vez de repetir em cada linha de
+  // trabalhador (era isso que deixava a planilha cheia de informação repetida).
 
   ws.mergeCells(1,1,3,LARG);
   const titulo=ws.getCell(1,1);
@@ -9727,17 +9734,7 @@ async function construirWorkbookExtraEscopo(grupos,subtitulo){
   ws.getCell(4,1).alignment={horizontal:'center'};
   ws.getRow(4).height=20;
 
-  const headerRow=6;
-  const headers=['Nº RDO','DATA','OBRA','ENCARREGADO','OSE','SERVIÇO','DESCRIÇÃO DO QUE FOI FEITO','FUNCIONÁRIO','FUNÇÃO','VEÍCULO','HORAS'];
-  headers.forEach((h,ci)=>{
-    const c=ws.getCell(headerRow,ci+1);
-    c.value=h; c.font={bold:true,color:{argb:'FFFFFFFF'},size:10};
-    c.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF0A3C64'}};
-    c.alignment={horizontal:'center',vertical:'middle'};
-  });
-  ws.getRow(headerRow).height=24;
-
-  let linhaAtual=headerRow+1;
+  let linhaAtual=6;
   let totalHoras=0;
   grupos.forEach(g=>{
     const totalGrupo=g.trabalhadores.reduce((s,t)=>s+t.horas,0);
@@ -9745,8 +9742,8 @@ async function construirWorkbookExtraEscopo(grupos,subtitulo){
     const[yy,mm,dd]=g.data.split('-');
     const dataFmt=`${dd}/${mm}/${yy}`;
 
-    // Barra separadora — identifica de relance de qual RDO/obra/encarregado/OSE vieram as
-    // linhas logo abaixo, sem precisar ler coluna por coluna (rastreabilidade).
+    // Barra do bloco — Nº RDO, Obra, Encarregado, OSE e Data aparecem UMA VEZ aqui (não
+    // se repetem em cada linha de trabalhador abaixo).
     ws.mergeCells(linhaAtual,1,linhaAtual,LARG);
     const cBarra=ws.getCell(linhaAtual,1);
     cBarra.value=`🟢 ${g.nrdo} — ${g.obra} — Encarregado: ${g.encarregado} — ${g.ose} — ${dataFmt}`;
@@ -9756,15 +9753,34 @@ async function construirWorkbookExtraEscopo(grupos,subtitulo){
     ws.getRow(linhaAtual).height=18;
     linhaAtual++;
 
+    // Descrição do serviço — também uma vez só, com quebra de linha automática.
+    ws.mergeCells(linhaAtual,1,linhaAtual,LARG);
+    const cDesc=ws.getCell(linhaAtual,1);
+    cDesc.value=`Descrição: ${g.descricao||'—'}`;
+    cDesc.font={italic:true,size:9,color:{argb:'FF444444'}};
+    cDesc.alignment={horizontal:'left',vertical:'top',indent:1,wrapText:true};
+    const linhasDesc=Math.max(1,Math.ceil((g.descricao||'').length/95));
+    ws.getRow(linhaAtual).height=Math.max(16,linhasDesc*13);
+    linhaAtual++;
+
+    // Cabeçalho da tabela de trabalhadores deste bloco.
+    ['FUNCIONÁRIO','FUNÇÃO','VEÍCULO','HORAS'].forEach((h,ci)=>{
+      const c=ws.getCell(linhaAtual,ci+1);
+      c.value=h; c.font={bold:true,color:{argb:'FFFFFFFF'},size:9};
+      c.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF0A3C64'}};
+      c.alignment={horizontal:'center',vertical:'middle'};
+    });
+    linhaAtual++;
+
     g.trabalhadores.forEach((t,idx)=>{
-      const valores=[g.nrdo,dataFmt,g.obra,g.encarregado,g.ose,g.servico,g.descricao,t.nome,t.funcao,t.veiculo||'—',Number(t.horas.toFixed(1))];
+      const valores=[t.nome,t.funcao,t.veiculo||'—',Number(t.horas.toFixed(1))];
       valores.forEach((v,ci)=>{
         const c=ws.getCell(linhaAtual,ci+1);
         c.value=v;
         c.fill={type:'pattern',pattern:'solid',fgColor:{argb:idx%2===0?'FFFFFFFF':'FFEAF5EE'}};
         c.border={bottom:{style:'thin',color:{argb:'FFEEEEEE'}}};
         if(typeof v==='number'){ c.numFmt='0.0'; c.font={bold:true,size:10}; c.alignment={horizontal:'center'}; }
-        else{ c.font={size:10}; c.alignment={horizontal:'left',vertical:'middle',indent:1,wrapText:ci===6}; }
+        else{ c.font={size:10}; c.alignment={horizontal:'left',vertical:'middle',indent:1}; }
       });
       linhaAtual++;
     });
@@ -9797,9 +9813,7 @@ async function construirWorkbookExtraEscopo(grupos,subtitulo){
   ws.getCell(linhaTotal,LARG).alignment={horizontal:'center'};
   for(let c=1;c<=LARG;c++) ws.getCell(linhaTotal,c).fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF158038'}};
 
-  ws.getColumn(1).width=12; ws.getColumn(2).width=12; ws.getColumn(3).width=24; ws.getColumn(4).width=22;
-  ws.getColumn(5).width=9; ws.getColumn(6).width=26; ws.getColumn(7).width=46; ws.getColumn(8).width=24;
-  ws.getColumn(9).width=16; ws.getColumn(10).width=16; ws.getColumn(11).width=11;
+  ws.getColumn(1).width=30; ws.getColumn(2).width=22; ws.getColumn(3).width=20; ws.getColumn(4).width=12;
 
   return {wb,totalHoras};
 }
@@ -10475,7 +10489,8 @@ async function construirWorkbookAndamento(grupos,subtitulo){
   wb.creator='Master Energy — Sistema de RDO';
   wb.created=new Date();
   const ws=wb.addWorksheet('Andamento',{properties:{tabColor:{argb:'FF1A52C8'}}});
-  const LARG=11;
+  const LARG=4; // Funcionário | Função | Veículo | Horas — mesmo padrão do Extra Escopo,
+  // sem repetir Nº RDO/Obra/Encarregado/OSE/Data/Descrição em cada linha de trabalhador.
 
   ws.mergeCells(1,1,3,LARG);
   const titulo=ws.getCell(1,1);
@@ -10490,17 +10505,7 @@ async function construirWorkbookAndamento(grupos,subtitulo){
   ws.getCell(4,1).alignment={horizontal:'center'};
   ws.getRow(4).height=20;
 
-  const headerRow=6;
-  const headers=['Nº RDO','DATA','OBRA','ENCARREGADO','OSE','PROJETO/SERVIÇO','DESCRIÇÃO DO QUE FOI FEITO','FUNCIONÁRIO','FUNÇÃO','VEÍCULO','HORAS'];
-  headers.forEach((h,ci)=>{
-    const c=ws.getCell(headerRow,ci+1);
-    c.value=h; c.font={bold:true,color:{argb:'FFFFFFFF'},size:10};
-    c.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF0A3C64'}};
-    c.alignment={horizontal:'center',vertical:'middle'};
-  });
-  ws.getRow(headerRow).height=24;
-
-  let linhaAtual=headerRow+1;
+  let linhaAtual=6;
   let totalHoras=0;
   grupos.forEach(g=>{
     const totalGrupo=g.trabalhadores.reduce((s,t)=>s+t.horas,0);
@@ -10517,15 +10522,32 @@ async function construirWorkbookAndamento(grupos,subtitulo){
     ws.getRow(linhaAtual).height=18;
     linhaAtual++;
 
+    ws.mergeCells(linhaAtual,1,linhaAtual,LARG);
+    const cDesc=ws.getCell(linhaAtual,1);
+    cDesc.value=`Descrição: ${g.descricao||'—'}`;
+    cDesc.font={italic:true,size:9,color:{argb:'FF444444'}};
+    cDesc.alignment={horizontal:'left',vertical:'top',indent:1,wrapText:true};
+    const linhasDesc=Math.max(1,Math.ceil((g.descricao||'').length/95));
+    ws.getRow(linhaAtual).height=Math.max(16,linhasDesc*13);
+    linhaAtual++;
+
+    ['FUNCIONÁRIO','FUNÇÃO','VEÍCULO','HORAS'].forEach((h,ci)=>{
+      const c=ws.getCell(linhaAtual,ci+1);
+      c.value=h; c.font={bold:true,color:{argb:'FFFFFFFF'},size:9};
+      c.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF0A3C64'}};
+      c.alignment={horizontal:'center',vertical:'middle'};
+    });
+    linhaAtual++;
+
     g.trabalhadores.forEach((t,idx)=>{
-      const valores=[g.nrdo,dataFmt,g.obra,g.encarregado,g.ose,g.servico,g.descricao,t.nome,t.funcao,t.veiculo||'—',Number(t.horas.toFixed(1))];
+      const valores=[t.nome,t.funcao,t.veiculo||'—',Number(t.horas.toFixed(1))];
       valores.forEach((v,ci)=>{
         const c=ws.getCell(linhaAtual,ci+1);
         c.value=v;
         c.fill={type:'pattern',pattern:'solid',fgColor:{argb:idx%2===0?'FFFFFFFF':'FFEAF0FB'}};
         c.border={bottom:{style:'thin',color:{argb:'FFEEEEEE'}}};
         if(typeof v==='number'){ c.numFmt='0.0'; c.font={bold:true,size:10}; c.alignment={horizontal:'center'}; }
-        else{ c.font={size:10}; c.alignment={horizontal:'left',vertical:'middle',indent:1,wrapText:ci===6}; }
+        else{ c.font={size:10}; c.alignment={horizontal:'left',vertical:'middle',indent:1}; }
       });
       linhaAtual++;
     });
@@ -10557,9 +10579,7 @@ async function construirWorkbookAndamento(grupos,subtitulo){
   ws.getCell(linhaTotal,LARG).alignment={horizontal:'center'};
   for(let c=1;c<=LARG;c++) ws.getCell(linhaTotal,c).fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF1A52C8'}};
 
-  ws.getColumn(1).width=12; ws.getColumn(2).width=12; ws.getColumn(3).width=24; ws.getColumn(4).width=22;
-  ws.getColumn(5).width=9; ws.getColumn(6).width=26; ws.getColumn(7).width=46; ws.getColumn(8).width=24;
-  ws.getColumn(9).width=16; ws.getColumn(10).width=16; ws.getColumn(11).width=11;
+  ws.getColumn(1).width=30; ws.getColumn(2).width=22; ws.getColumn(3).width=20; ws.getColumn(4).width=12;
 
   return {wb,totalHoras};
 }
