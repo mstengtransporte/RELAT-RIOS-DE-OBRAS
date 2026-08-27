@@ -9716,10 +9716,12 @@ async function construirWorkbookExtraEscopo(grupos,subtitulo){
   wb.creator='Master Energy — Sistema de RDO';
   wb.created=new Date();
   const ws=wb.addWorksheet('Extra Escopo',{properties:{tabColor:{argb:'FF158038'}}});
-  const LARG=4; // Funcionário | Função | Veículo | Horas — o resto (Nº RDO, Obra,
-  // Encarregado, OSE, Data, Descrição) é fixo pra todo mundo daquele bloco, então vai só
-  // UMA VEZ na barra + linha de descrição do bloco, em vez de repetir em cada linha de
-  // trabalhador (era isso que deixava a planilha cheia de informação repetida).
+  const LARG=11;
+  // Colunas 1-7 (Nº RDO...Descrição) são as mesmas pra todo mundo daquele RDO/OSE — em
+  // vez de repetir o texto em cada linha OU empilhar tudo fora de colunas, usa MESCLA
+  // VERTICAL: a célula aparece uma única vez, ocupando visualmente todas as linhas
+  // daquele bloco — é uma tabela de colunas de verdade, organizada por RDO, sem repetir
+  // informação.
 
   ws.mergeCells(1,1,3,LARG);
   const titulo=ws.getCell(1,1);
@@ -9734,56 +9736,59 @@ async function construirWorkbookExtraEscopo(grupos,subtitulo){
   ws.getCell(4,1).alignment={horizontal:'center'};
   ws.getRow(4).height=20;
 
-  let linhaAtual=6;
+  const headerRow=6;
+  const headers=['Nº RDO','DATA','OBRA','ENCARREGADO','OSE','SERVIÇO','DESCRIÇÃO','FUNCIONÁRIO','FUNÇÃO','VEÍCULO','HORAS'];
+  headers.forEach((h,ci)=>{
+    const c=ws.getCell(headerRow,ci+1);
+    c.value=h; c.font={bold:true,color:{argb:'FFFFFFFF'},size:10};
+    c.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF0A3C64'}};
+    c.alignment={horizontal:'center',vertical:'middle'};
+  });
+  ws.getRow(headerRow).height=24;
+  ws.views=[{state:'frozen',ySplit:headerRow}]; // cabeçalho fixo ao rolar — sempre visível qual coluna é qual
+
+  let linhaAtual=headerRow+1;
   let totalHoras=0;
-  grupos.forEach(g=>{
+  grupos.forEach((g,idxGrupo)=>{
     const totalGrupo=g.trabalhadores.reduce((s,t)=>s+t.horas,0);
     totalHoras+=totalGrupo;
     const[yy,mm,dd]=g.data.split('-');
     const dataFmt=`${dd}/${mm}/${yy}`;
+    const n=Math.max(1,g.trabalhadores.length);
+    const linhaInicioBloco=linhaAtual;
+    const linhaFimBloco=linhaAtual+n-1;
+    const corFundo=idxGrupo%2===0?'FFFFFFFF':'FFEAF5EE';
 
-    // Barra do bloco — Nº RDO, Obra, Encarregado, OSE e Data aparecem UMA VEZ aqui (não
-    // se repetem em cada linha de trabalhador abaixo).
-    ws.mergeCells(linhaAtual,1,linhaAtual,LARG);
-    const cBarra=ws.getCell(linhaAtual,1);
-    cBarra.value=`🟢 ${g.nrdo} — ${g.obra} — Encarregado: ${g.encarregado} — ${g.ose} — ${dataFmt}`;
-    cBarra.font={bold:true,size:10,color:{argb:'FF0D5228'}};
-    cBarra.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFD6EFE0'}};
-    cBarra.alignment={horizontal:'left',vertical:'middle',indent:1};
-    ws.getRow(linhaAtual).height=18;
-    linhaAtual++;
-
-    // Descrição do serviço — também uma vez só, com quebra de linha automática.
-    ws.mergeCells(linhaAtual,1,linhaAtual,LARG);
-    const cDesc=ws.getCell(linhaAtual,1);
-    cDesc.value=`Descrição: ${g.descricao||'—'}`;
-    cDesc.font={italic:true,size:9,color:{argb:'FF444444'}};
-    cDesc.alignment={horizontal:'left',vertical:'top',indent:1,wrapText:true};
-    const linhasDesc=Math.max(1,Math.ceil((g.descricao||'').length/95));
-    ws.getRow(linhaAtual).height=Math.max(16,linhasDesc*13);
-    linhaAtual++;
-
-    // Cabeçalho da tabela de trabalhadores deste bloco.
-    ['FUNCIONÁRIO','FUNÇÃO','VEÍCULO','HORAS'].forEach((h,ci)=>{
-      const c=ws.getCell(linhaAtual,ci+1);
-      c.value=h; c.font={bold:true,color:{argb:'FFFFFFFF'},size:9};
-      c.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF0A3C64'}};
-      c.alignment={horizontal:'center',vertical:'middle'};
-    });
-    linhaAtual++;
-
-    g.trabalhadores.forEach((t,idx)=>{
-      const valores=[t.nome,t.funcao,t.veiculo||'—',Number(t.horas.toFixed(1))];
-      valores.forEach((v,ci)=>{
-        const c=ws.getCell(linhaAtual,ci+1);
+    const trabalhadores=g.trabalhadores.length?g.trabalhadores:[{nome:'—',funcao:'—',veiculo:'—',horas:0}];
+    trabalhadores.forEach((t,idxT)=>{
+      const linha=linhaInicioBloco+idxT;
+      const valoresPessoais=[t.nome,t.funcao,t.veiculo||'—',Number(t.horas.toFixed(1))];
+      valoresPessoais.forEach((v,ci)=>{
+        const c=ws.getCell(linha,8+ci);
         c.value=v;
-        c.fill={type:'pattern',pattern:'solid',fgColor:{argb:idx%2===0?'FFFFFFFF':'FFEAF5EE'}};
-        c.border={bottom:{style:'thin',color:{argb:'FFEEEEEE'}}};
+        c.fill={type:'pattern',pattern:'solid',fgColor:{argb:corFundo}};
+        c.border={bottom:{style:'thin',color:{argb:'FFEEEEEE'}},left:{style:'thin',color:{argb:'FFD8E8DD'}}};
         if(typeof v==='number'){ c.numFmt='0.0'; c.font={bold:true,size:10}; c.alignment={horizontal:'center'}; }
         else{ c.font={size:10}; c.alignment={horizontal:'left',vertical:'middle',indent:1}; }
       });
-      linhaAtual++;
+      if(idxT===0){
+        const valoresBloco=[g.nrdo,dataFmt,g.obra,g.encarregado,g.ose,g.servico,g.descricao];
+        valoresBloco.forEach((v,ci)=>{
+          const c=ws.getCell(linha,ci+1);
+          c.value=v;
+          c.fill={type:'pattern',pattern:'solid',fgColor:{argb:corFundo}};
+          c.font={size:10,bold:ci===0};
+          c.alignment={horizontal:ci===0?'center':'left',vertical:'middle',indent:ci===0?0:1,wrapText:ci===6};
+          c.border={left:{style:'thin',color:{argb:'FF158038'}}};
+        });
+      }
     });
+    if(n>1) for(let ci=1;ci<=7;ci++) ws.mergeCells(linhaInicioBloco,ci,linhaFimBloco,ci);
+    // Altura maior quando a descrição é longa, pra não cortar o texto na célula mesclada.
+    const linhasDesc=Math.max(1,Math.ceil((g.descricao||'').length/44));
+    if(linhasDesc>n) ws.getRow(linhaInicioBloco).height=linhasDesc*13;
+
+    linhaAtual=linhaFimBloco+1;
 
     // Subtotal deste bloco (RDO+OSE) — útil quando a exportação junta mais de um.
     ws.mergeCells(linhaAtual,1,linhaAtual,LARG-1);
@@ -9799,7 +9804,6 @@ async function construirWorkbookExtraEscopo(grupos,subtitulo){
     for(let c=1;c<=LARG;c++) ws.getCell(linhaAtual,c).fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFEFF9F2'}};
     ws.getRow(linhaAtual).height=16;
     linhaAtual++;
-    linhaAtual++; // linha em branco separando o próximo bloco
   });
 
   const linhaTotal=linhaAtual;
@@ -9813,7 +9817,9 @@ async function construirWorkbookExtraEscopo(grupos,subtitulo){
   ws.getCell(linhaTotal,LARG).alignment={horizontal:'center'};
   for(let c=1;c<=LARG;c++) ws.getCell(linhaTotal,c).fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF158038'}};
 
-  ws.getColumn(1).width=30; ws.getColumn(2).width=22; ws.getColumn(3).width=20; ws.getColumn(4).width=12;
+  ws.getColumn(1).width=12; ws.getColumn(2).width=12; ws.getColumn(3).width=24; ws.getColumn(4).width=20;
+  ws.getColumn(5).width=9; ws.getColumn(6).width=24; ws.getColumn(7).width=40; ws.getColumn(8).width=24;
+  ws.getColumn(9).width=16; ws.getColumn(10).width=16; ws.getColumn(11).width=11;
 
   return {wb,totalHoras};
 }
@@ -10489,8 +10495,7 @@ async function construirWorkbookAndamento(grupos,subtitulo){
   wb.creator='Master Energy — Sistema de RDO';
   wb.created=new Date();
   const ws=wb.addWorksheet('Andamento',{properties:{tabColor:{argb:'FF1A52C8'}}});
-  const LARG=4; // Funcionário | Função | Veículo | Horas — mesmo padrão do Extra Escopo,
-  // sem repetir Nº RDO/Obra/Encarregado/OSE/Data/Descrição em cada linha de trabalhador.
+  const LARG=11;
 
   ws.mergeCells(1,1,3,LARG);
   const titulo=ws.getCell(1,1);
@@ -10505,52 +10510,58 @@ async function construirWorkbookAndamento(grupos,subtitulo){
   ws.getCell(4,1).alignment={horizontal:'center'};
   ws.getRow(4).height=20;
 
-  let linhaAtual=6;
+  const headerRow=6;
+  const headers=['Nº RDO','DATA','OBRA','ENCARREGADO','OSE','PROJETO/SERVIÇO','DESCRIÇÃO','FUNCIONÁRIO','FUNÇÃO','VEÍCULO','HORAS'];
+  headers.forEach((h,ci)=>{
+    const c=ws.getCell(headerRow,ci+1);
+    c.value=h; c.font={bold:true,color:{argb:'FFFFFFFF'},size:10};
+    c.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF0A3C64'}};
+    c.alignment={horizontal:'center',vertical:'middle'};
+  });
+  ws.getRow(headerRow).height=24;
+  ws.views=[{state:'frozen',ySplit:headerRow}];
+
+  let linhaAtual=headerRow+1;
   let totalHoras=0;
-  grupos.forEach(g=>{
+  grupos.forEach((g,idxGrupo)=>{
     const totalGrupo=g.trabalhadores.reduce((s,t)=>s+t.horas,0);
     totalHoras+=totalGrupo;
     const[yy,mm,dd]=g.data.split('-');
     const dataFmt=`${dd}/${mm}/${yy}`;
+    const n=Math.max(1,g.trabalhadores.length);
+    const linhaInicioBloco=linhaAtual;
+    const linhaFimBloco=linhaAtual+n-1;
+    const corFundo=idxGrupo%2===0?'FFFFFFFF':'FFEAF0FB';
 
-    ws.mergeCells(linhaAtual,1,linhaAtual,LARG);
-    const cBarra=ws.getCell(linhaAtual,1);
-    cBarra.value=`🔵 ${g.nrdo} — ${g.obra} — Encarregado: ${g.encarregado} — ${g.ose} — ${dataFmt}`;
-    cBarra.font={bold:true,size:10,color:{argb:'FF0D3C8C'}};
-    cBarra.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFD6E3F9'}};
-    cBarra.alignment={horizontal:'left',vertical:'middle',indent:1};
-    ws.getRow(linhaAtual).height=18;
-    linhaAtual++;
-
-    ws.mergeCells(linhaAtual,1,linhaAtual,LARG);
-    const cDesc=ws.getCell(linhaAtual,1);
-    cDesc.value=`Descrição: ${g.descricao||'—'}`;
-    cDesc.font={italic:true,size:9,color:{argb:'FF444444'}};
-    cDesc.alignment={horizontal:'left',vertical:'top',indent:1,wrapText:true};
-    const linhasDesc=Math.max(1,Math.ceil((g.descricao||'').length/95));
-    ws.getRow(linhaAtual).height=Math.max(16,linhasDesc*13);
-    linhaAtual++;
-
-    ['FUNCIONÁRIO','FUNÇÃO','VEÍCULO','HORAS'].forEach((h,ci)=>{
-      const c=ws.getCell(linhaAtual,ci+1);
-      c.value=h; c.font={bold:true,color:{argb:'FFFFFFFF'},size:9};
-      c.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF0A3C64'}};
-      c.alignment={horizontal:'center',vertical:'middle'};
-    });
-    linhaAtual++;
-
-    g.trabalhadores.forEach((t,idx)=>{
-      const valores=[t.nome,t.funcao,t.veiculo||'—',Number(t.horas.toFixed(1))];
-      valores.forEach((v,ci)=>{
-        const c=ws.getCell(linhaAtual,ci+1);
+    const trabalhadores=g.trabalhadores.length?g.trabalhadores:[{nome:'—',funcao:'—',veiculo:'—',horas:0}];
+    trabalhadores.forEach((t,idxT)=>{
+      const linha=linhaInicioBloco+idxT;
+      const valoresPessoais=[t.nome,t.funcao,t.veiculo||'—',Number(t.horas.toFixed(1))];
+      valoresPessoais.forEach((v,ci)=>{
+        const c=ws.getCell(linha,8+ci);
         c.value=v;
-        c.fill={type:'pattern',pattern:'solid',fgColor:{argb:idx%2===0?'FFFFFFFF':'FFEAF0FB'}};
-        c.border={bottom:{style:'thin',color:{argb:'FFEEEEEE'}}};
+        c.fill={type:'pattern',pattern:'solid',fgColor:{argb:corFundo}};
+        c.border={bottom:{style:'thin',color:{argb:'FFEEEEEE'}},left:{style:'thin',color:{argb:'FFD8E0F5'}}};
         if(typeof v==='number'){ c.numFmt='0.0'; c.font={bold:true,size:10}; c.alignment={horizontal:'center'}; }
         else{ c.font={size:10}; c.alignment={horizontal:'left',vertical:'middle',indent:1}; }
       });
-      linhaAtual++;
+      if(idxT===0){
+        const valoresBloco=[g.nrdo,dataFmt,g.obra,g.encarregado,g.ose,g.servico,g.descricao];
+        valoresBloco.forEach((v,ci)=>{
+          const c=ws.getCell(linha,ci+1);
+          c.value=v;
+          c.fill={type:'pattern',pattern:'solid',fgColor:{argb:corFundo}};
+          c.font={size:10,bold:ci===0};
+          c.alignment={horizontal:ci===0?'center':'left',vertical:'middle',indent:ci===0?0:1,wrapText:ci===6};
+          c.border={left:{style:'thin',color:{argb:'FF1A52C8'}}};
+        });
+      }
     });
+    if(n>1) for(let ci=1;ci<=7;ci++) ws.mergeCells(linhaInicioBloco,ci,linhaFimBloco,ci);
+    const linhasDesc=Math.max(1,Math.ceil((g.descricao||'').length/44));
+    if(linhasDesc>n) ws.getRow(linhaInicioBloco).height=linhasDesc*13;
+
+    linhaAtual=linhaFimBloco+1;
 
     ws.mergeCells(linhaAtual,1,linhaAtual,LARG-1);
     const cSub=ws.getCell(linhaAtual,1);
@@ -10565,7 +10576,6 @@ async function construirWorkbookAndamento(grupos,subtitulo){
     for(let c=1;c<=LARG;c++) ws.getCell(linhaAtual,c).fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFEEF3FC'}};
     ws.getRow(linhaAtual).height=16;
     linhaAtual++;
-    linhaAtual++;
   });
 
   const linhaTotal=linhaAtual;
@@ -10579,7 +10589,9 @@ async function construirWorkbookAndamento(grupos,subtitulo){
   ws.getCell(linhaTotal,LARG).alignment={horizontal:'center'};
   for(let c=1;c<=LARG;c++) ws.getCell(linhaTotal,c).fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF1A52C8'}};
 
-  ws.getColumn(1).width=30; ws.getColumn(2).width=22; ws.getColumn(3).width=20; ws.getColumn(4).width=12;
+  ws.getColumn(1).width=12; ws.getColumn(2).width=12; ws.getColumn(3).width=24; ws.getColumn(4).width=20;
+  ws.getColumn(5).width=9; ws.getColumn(6).width=24; ws.getColumn(7).width=40; ws.getColumn(8).width=24;
+  ws.getColumn(9).width=16; ws.getColumn(10).width=16; ws.getColumn(11).width=11;
 
   return {wb,totalHoras};
 }
