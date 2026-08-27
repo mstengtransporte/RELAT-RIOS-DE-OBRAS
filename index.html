@@ -1102,6 +1102,9 @@ body.dark .aviso-data-divergente .fechar-aviso-divergente{color:#fbbf24;}
     min-width:850px;
   }
 }
+#extra-escopo-modal .multipdf-box, #andamento-modal .multipdf-box{
+  overscroll-behavior:contain;
+}
 
 /* Celular deitado (paisagem) — tela baixa e larga: os modais não podem ficar mais
    altos que a tela disponível, senão o cabeçalho/rodapé somem de novo como no
@@ -2142,9 +2145,11 @@ body.dark #workers-body tr:hover{background-color:rgba(58,110,232,.08)}
         <select id="ee-encarregado" onchange="renderizarExtraEscopo()" title="Ver só de um encarregado" style="flex:1.6;min-width:150px;padding:6px"><option value="">— Todos os encarregados —</option></select>
         <button type="button" onclick="renderizarExtraEscopo()" style="background:#158038;color:#fff;border:2px solid #0d5228;padding:6px 12px;font-size:11px;font-weight:900;cursor:pointer;white-space:nowrap">🔍 Filtrar</button>
         <button type="button" onclick="forcarAtualizacaoPainel('extraescopo',this)" style="background:#0d5228;color:#fff;border:2px solid #063d1c;padding:6px 12px;font-size:11px;font-weight:900;cursor:pointer;white-space:nowrap">🔄 Atualizar da nuvem</button>
+        <button type="button" onclick="toggleTodosExtraEscopo(true)" style="background:#fff;color:#158038;border:2px solid #158038;padding:6px 10px;font-size:11px;font-weight:900;cursor:pointer;white-space:nowrap">⬇️ Abrir todos</button>
+        <button type="button" onclick="toggleTodosExtraEscopo(false)" style="background:#fff;color:#158038;border:2px solid #158038;padding:6px 10px;font-size:11px;font-weight:900;cursor:pointer;white-space:nowrap">⬆️ Fechar todos</button>
       </div>
       <div id="ee-resumo" style="flex-shrink:0;display:grid;grid-template-columns:repeat(4,1fr);gap:6px"></div>
-      <div id="ee-lista-wrap" style="flex:1;min-height:380px;overflow-y:auto;border:2px solid #000;padding:14px"></div>
+      <div id="ee-lista-wrap" style="flex:1;min-height:380px;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;scroll-behavior:smooth;border:2px solid #000;padding:14px 14px 34px"></div>
     </div>
     <div class="multipdf-footer" style="flex-wrap:wrap">
       <button class="multipdf-cancel" onclick="document.getElementById('extra-escopo-modal').classList.remove('show')">Fechar</button>
@@ -2172,9 +2177,11 @@ body.dark #workers-body tr:hover{background-color:rgba(58,110,232,.08)}
         <select id="an-encarregado" onchange="renderizarAndamento()" title="Ver só de um encarregado" style="flex:1.6;min-width:150px;padding:6px"><option value="">— Todos os encarregados —</option></select>
         <button type="button" onclick="renderizarAndamento()" style="background:#1a52c8;color:#fff;border:2px solid #0e3a9a;padding:6px 12px;font-size:11px;font-weight:900;cursor:pointer;white-space:nowrap">🔍 Filtrar</button>
         <button type="button" onclick="forcarAtualizacaoPainel('andamento',this)" style="background:#0e3a9a;color:#fff;border:2px solid #082763;padding:6px 12px;font-size:11px;font-weight:900;cursor:pointer;white-space:nowrap">🔄 Atualizar da nuvem</button>
+        <button type="button" onclick="toggleTodosAndamento(true)" style="background:#fff;color:#1a52c8;border:2px solid #1a52c8;padding:6px 10px;font-size:11px;font-weight:900;cursor:pointer;white-space:nowrap">⬇️ Abrir todos</button>
+        <button type="button" onclick="toggleTodosAndamento(false)" style="background:#fff;color:#1a52c8;border:2px solid #1a52c8;padding:6px 10px;font-size:11px;font-weight:900;cursor:pointer;white-space:nowrap">⬆️ Fechar todos</button>
       </div>
       <div id="an-resumo" style="flex-shrink:0;display:grid;grid-template-columns:repeat(4,1fr);gap:6px"></div>
-      <div id="an-lista-wrap" style="flex:1;min-height:380px;overflow-y:auto;border:2px solid #000;padding:14px"></div>
+      <div id="an-lista-wrap" style="flex:1;min-height:380px;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;scroll-behavior:smooth;border:2px solid #000;padding:14px 14px 34px"></div>
     </div>
     <div class="multipdf-footer" style="flex-wrap:wrap">
       <button class="multipdf-cancel" onclick="document.getElementById('andamento-modal').classList.remove('show')">Fechar</button>
@@ -9671,13 +9678,19 @@ function renderizarExtraEscopo(){
         </div>
       </div>
     </div>`;
-  }).join('');
+  }).join('')+`<div style="text-align:center;padding:10px 0 4px;font-size:11px;color:var(--text3);opacity:.7">— fim da lista (${listaProjetos.length} projeto${listaProjetos.length>1?'s':''}) —</div>`;
 }
 
 let extraEscopoProjetosAtuais={}; // agrupamento por nome de projeto/OSE — pro PDF individual
 
 function toggleExtraEscopoProjeto(elHeader){
   elHeader.closest('.ee-projeto').classList.toggle('aberto');
+}
+
+// NOVO: abre/fecha todos os projetos de uma vez — resolve não conseguir ver/abrir cada
+// trabalho um por um quando a lista é grande.
+function toggleTodosExtraEscopo(abrir){
+  document.querySelectorAll('#ee-lista-wrap .ee-projeto').forEach(el=>el.classList.toggle('aberto',abrir));
 }
 
 function compartilharExtraEscopoProjeto(nomeProjeto){
@@ -10218,6 +10231,12 @@ function toggleAndamentoProjeto(elHeader){
   elHeader.closest('.an-projeto').classList.toggle('aberto');
 }
 
+// NOVO: abre/fecha todos os projetos de uma vez — resolve não conseguir ver/abrir cada
+// trabalho um por um quando a lista é grande.
+function toggleTodosAndamento(abrir){
+  document.querySelectorAll('#an-lista-wrap .an-projeto').forEach(el=>el.classList.toggle('aberto',abrir));
+}
+
 function renderizarAndamento(){
   const de=document.getElementById('an-de').value||null;
   const ate=document.getElementById('an-ate').value||null;
@@ -10341,7 +10360,7 @@ function renderizarAndamento(){
         </div>
       </div>
     </div>`;
-  }).join('');
+  }).join('')+`<div style="text-align:center;padding:10px 0 4px;font-size:11px;color:var(--text3);opacity:.7">— fim da lista (${listaProjetos.length} projeto${listaProjetos.length>1?'s':''}) —</div>`;
 }
 
 function deletarAndamentoDia(chave){
