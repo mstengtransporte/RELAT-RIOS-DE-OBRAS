@@ -3740,6 +3740,12 @@ function hojeLocal(){
   const d=new Date();
   return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
 }
+// Mesma data de hojeLocal(), só que no formato brasileiro DD-MM-AAAA — usada só em NOMES
+// DE ARQUIVO (nunca em <input type="date">, que exige o formato ISO AAAA-MM-DD).
+function dataBRArquivo(iso){
+  const[y,m,dd]=(iso||hojeLocal()).split('-');
+  return `${dd}-${m}-${y}`;
+}
 function gerarRdoId(){
   return Date.now().toString(36)+Math.random().toString(36).slice(2,6);
 }
@@ -9716,8 +9722,8 @@ async function construirWorkbookExtraEscopo(grupos,subtitulo){
   wb.creator='Master Energy — Sistema de RDO';
   wb.created=new Date();
   const ws=wb.addWorksheet('Extra Escopo',{properties:{tabColor:{argb:'FF158038'}}});
-  const LARG=11;
-  // Colunas 1-7 (Nº RDO...Descrição) são as mesmas pra todo mundo daquele RDO/OSE — em
+  const LARG=12;
+  // Colunas 1-8 (Nº RDO...Descrição) são as mesmas pra todo mundo daquele RDO/OSE — em
   // vez de repetir o texto em cada linha OU empilhar tudo fora de colunas, usa MESCLA
   // VERTICAL: a célula aparece uma única vez, ocupando visualmente todas as linhas
   // daquele bloco — é uma tabela de colunas de verdade, organizada por RDO, sem repetir
@@ -9737,7 +9743,7 @@ async function construirWorkbookExtraEscopo(grupos,subtitulo){
   ws.getRow(4).height=20;
 
   const headerRow=6;
-  const headers=['Nº RDO','DATA','OBRA','ENCARREGADO','OSE','SERVIÇO','DESCRIÇÃO','FUNCIONÁRIO','FUNÇÃO','VEÍCULO','HORAS'];
+  const headers=['Nº RDO','DATA','OBRA','DISCIPLINA','ENCARREGADO','OSE','SERVIÇO','DESCRIÇÃO','FUNCIONÁRIO','FUNÇÃO','VEÍCULO','HORAS'];
   headers.forEach((h,ci)=>{
     const c=ws.getCell(headerRow,ci+1);
     c.value=h; c.font={bold:true,color:{argb:'FFFFFFFF'},size:10};
@@ -9753,7 +9759,7 @@ async function construirWorkbookExtraEscopo(grupos,subtitulo){
     const totalGrupo=g.trabalhadores.reduce((s,t)=>s+t.horas,0);
     totalHoras+=totalGrupo;
     const[yy,mm,dd]=g.data.split('-');
-    const dataFmt=`${dd}/${mm}/${yy}`;
+    const dataFmt=`${dd}/${mm}/${yy}`; // padrão brasileiro dia/mês/ano
     const n=Math.max(1,g.trabalhadores.length);
     const linhaInicioBloco=linhaAtual;
     const linhaFimBloco=linhaAtual+n-1;
@@ -9764,7 +9770,7 @@ async function construirWorkbookExtraEscopo(grupos,subtitulo){
       const linha=linhaInicioBloco+idxT;
       const valoresPessoais=[t.nome,t.funcao,t.veiculo||'—',Number(t.horas.toFixed(1))];
       valoresPessoais.forEach((v,ci)=>{
-        const c=ws.getCell(linha,8+ci);
+        const c=ws.getCell(linha,9+ci);
         c.value=v;
         c.fill={type:'pattern',pattern:'solid',fgColor:{argb:corFundo}};
         c.border={bottom:{style:'thin',color:{argb:'FFEEEEEE'}},left:{style:'thin',color:{argb:'FFD8E8DD'}}};
@@ -9772,18 +9778,18 @@ async function construirWorkbookExtraEscopo(grupos,subtitulo){
         else{ c.font={size:10}; c.alignment={horizontal:'left',vertical:'middle',indent:1}; }
       });
       if(idxT===0){
-        const valoresBloco=[g.nrdo,dataFmt,g.obra,g.encarregado,g.ose,g.servico,g.descricao];
+        const valoresBloco=[g.nrdo,dataFmt,(g.obra||'—').toUpperCase(),g.disc||'—',g.encarregado,g.ose,g.servico,g.descricao];
         valoresBloco.forEach((v,ci)=>{
           const c=ws.getCell(linha,ci+1);
           c.value=v;
           c.fill={type:'pattern',pattern:'solid',fgColor:{argb:corFundo}};
           c.font={size:10,bold:ci===0};
-          c.alignment={horizontal:ci===0?'center':'left',vertical:'middle',indent:ci===0?0:1,wrapText:ci===6};
+          c.alignment={horizontal:ci===0?'center':'left',vertical:'middle',indent:ci===0?0:1,wrapText:ci===7};
           c.border={left:{style:'thin',color:{argb:'FF158038'}}};
         });
       }
     });
-    if(n>1) for(let ci=1;ci<=7;ci++) ws.mergeCells(linhaInicioBloco,ci,linhaFimBloco,ci);
+    if(n>1) for(let ci=1;ci<=8;ci++) ws.mergeCells(linhaInicioBloco,ci,linhaFimBloco,ci);
     // Altura maior quando a descrição é longa, pra não cortar o texto na célula mesclada.
     const linhasDesc=Math.max(1,Math.ceil((g.descricao||'').length/44));
     if(linhasDesc>n) ws.getRow(linhaInicioBloco).height=linhasDesc*13;
@@ -9817,9 +9823,9 @@ async function construirWorkbookExtraEscopo(grupos,subtitulo){
   ws.getCell(linhaTotal,LARG).alignment={horizontal:'center'};
   for(let c=1;c<=LARG;c++) ws.getCell(linhaTotal,c).fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF158038'}};
 
-  ws.getColumn(1).width=12; ws.getColumn(2).width=12; ws.getColumn(3).width=24; ws.getColumn(4).width=20;
-  ws.getColumn(5).width=9; ws.getColumn(6).width=24; ws.getColumn(7).width=40; ws.getColumn(8).width=24;
-  ws.getColumn(9).width=16; ws.getColumn(10).width=16; ws.getColumn(11).width=11;
+  ws.getColumn(1).width=12; ws.getColumn(2).width=12; ws.getColumn(3).width=24; ws.getColumn(4).width=16;
+  ws.getColumn(5).width=20; ws.getColumn(6).width=9; ws.getColumn(7).width=24; ws.getColumn(8).width=40;
+  ws.getColumn(9).width=24; ws.getColumn(10).width=16; ws.getColumn(11).width=16; ws.getColumn(12).width=11;
 
   return {wb,totalHoras};
 }
@@ -9848,20 +9854,28 @@ async function exportarExtraEscopoExcel(){
   if(!grupos.length){ showToast('Nenhum Extra Escopo encontrado pra exportar.','#d97706'); return; }
   if(typeof ExcelJS==='undefined'){ showToast('Biblioteca de Excel ainda carregando — espera 2 segundos e tenta de novo.','#d97706'); return; }
 
-  let subtitulo=`CONTROLE DE EXTRA ESCOPO / ADICIONAL — Período: ${de?formatarDataBR(de):'início'} até ${ate?formatarDataBR(ate):'hoje'}`;
-  if(encFiltro) subtitulo+=` — Encarregado: ${encFiltro}`;
+  // Período SEMPRE em dia/mês/ano (padrão brasileiro), mesmo quando o filtro está em
+  // branco (nesse caso mostra a primeira e a última data que realmente aparecem na
+  // exportação, em vez da palavra genérica "início"/"hoje").
+  const primeiraData=grupos[0].data, ultimaData=grupos[grupos.length-1].data;
+  const deTxt=formatarDataBR(de||primeiraData), ateTxt=formatarDataBR(ate||ultimaData);
+  let subtitulo=`EXTRA ESCOPO — PERÍODO: ${deTxt} A ${ateTxt}`;
+  const obrasUnicas=[...new Set(grupos.map(g=>(g.obra||'—').toUpperCase()))];
+  const discsUnicas=[...new Set(grupos.map(g=>g.disc||'—'))];
+  if(obrasUnicas.length===1) subtitulo+=` — OBRA: ${obrasUnicas[0]}`;
+  if(discsUnicas.length===1) subtitulo+=` — DISCIPLINA: ${discsUnicas[0]}`;
+  if(encFiltro) subtitulo+=` — ENCARREGADO: ${encFiltro.toUpperCase()}`;
   const {wb}=await construirWorkbookExtraEscopo(grupos,subtitulo);
 
-  const carimbo=hojeLocal();
+  const deArq=dataBRArquivo(de||primeiraData), ateArq=dataBRArquivo(ate||ultimaData);
   let nomeArquivo;
   if(grupos.length===1){
     const g=grupos[0];
-    const[y,m,dd]=g.data.split('-');
-    nomeArquivo=`${sanitizarNomeArquivo(g.nrdo)} - Extra Escopo - ${dd}-${m}-${y} - Obra ${sanitizarNomeArquivo(g.obra)} - ${sanitizarNomeArquivo(g.encarregado)}.xlsx`;
+    nomeArquivo=`${sanitizarNomeArquivo(g.nrdo)} - EXTRA ESCOPO - ${dataBRArquivo(g.data)} - OBRA ${sanitizarNomeArquivo(g.obra).toUpperCase()} - DISCIPLINA ${sanitizarNomeArquivo(g.disc||'—').toUpperCase()} - ENCARREGADO ${sanitizarNomeArquivo(g.encarregado).toUpperCase()}.xlsx`;
   }else if(encFiltro){
-    nomeArquivo=`Extra_Escopo_MasterEnergy_${sanitizarNomeArquivo(encFiltro)}_${carimbo}.xlsx`;
+    nomeArquivo=`EXTRA_ESCOPO_MASTERENERGY_ENCARREGADO_${sanitizarNomeArquivo(encFiltro).toUpperCase().replace(/\s+/g,'_')}_PERIODO_${deArq}_A_${ateArq}.xlsx`;
   }else{
-    nomeArquivo=`Extra_Escopo_MasterEnergy_${carimbo}.xlsx`;
+    nomeArquivo=`EXTRA_ESCOPO_MASTERENERGY_PERIODO_${deArq}_A_${ateArq}.xlsx`;
   }
   await baixarWorkbookExtraEscopo(wb,nomeArquivo);
   showToast('📥 Controle de Extra Escopo exportado com formatação!','#158038');
@@ -9873,10 +9887,9 @@ async function exportarExtraEscopoExcelIndividual(chave){
   const g=extraEscopoGruposAtuais[chave];
   if(!g){ showToast('Registro não encontrado — filtre de novo e tente outra vez.','#d97706'); return; }
   if(typeof ExcelJS==='undefined'){ showToast('Biblioteca de Excel ainda carregando — espera 2 segundos e tenta de novo.','#d97706'); return; }
-  const[y,m,dd]=g.data.split('-');
-  const subtitulo=`CONTROLE DE EXTRA ESCOPO / ADICIONAL — Registro individual — ${dd}/${m}/${y} — ${g.ose}`;
+  const subtitulo=`EXTRA ESCOPO — REGISTRO INDIVIDUAL — DATA: ${formatarDataBR(g.data)} — OBRA: ${(g.obra||'—').toUpperCase()} — DISCIPLINA: ${g.disc||'—'} — ENCARREGADO: ${g.encarregado} — ${g.ose}`;
   const {wb}=await construirWorkbookExtraEscopo([g],subtitulo);
-  const nomeArquivo=`${sanitizarNomeArquivo(g.nrdo)} - Extra Escopo - ${dd}-${m}-${y} - Obra ${sanitizarNomeArquivo(g.obra)} - ${sanitizarNomeArquivo(g.encarregado)}.xlsx`;
+  const nomeArquivo=`${sanitizarNomeArquivo(g.nrdo)} - EXTRA ESCOPO - ${dataBRArquivo(g.data)} - OBRA ${sanitizarNomeArquivo(g.obra).toUpperCase()} - DISCIPLINA ${sanitizarNomeArquivo(g.disc||'—').toUpperCase()} - ENCARREGADO ${sanitizarNomeArquivo(g.encarregado).toUpperCase()}.xlsx`;
   await baixarWorkbookExtraEscopo(wb,nomeArquivo);
   showToast('📥 Excel deste dia exportado!','#158038');
 }
@@ -9889,9 +9902,10 @@ async function exportarExtraEscopoExcelProjeto(nomeProjeto){
   if(!p){ showToast('Registro não encontrado — filtre de novo e tente outra vez.','#d97706'); return; }
   if(typeof ExcelJS==='undefined'){ showToast('Biblioteca de Excel ainda carregando — espera 2 segundos e tenta de novo.','#d97706'); return; }
   const grupos=[...p.dias].sort((a,b)=>a.data.localeCompare(b.data));
-  const subtitulo=`CONTROLE DE EXTRA ESCOPO / ADICIONAL — Extra Escopo: ${p.nome}`;
+  const primeiraData=grupos[0].data, ultimaData=grupos[grupos.length-1].data;
+  const subtitulo=`EXTRA ESCOPO — SERVIÇO: ${p.nome.toUpperCase()} — PERÍODO: ${formatarDataBR(primeiraData)} A ${formatarDataBR(ultimaData)}`;
   const {wb}=await construirWorkbookExtraEscopo(grupos,subtitulo);
-  const nomeArquivo=`Extra_Escopo_${p.nome.replace(/[^A-Z0-9]+/gi,'_').slice(0,40)}.xlsx`;
+  const nomeArquivo=`EXTRA_ESCOPO_${p.nome.toUpperCase().replace(/[^A-Z0-9]+/gi,'_').slice(0,40)}_${dataBRArquivo(primeiraData)}_A_${dataBRArquivo(ultimaData)}.xlsx`;
   await baixarWorkbookExtraEscopo(wb,nomeArquivo);
   showToast('📥 Excel deste Extra Escopo exportado!','#158038');
 }
@@ -10495,7 +10509,7 @@ async function construirWorkbookAndamento(grupos,subtitulo){
   wb.creator='Master Energy — Sistema de RDO';
   wb.created=new Date();
   const ws=wb.addWorksheet('Andamento',{properties:{tabColor:{argb:'FF1A52C8'}}});
-  const LARG=11;
+  const LARG=12;
 
   ws.mergeCells(1,1,3,LARG);
   const titulo=ws.getCell(1,1);
@@ -10511,7 +10525,7 @@ async function construirWorkbookAndamento(grupos,subtitulo){
   ws.getRow(4).height=20;
 
   const headerRow=6;
-  const headers=['Nº RDO','DATA','OBRA','ENCARREGADO','OSE','PROJETO/SERVIÇO','DESCRIÇÃO','FUNCIONÁRIO','FUNÇÃO','VEÍCULO','HORAS'];
+  const headers=['Nº RDO','DATA','OBRA','DISCIPLINA','ENCARREGADO','OSE','PROJETO/SERVIÇO','DESCRIÇÃO','FUNCIONÁRIO','FUNÇÃO','VEÍCULO','HORAS'];
   headers.forEach((h,ci)=>{
     const c=ws.getCell(headerRow,ci+1);
     c.value=h; c.font={bold:true,color:{argb:'FFFFFFFF'},size:10};
@@ -10527,7 +10541,7 @@ async function construirWorkbookAndamento(grupos,subtitulo){
     const totalGrupo=g.trabalhadores.reduce((s,t)=>s+t.horas,0);
     totalHoras+=totalGrupo;
     const[yy,mm,dd]=g.data.split('-');
-    const dataFmt=`${dd}/${mm}/${yy}`;
+    const dataFmt=`${dd}/${mm}/${yy}`; // padrão brasileiro dia/mês/ano
     const n=Math.max(1,g.trabalhadores.length);
     const linhaInicioBloco=linhaAtual;
     const linhaFimBloco=linhaAtual+n-1;
@@ -10538,7 +10552,7 @@ async function construirWorkbookAndamento(grupos,subtitulo){
       const linha=linhaInicioBloco+idxT;
       const valoresPessoais=[t.nome,t.funcao,t.veiculo||'—',Number(t.horas.toFixed(1))];
       valoresPessoais.forEach((v,ci)=>{
-        const c=ws.getCell(linha,8+ci);
+        const c=ws.getCell(linha,9+ci);
         c.value=v;
         c.fill={type:'pattern',pattern:'solid',fgColor:{argb:corFundo}};
         c.border={bottom:{style:'thin',color:{argb:'FFEEEEEE'}},left:{style:'thin',color:{argb:'FFD8E0F5'}}};
@@ -10546,18 +10560,18 @@ async function construirWorkbookAndamento(grupos,subtitulo){
         else{ c.font={size:10}; c.alignment={horizontal:'left',vertical:'middle',indent:1}; }
       });
       if(idxT===0){
-        const valoresBloco=[g.nrdo,dataFmt,g.obra,g.encarregado,g.ose,g.servico,g.descricao];
+        const valoresBloco=[g.nrdo,dataFmt,(g.obra||'—').toUpperCase(),g.disc||'—',g.encarregado,g.ose,g.servico,g.descricao];
         valoresBloco.forEach((v,ci)=>{
           const c=ws.getCell(linha,ci+1);
           c.value=v;
           c.fill={type:'pattern',pattern:'solid',fgColor:{argb:corFundo}};
           c.font={size:10,bold:ci===0};
-          c.alignment={horizontal:ci===0?'center':'left',vertical:'middle',indent:ci===0?0:1,wrapText:ci===6};
+          c.alignment={horizontal:ci===0?'center':'left',vertical:'middle',indent:ci===0?0:1,wrapText:ci===7};
           c.border={left:{style:'thin',color:{argb:'FF1A52C8'}}};
         });
       }
     });
-    if(n>1) for(let ci=1;ci<=7;ci++) ws.mergeCells(linhaInicioBloco,ci,linhaFimBloco,ci);
+    if(n>1) for(let ci=1;ci<=8;ci++) ws.mergeCells(linhaInicioBloco,ci,linhaFimBloco,ci);
     const linhasDesc=Math.max(1,Math.ceil((g.descricao||'').length/44));
     if(linhasDesc>n) ws.getRow(linhaInicioBloco).height=linhasDesc*13;
 
@@ -10589,9 +10603,9 @@ async function construirWorkbookAndamento(grupos,subtitulo){
   ws.getCell(linhaTotal,LARG).alignment={horizontal:'center'};
   for(let c=1;c<=LARG;c++) ws.getCell(linhaTotal,c).fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF1A52C8'}};
 
-  ws.getColumn(1).width=12; ws.getColumn(2).width=12; ws.getColumn(3).width=24; ws.getColumn(4).width=20;
-  ws.getColumn(5).width=9; ws.getColumn(6).width=24; ws.getColumn(7).width=40; ws.getColumn(8).width=24;
-  ws.getColumn(9).width=16; ws.getColumn(10).width=16; ws.getColumn(11).width=11;
+  ws.getColumn(1).width=12; ws.getColumn(2).width=12; ws.getColumn(3).width=24; ws.getColumn(4).width=16;
+  ws.getColumn(5).width=20; ws.getColumn(6).width=9; ws.getColumn(7).width=24; ws.getColumn(8).width=40;
+  ws.getColumn(9).width=24; ws.getColumn(10).width=16; ws.getColumn(11).width=16; ws.getColumn(12).width=11;
 
   return {wb,totalHoras};
 }
@@ -10607,20 +10621,25 @@ async function exportarAndamentoExcel(){
   if(!grupos.length){ showToast('Nenhum Andamento encontrado pra exportar.','#d97706'); return; }
   if(typeof ExcelJS==='undefined'){ showToast('Biblioteca de Excel ainda carregando — espera 2 segundos e tenta de novo.','#d97706'); return; }
 
-  let subtitulo=`CONTROLE DE ANDAMENTO POR PROJETO — Período: ${de?formatarDataBR(de):'início'} até ${ate?formatarDataBR(ate):'hoje'}`;
-  if(encFiltro) subtitulo+=` — Encarregado: ${encFiltro}`;
+  const primeiraData=grupos[0].data, ultimaData=grupos[grupos.length-1].data;
+  const deTxt=formatarDataBR(de||primeiraData), ateTxt=formatarDataBR(ate||ultimaData);
+  let subtitulo=`ANDAMENTO — PERÍODO: ${deTxt} A ${ateTxt}`;
+  const obrasUnicas=[...new Set(grupos.map(g=>(g.obra||'—').toUpperCase()))];
+  const discsUnicas=[...new Set(grupos.map(g=>g.disc||'—'))];
+  if(obrasUnicas.length===1) subtitulo+=` — OBRA: ${obrasUnicas[0]}`;
+  if(discsUnicas.length===1) subtitulo+=` — DISCIPLINA: ${discsUnicas[0]}`;
+  if(encFiltro) subtitulo+=` — ENCARREGADO: ${encFiltro.toUpperCase()}`;
   const {wb}=await construirWorkbookAndamento(grupos,subtitulo);
 
-  const carimbo=hojeLocal();
+  const deArq=dataBRArquivo(de||primeiraData), ateArq=dataBRArquivo(ate||ultimaData);
   let nomeArquivo;
   if(grupos.length===1){
     const g=grupos[0];
-    const[y,m,dd]=g.data.split('-');
-    nomeArquivo=`${sanitizarNomeArquivo(g.nrdo)} - Andamento - ${dd}-${m}-${y} - Obra ${sanitizarNomeArquivo(g.obra)} - ${sanitizarNomeArquivo(g.encarregado)}.xlsx`;
+    nomeArquivo=`${sanitizarNomeArquivo(g.nrdo)} - ANDAMENTO - ${dataBRArquivo(g.data)} - OBRA ${sanitizarNomeArquivo(g.obra).toUpperCase()} - DISCIPLINA ${sanitizarNomeArquivo(g.disc||'—').toUpperCase()} - ENCARREGADO ${sanitizarNomeArquivo(g.encarregado).toUpperCase()}.xlsx`;
   }else if(encFiltro){
-    nomeArquivo=`Andamento_MasterEnergy_${sanitizarNomeArquivo(encFiltro)}_${carimbo}.xlsx`;
+    nomeArquivo=`ANDAMENTO_MASTERENERGY_ENCARREGADO_${sanitizarNomeArquivo(encFiltro).toUpperCase().replace(/\s+/g,'_')}_PERIODO_${deArq}_A_${ateArq}.xlsx`;
   }else{
-    nomeArquivo=`Andamento_MasterEnergy_${carimbo}.xlsx`;
+    nomeArquivo=`ANDAMENTO_MASTERENERGY_PERIODO_${deArq}_A_${ateArq}.xlsx`;
   }
   await baixarWorkbookExtraEscopo(wb,nomeArquivo); // utilitário genérico de download — não tem lógica específica de Extra Escopo
   showToast('📥 Controle de Andamento exportado com formatação!','#1a52c8');
@@ -10631,10 +10650,9 @@ async function exportarAndamentoExcelIndividual(chave){
   const g=andamentoGruposAtuais[chave];
   if(!g){ showToast('Registro não encontrado — filtre de novo e tente outra vez.','#d97706'); return; }
   if(typeof ExcelJS==='undefined'){ showToast('Biblioteca de Excel ainda carregando — espera 2 segundos e tenta de novo.','#d97706'); return; }
-  const[y,m,dd]=g.data.split('-');
-  const subtitulo=`CONTROLE DE ANDAMENTO POR PROJETO — Registro individual — ${dd}/${m}/${y} — ${g.ose}`;
+  const subtitulo=`ANDAMENTO — REGISTRO INDIVIDUAL — DATA: ${formatarDataBR(g.data)} — OBRA: ${(g.obra||'—').toUpperCase()} — DISCIPLINA: ${g.disc||'—'} — ENCARREGADO: ${g.encarregado} — ${g.ose}`;
   const {wb}=await construirWorkbookAndamento([g],subtitulo);
-  const nomeArquivo=`${sanitizarNomeArquivo(g.nrdo)} - Andamento - ${dd}-${m}-${y} - Obra ${sanitizarNomeArquivo(g.obra)} - ${sanitizarNomeArquivo(g.encarregado)}.xlsx`;
+  const nomeArquivo=`${sanitizarNomeArquivo(g.nrdo)} - ANDAMENTO - ${dataBRArquivo(g.data)} - OBRA ${sanitizarNomeArquivo(g.obra).toUpperCase()} - DISCIPLINA ${sanitizarNomeArquivo(g.disc||'—').toUpperCase()} - ENCARREGADO ${sanitizarNomeArquivo(g.encarregado).toUpperCase()}.xlsx`;
   await baixarWorkbookExtraEscopo(wb,nomeArquivo);
   showToast('📥 Excel deste dia exportado!','#1a52c8');
 }
@@ -10645,9 +10663,10 @@ async function exportarAndamentoExcelProjeto(nomeProjeto){
   if(!p){ showToast('Registro não encontrado — filtre de novo e tente outra vez.','#d97706'); return; }
   if(typeof ExcelJS==='undefined'){ showToast('Biblioteca de Excel ainda carregando — espera 2 segundos e tenta de novo.','#d97706'); return; }
   const grupos=[...p.dias].sort((a,b)=>a.data.localeCompare(b.data));
-  const subtitulo=`CONTROLE DE ANDAMENTO POR PROJETO — Projeto: ${p.nome}`;
+  const primeiraData=grupos[0].data, ultimaData=grupos[grupos.length-1].data;
+  const subtitulo=`ANDAMENTO — PROJETO: ${p.nome.toUpperCase()} — PERÍODO: ${formatarDataBR(primeiraData)} A ${formatarDataBR(ultimaData)}`;
   const {wb}=await construirWorkbookAndamento(grupos,subtitulo);
-  const nomeArquivo=`Andamento_${p.nome.replace(/[^A-Z0-9]+/gi,'_').slice(0,40)}.xlsx`;
+  const nomeArquivo=`ANDAMENTO_${p.nome.toUpperCase().replace(/[^A-Z0-9]+/gi,'_').slice(0,40)}_${dataBRArquivo(primeiraData)}_A_${dataBRArquivo(ultimaData)}.xlsx`;
   await baixarWorkbookExtraEscopo(wb,nomeArquivo);
   showToast('📥 Excel deste projeto exportado!','#1a52c8');
 }
