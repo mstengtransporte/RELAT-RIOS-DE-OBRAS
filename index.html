@@ -85,6 +85,12 @@ body.dark input::placeholder,body.dark textarea::placeholder{color:#9fb0cc!impor
 input:not(.hrs),textarea:not(.hrs),select:not(.hrs-status):not(.ose-status-sel){font-weight:900!important}
 body:not(.dark) input:not(.hrs),body:not(.dark) textarea:not(.hrs),body:not(.dark) select:not(.hrs-status):not(.ose-status-sel){color:#0a1628!important}
 body.dark input:not(.hrs),body.dark textarea:not(.hrs),body.dark select:not(.hrs-status):not(.ose-status-sel),body.dark .sum-val{color:#fff!important}
+/* A regra acima deixa a LETRA branca nas caixas de seleção no modo escuro, mas a lista
+   suspensa (as opções, quando você clica pra escolher) usa o fundo padrão do sistema
+   operacional, que costuma ser claro — resultado: letra branca em fundo claro, invisível
+   até passar o mouse (o destaque azul do hover é o que deixava visível). Esta regra
+   define um fundo escuro pras opções também, pra aparecer direto, sem precisar do hover. */
+body.dark select:not(.hrs-status):not(.ose-status-sel) option{background:#0a1628;color:#fff}
 textarea.hrs{color:inherit}
 textarea.hrs.col-sem{color:#0a1628}
 body.dark textarea.hrs.col-sem{color:#fff}
@@ -1977,7 +1983,7 @@ body.dark #workers-body tr:hover{background-color:rgba(58,110,232,.08)}
       <div class="search-filters">
         <input type="date" id="search-de" title="Data inicial">
         <input type="date" id="search-ate" title="Data final">
-        <input type="text" id="search-obra" placeholder="Obra / Cliente..." style="min-width:130px">
+        <input type="text" id="search-obra" placeholder="Obra / Cliente..." style="min-width:130px" onkeydown="if(event.key==='Enter'){event.preventDefault();buscarRDOs();}">
         <button onclick="buscarRDOs()">Buscar</button>
       </div>
       <div class="search-results" id="search-results">
@@ -8773,7 +8779,7 @@ function getAllRDOKeys(){
 function buscarRDOs(){
   const de=document.getElementById('search-de').value;
   const ate=document.getElementById('search-ate').value;
-  const obra=(document.getElementById('search-obra').value||'').trim().toLowerCase();
+  const obra=normalizarObra(document.getElementById('search-obra').value||'');
   const keys=getAllRDOKeys();
   const resultDiv=document.getElementById('search-results');
   const countEl=document.getElementById('search-count');
@@ -8803,7 +8809,7 @@ function buscarRDOs(){
       if(de&&data&&data<de)return;
       if(ate&&data&&data>ate)return;
       // Filtro por obra
-      if(obra&&!(h.obra||'').toLowerCase().includes(obra))return;
+      if(obra&&!normalizarObra(h.obra||'').includes(obra))return;
       resultados.push({key:k,data,obra:h.obra||'',nrdo:h.nrdo||'',enc:h.enc||'',disc:h.disc||''});
     }catch(e){}
   });
