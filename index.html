@@ -5709,6 +5709,7 @@ function makeHrsCell(i,o){
       <textarea class="hrs col-sem" rows="1" id="hrs-${i}-${o}" placeholder="—"
         oninput="atualizarCorCelulaHora(${i},${o});recalcAll()" onblur="formatHrs(this)"
         onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}"
+        onpaste="handlePasteHoras(event,${i},${o})"
         title="Horas normais. Ausência/desvio do dia inteiro: use o campo Veículo, na coluna ao lado."></textarea>
       <select class="hrs-status" id="hst-${i}-${o}" onchange="applyHrsStatus(${i},${o})" style="font-size:8px;padding:0 1px;border:none;background:transparent;color:var(--text3);cursor:pointer;max-width:72px;font-weight:800">
         <option value="normal">${normalLabel}</option>
@@ -5716,6 +5717,56 @@ function makeHrsCell(i,o){
       </select>
     </div>
   </td>`;
+}
+
+// ── COLAR BLOCO DE HORAS (estilo Excel) ─────────────────────────────────────
+// Cola um bloco de células copiado do Excel (várias linhas/colunas separadas por
+// tab/quebra de linha) espalhando pelas células de hora a partir da célula onde o
+// cursor estava. Só entra em ação quando o texto colado É de fato um bloco (tem tab ou
+// quebra de linha) — colar um valor único continua exatamente como sempre funcionou
+// (sem interceptar nada, sem mudar esse caminho).
+function handlePasteHoras(event,linhaInicio,oseInicio){
+  const texto=(event.clipboardData||window.clipboardData).getData('text');
+  if(!texto||(!texto.includes('\t')&&!texto.includes('\n'))) return; // valor único: comportamento padrão do navegador
+  event.preventDefault();
+
+  const linhasTexto=texto.replace(/\r/g,'').split('\n').filter((l,idx,arr)=>!(idx===arr.length-1&&l===''));
+  if(!linhasTexto.length) return;
+  const blocos=linhasTexto.map(l=>l.split('\t'));
+
+  const trInicio=event.target.closest('tr');
+  let trs=[...document.querySelectorAll('#workers-body tr')];
+  const idxInicio=trs.indexOf(trInicio);
+  if(idxInicio===-1) return;
+
+  // Cria as linhas que faltarem (sem recalcular a cada uma — só no final, pra não travar
+  // colando blocos grandes). Reaproveita a MESMA função do botão "+ Adicionar
+  // funcionário", então a linha nova nasce 100% igual a uma criada manualmente.
+  const linhasNecessarias=idxInicio+blocos.length;
+  while(trs.length<linhasNecessarias){ addWorkerRow(false); trs=[...document.querySelectorAll('#workers-body tr')]; }
+
+  let celulasPreenchidas=0;
+  blocos.forEach((colunas,r)=>{
+    const tr=trs[idxInicio+r];
+    if(!tr) return;
+    const linhaReal=tr.dataset.row;
+    // Da esquerda pra direita, nunca passando da OSE 06 — colunas a mais no bloco
+    // colado (ex: colou OSE 01 a 08) são simplesmente ignoradas.
+    for(let c=0;c<colunas.length;c++){
+      const ose=oseInicio+c;
+      if(ose>NUM_OSE) break;
+      const cel=document.getElementById(`hrs-${linhaReal}-${ose}`);
+      if(!cel) continue;
+      cel.value=colunas[c].trim();
+      formatHrs(cel); // mesma formatação/reconhecimento de rótulo (FALTA, INTEGRAÇÃO...) de sempre
+      atualizarCorCelulaHora(linhaReal,ose); // cor segue o status que a OSE já tiver, igual sempre
+      celulasPreenchidas++;
+    }
+  });
+
+  renumerarLinhasVisiveis();
+  recalcAll(); // um recálculo só, no final — não a cada célula colada
+  if(celulasPreenchidas) showToast(`📋 ${celulasPreenchidas} célula${celulasPreenchidas>1?'s':''} de hora preenchida${celulasPreenchidas>1?'s':''} a partir da colagem.`,'#158038');
 }
 
 // Aplica (ou remove) a cor de status na célula de horas conforme ela tem ou não valor
@@ -9616,11 +9667,9 @@ function renderizarExtraEscopo(){
   Object.values(projetos).forEach(p=>p.dias.sort((a,b)=>a.data.localeCompare(b.data)));
   extraEscopoProjetosAtuais=projetos;
 
-  const listaProjetos=Object.values(projetos).sort((a,b)=>{
-    const totA=a.dias.reduce((s,g)=>s+g.trabalhadores.reduce((s2,t)=>s2+t.horas,0),0);
-    const totB=b.dias.reduce((s,g)=>s+g.trabalhadores.reduce((s2,t)=>s2+t.horas,0),0);
-    return totB-totA; // quem consumiu mais horas aparece primeiro
-  });
+  const listaProjetos=Object.values(projetos).sort((a,b)=>
+    a.dias[0].data.localeCompare(b.dias[0].data) // mais antigo primeiro, mais recente por último
+  );
 
   wrap.innerHTML=listaProjetos.map((p,idxP)=>{
     const totalProjeto=p.dias.reduce((s,g)=>s+g.trabalhadores.reduce((s2,t)=>s2+t.horas,0),0);
@@ -9634,11 +9683,9 @@ function renderizarExtraEscopo(){
       if(!porDisc[nomeDisc]) porDisc[nomeDisc]={nome:nomeDisc,dias:[]};
       porDisc[nomeDisc].dias.push(g);
     });
-    const disciplinas=Object.values(porDisc).sort((a,b)=>{
-      const totA=a.dias.reduce((s,g)=>s+g.trabalhadores.reduce((s2,t)=>s2+t.horas,0),0);
-      const totB=b.dias.reduce((s,g)=>s+g.trabalhadores.reduce((s2,t)=>s2+t.horas,0),0);
-      return totB-totA;
-    });
+    const disciplinas=Object.values(porDisc).sort((a,b)=>
+      a.dias[0].data.localeCompare(b.dias[0].data)
+    );
 
     const disciplinasHtml=disciplinas.map((disc,idxD)=>{
       const totalDisc=disc.dias.reduce((s,g)=>s+g.trabalhadores.reduce((s2,t)=>s2+t.horas,0),0);
@@ -10322,11 +10369,9 @@ function renderizarAndamento(){
   Object.values(projetos).forEach(p=>p.dias.sort((a,b)=>a.data.localeCompare(b.data)));
   andamentoProjetosAtuais=projetos;
 
-  const listaProjetos=Object.values(projetos).sort((a,b)=>{
-    const totA=a.dias.reduce((s,g)=>s+g.trabalhadores.reduce((s2,t)=>s2+t.horas,0),0);
-    const totB=b.dias.reduce((s,g)=>s+g.trabalhadores.reduce((s2,t)=>s2+t.horas,0),0);
-    return totB-totA; // projeto com mais horas aparece primeiro
-  });
+  const listaProjetos=Object.values(projetos).sort((a,b)=>
+    a.dias[0].data.localeCompare(b.dias[0].data) // mais antigo primeiro, mais recente por último
+  );
 
   wrap.innerHTML=listaProjetos.map((p,idxP)=>{
     const totalProjeto=p.dias.reduce((s,g)=>s+g.trabalhadores.reduce((s2,t)=>s2+t.horas,0),0);
@@ -10340,11 +10385,9 @@ function renderizarAndamento(){
       if(!porDisc[nomeDisc]) porDisc[nomeDisc]={nome:nomeDisc,dias:[]};
       porDisc[nomeDisc].dias.push(g);
     });
-    const disciplinas=Object.values(porDisc).sort((a,b)=>{
-      const totA=a.dias.reduce((s,g)=>s+g.trabalhadores.reduce((s2,t)=>s2+t.horas,0),0);
-      const totB=b.dias.reduce((s,g)=>s+g.trabalhadores.reduce((s2,t)=>s2+t.horas,0),0);
-      return totB-totA;
-    });
+    const disciplinas=Object.values(porDisc).sort((a,b)=>
+      a.dias[0].data.localeCompare(b.dias[0].data)
+    );
 
     const disciplinasHtml=disciplinas.map((disc,idxD)=>{
       const totalDisc=disc.dias.reduce((s,g)=>s+g.trabalhadores.reduce((s2,t)=>s2+t.horas,0),0);
