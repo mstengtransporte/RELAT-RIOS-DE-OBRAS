@@ -1825,7 +1825,8 @@ body.dark #workers-body tr:hover{background-color:rgba(58,110,232,.08)}
         <option value="PINTURA">PINTURA</option>
         <option value="TÉC. SEGURANÇA">TÉC. SEGURANÇA</option>
       </select></div>
-      <div class="hfield" style="border-right:none"><label>Encarregado <span style="font-weight:400;font-size:9px;opacity:.7">(automático)</span></label><div id="h-enc" class="hfield-readonly-wrap" tabindex="-1"></div></div>
+      <div class="hfield"><label>Encarregado <span style="font-weight:400;font-size:9px;opacity:.7">(automático)</span></label><div id="h-enc" class="hfield-readonly-wrap" tabindex="-1"></div></div>
+      <div class="hfield" style="border-right:none"><label>Feriado <span style="font-weight:400;font-size:9px;opacity:.7">(se houver, senão deixe em branco)</span></label><input type="text" id="h-feriado" placeholder="Ex: Aniversário da cidade" style="text-transform:uppercase" title="Preencha só se hoje for feriado (municipal, estadual ou nacional) — isso faz as horas lançadas nesse RDO contarem 100% de hora extra automaticamente. Domingo já é automático, não precisa preencher aqui."></div>
     </div>
   </div>
 
@@ -3529,7 +3530,11 @@ async function _syncSalvarSupabaseReal(d,rdoKey){
       .filter(w=>w.name||(w.hrs||[]).some(v=>v))
       .map((w,idx)=>({
         worker_index:idx,nome:w.name||null,funcao:w.func||null,veiculo:w.vehicle||null,hrs:w.hrs||[],hst:w.hst||[],
-        status_dia:statusDiaPorRotulo(w.vehicle)
+        status_dia:statusDiaPorRotulo(w.vehicle),
+        // Justificativa de hora extra, se o encarregado já preencheu numa tentativa
+        // anterior deste mesmo envio (guardada em memória, por nome normalizado —
+        // ver mostrarModalHoraExtra). Fica vazio/ausente em qualquer envio normal.
+        justificativa_he:(w.name&&window._justificativasHoraExtra?.[normalizarObra(w.name)])||undefined
       }));
     const{data:rpcResultado,error:erroRdo}=await supabaseClient.rpc('salvar_rdo_completo_v2',{
       p_rdo_key:rdoKey,
@@ -3544,7 +3549,8 @@ async function _syncSalvarSupabaseReal(d,rdoKey){
       p_row_counter:d.rowCounter||0,
       p_criado_por:idAtualConfirmado,
       p_oses:osesRows,
-      p_workers:workersRows
+      p_workers:workersRows,
+      p_feriado_nome:h.feriado||null
     });
     if(erroRdo||!rpcResultado){
       // Código 23505 = violação de índice/constraint único — teoricamente não deveria
@@ -3555,6 +3561,22 @@ async function _syncSalvarSupabaseReal(d,rdoKey){
         const msg='Já existe um RDO com esse número nesta obra. Confira o Nº do RDO (campo no topo) antes de salvar de novo.';
         console.error('Supabase erro ao salvar RDO (duplicidade):',erroRdo.message);
         return{sucesso:false,erro:msg};
+      }
+      // TRAVA DE HORA EXTRA (2026-08-29): o banco recusou o envio porque algum
+      // funcionário passaria de 9h somadas hoje (entre todos os RDOs) sem
+      // justificativa. Extrai a listinha de quem excedeu (mandada pelo próprio banco
+      // dentro da mensagem de erro) pra mostrar pro encarregado exatamente quem e
+      // quanto, em vez de um erro genérico.
+      const msgErro=erroRdo?.message||'';
+      if(msgErro.includes('HORA_EXTRA_SEM_JUSTIFICATIVA:')){
+        try{
+          const jsonTexto=msgErro.split('HORA_EXTRA_SEM_JUSTIFICATIVA:')[1].trim();
+          const excedentes=JSON.parse(jsonTexto);
+          return{sucesso:false,horaExtraBloqueio:true,excedentes};
+        }catch(e){
+          console.error('Falha ao interpretar a lista de hora extra vinda do banco:',e,msgErro);
+          return{sucesso:false,erro:'Algum funcionário passaria de 9h hoje. Confira as horas antes de enviar.'};
+        }
       }
       const msg=erroRdo?.message||erroRdo?.hint||erroRdo?.code||'Erro desconhecido ao salvar o RDO.';
       console.error('Supabase erro ao salvar RDO (RPC atômica):',msg);
@@ -6224,6 +6246,56 @@ function parseHrs(val){
 }
 function fmt(n){return n%1===0?n.toString():n.toFixed(1);}
 
+// TRAVA DE HORA EXTRA (2026-08-29): mostra a lista de funcionários que passariam de
+// 9h hoje (somando todos os RDOs), pede o motivo de cada um, e devolve um objeto
+// {nomeNormalizado: justificativa} se o encarregado confirmar, ou null se ele preferir
+// voltar e corrigir as horas em vez de justificar.
+function mostrarModalHoraExtra(excedentes){
+  return new Promise(resolve=>{
+    const overlay=document.createElement('div');
+    overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px';
+    const box=document.createElement('div');
+    box.style.cssText='background:var(--surface,#fff);border:2.5px solid #000;box-shadow:6px 6px 0 #000;max-width:520px;width:100%;max-height:90vh;overflow-y:auto';
+    let camposHtml='';
+    (excedentes||[]).forEach(ex=>{
+      const nomeSeguro=(ex.nome||'').replace(/"/g,'&quot;');
+      camposHtml+=`
+        <div style="margin-bottom:14px;padding:10px;border:1.5px solid #f0ad4e;background:#fff8ee;border-radius:6px">
+          <div style="font-weight:900;font-size:13px;margin-bottom:2px;color:#000">⚠️ ${(ex.nome||'').toUpperCase()}</div>
+          <div style="font-size:11.5px;color:#7a5a1e;margin-bottom:8px">Já tem ${fmt(ex.total_outros_rdos||0)}h em outro(s) RDO(s) hoje + ${fmt(ex.total_neste_rdo||0)}h neste RDO = ${fmt(ex.total_hoje||0)}h no total. Passou de 9h.</div>
+          <label style="font-size:10.5px;font-weight:900;text-transform:uppercase;color:var(--text3);display:block;margin-bottom:3px">Motivo da hora extra (obrigatório pra enviar assim mesmo):</label>
+          <textarea data-nome-he="${nomeSeguro}" rows="2" style="width:100%;padding:6px;font-size:13px;border:1.5px solid #000;box-sizing:border-box;font-family:inherit" placeholder="Ex: atendimento emergencial solicitado pela obra"></textarea>
+        </div>`;
+    });
+    box.innerHTML=`
+      <div style="background:linear-gradient(135deg,#d97706,#b45309);color:#fff;padding:14px 18px;font-weight:900;font-size:14px">⏱️ Horas acima de 9h detectadas</div>
+      <div style="padding:16px">
+        <p style="font-size:12.5px;color:var(--text2);margin:0 0 14px">Antes de enviar, corrija as horas se foi engano de digitação, ou explique o motivo de cada excedente pra confirmar que é hora extra de verdade.</p>
+        ${camposHtml}
+      </div>
+      <div style="display:flex;gap:8px;padding:12px 16px;border-top:2px solid #000">
+        <button id="btn-cancelar-he" style="flex:1;padding:10px;font-weight:900;background:#fff;border:2px solid #000;cursor:pointer">✏️ Vou corrigir as horas</button>
+        <button id="btn-confirmar-he" style="flex:1;padding:10px;font-weight:900;background:#d97706;color:#fff;border:2px solid #b45309;cursor:pointer">✔️ Confirmar e enviar</button>
+      </div>`;
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+    box.querySelector('#btn-cancelar-he').onclick=()=>{overlay.remove();resolve(null);};
+    box.querySelector('#btn-confirmar-he').onclick=()=>{
+      const textareas=box.querySelectorAll('textarea[data-nome-he]');
+      const justificativas={};
+      let faltando=false;
+      textareas.forEach(t=>{
+        const v=t.value.trim();
+        if(!v) faltando=true;
+        justificativas[normalizarObra(t.dataset.nomeHe)]=v;
+      });
+      if(faltando){ showToast('Preencha o motivo de todos os funcionários listados.','#d97706'); return; }
+      overlay.remove();
+      resolve(justificativas);
+    };
+  });
+}
+
 function recalcAll(){
   const tbody=document.getElementById('workers-body');
   const rows=tbody.querySelectorAll('tr');
@@ -6330,7 +6402,7 @@ function getFormData(){
   for(let o=1;o<=NUM_OSE;o++){
     oses.push({name:document.getElementById(`ose-name-${o}`)?.value||'',status:document.getElementById(`ose-status-${o}`)?.value||'sem',desc:document.getElementById(`ose-desc-${o}`)?.innerHTML||'',descText:document.getElementById(`ose-desc-${o}`)?.innerText||'',resp:document.getElementById(`ose-resp-${o}`)?.value||''});
   }
-  return{header:{nrdo:document.getElementById('h-nrdo').value,data:document.getElementById('h-data').value,obra:document.getElementById('h-obra').value,enc:document.getElementById('h-enc').textContent,encId:usuarioAtual?.id||null,disc:document.getElementById('h-disc').value},rowCounter,workers,oses,namesList,funcsList,vehiclesList};
+  return{header:{nrdo:document.getElementById('h-nrdo').value,data:document.getElementById('h-data').value,obra:document.getElementById('h-obra').value,enc:document.getElementById('h-enc').textContent,encId:usuarioAtual?.id||null,disc:document.getElementById('h-disc').value,feriado:document.getElementById('h-feriado')?.value||''},rowCounter,workers,oses,namesList,funcsList,vehiclesList};
 }
 
 // Trava contra clique duplo acidental nos botões de Salvar/Exportar — muito comum no
@@ -6480,6 +6552,21 @@ async function salvarRDO(){
       const campoNrdo=document.getElementById('h-nrdo');
       if(campoNrdo) campoNrdo.value=proximoNumero;
       localStorage.setItem(key,JSON.stringify(d)); // atualiza a gaveta local com o número corrigido também
+    }
+
+    // TRAVA DE HORA EXTRA (2026-08-29): o banco recusou porque algum funcionário
+    // passaria de 9h hoje sem justificativa. Mostra a caixa pedindo o motivo e
+    // reenvia automaticamente assim que confirmado — só uma vez (se ainda faltar
+    // depois disso, mostra o erro normal em vez de ficar insistindo sozinho).
+    if(resultado&&resultado.horaExtraBloqueio){
+      const justificativas=await mostrarModalHoraExtra(resultado.excedentes||[]);
+      if(justificativas){
+        window._justificativasHoraExtra=Object.assign(window._justificativasHoraExtra||{},justificativas);
+        showToast('🔁 Reenviando com a justificativa informada...','#7c3aed');
+        resultado=await syncSalvarSupabase(d);
+      }else{
+        resultado={sucesso:false,erro:'Envio cancelado — corrija as horas do(s) funcionário(s) listado(s) e tente enviar de novo.'};
+      }
     }
 
     if(resultado&&resultado.sucesso){
@@ -6790,6 +6877,8 @@ function restaurarEstadoCompleto(d){
   if(h.obra)setObraSelecionada(h.obra);
   if(h.enc)setEncarregadoSelecionado(h.enc);
   if(h.disc)setDiscSelecionada(h.disc);
+  const campoFeriado=document.getElementById('h-feriado');
+  if(campoFeriado) campoFeriado.value=h.feriado||'';
   if(d.oses){
     d.oses.forEach((o,idx)=>{
       const n=idx+1;
@@ -7138,8 +7227,9 @@ function _criarRDOEmBranco(mensagemToast,focarObra){
   fecharNovoRDOModal();
   const novaData=dataParaNovoRDO();
   rdoAtualId=gerarRdoId(); // identidade própria — nunca sobrescreve outro RDO já salvo
+  window._justificativasHoraExtra={}; // nunca deixa justificativa de um RDO vazar pro próximo
   localStorage.removeItem('rdo-last-key');
-  ['h-obra','h-disc'].forEach(id=>{const el=document.getElementById(id); if(el) el.value='';});
+  ['h-obra','h-disc','h-feriado'].forEach(id=>{const el=document.getElementById(id); if(el) el.value='';});
   popularSelectEncarregado(); // sempre o nome de quem está logado, mesmo depois de limpar o campo
   document.getElementById('h-data').value=novaData;
   updateDiaSemana();
