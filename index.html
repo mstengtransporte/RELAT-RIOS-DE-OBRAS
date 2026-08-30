@@ -886,6 +886,8 @@ input.login-input,
 #extra-escopo-modal.show{display:flex}
 #andamento-modal{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:9997;display:none;align-items:center;justify-content:center;padding:14px;backdrop-filter:blur(6px)}
 #andamento-modal.show{display:flex}
+#horas-extras-modal{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:9997;display:none;align-items:center;justify-content:center;padding:14px;backdrop-filter:blur(6px)}
+#horas-extras-modal.show{display:flex}
 #projetos-modal{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:9997;display:none;align-items:center;justify-content:center;padding:14px;backdrop-filter:blur(6px)}
 #projetos-modal.show{display:flex}
 #check-modal{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:9997;display:none;align-items:center;justify-content:center;padding:14px;backdrop-filter:blur(6px)}
@@ -1104,11 +1106,11 @@ body.dark .aviso-data-divergente .fechar-aviso-divergente{color:#fbbf24;}
    o modal fica em width:90vw (responsivo), senão 850px fixos estourariam a
    tela e forçariam rolagem horizontal num celular comum. */
 @media(min-width:900px){
-  #extra-escopo-modal .multipdf-box, #andamento-modal .multipdf-box{
+  #extra-escopo-modal .multipdf-box, #andamento-modal .multipdf-box, #horas-extras-modal .multipdf-box{
     min-width:850px;
   }
 }
-#extra-escopo-modal .multipdf-box, #andamento-modal .multipdf-box{
+#extra-escopo-modal .multipdf-box, #andamento-modal .multipdf-box, #horas-extras-modal .multipdf-box{
   overscroll-behavior:contain;
 }
 
@@ -1134,7 +1136,7 @@ body.dark .aviso-data-divergente .fechar-aviso-divergente{color:#fbbf24;}
   .legend-bar,
   .obras-paradas-bar,
   #toast,#autosave-dot,
-  #grafico-modal,#frases-modal,#multipdf-modal,#backup-modal,#novo-rdo-modal,#extra-escopo-modal,#andamento-modal,#projetos-modal,#check-modal,
+  #grafico-modal,#frases-modal,#multipdf-modal,#backup-modal,#novo-rdo-modal,#extra-escopo-modal,#andamento-modal,#horas-extras-modal,#projetos-modal,#check-modal,
   #list-modal,#search-modal,#pdf-loading,
   select.hrs-status,
   .no-print
@@ -1656,7 +1658,7 @@ body.dark #workers-body tr:hover{background-color:rgba(58,110,232,.08)}
    aparecer seco. Discreto, sem "bounce" nem exagero. */
 #multipdf-modal.show .multipdf-box, #novo-rdo-modal.show .multipdf-box,
 #absenteismo-periodo-modal.show .multipdf-box, #backup-modal.show .multipdf-box,
-#extra-escopo-modal.show .multipdf-box, #andamento-modal.show .multipdf-box{
+#extra-escopo-modal.show .multipdf-box, #andamento-modal.show .multipdf-box, #horas-extras-modal.show .multipdf-box{
   animation:polimento-entrada-modal .18s var(--ease);
 }
 @keyframes polimento-entrada-modal{
@@ -4766,23 +4768,35 @@ function updateDiaSemana(){
   atualizarFaixaFeriado();
 }
 
-// Mostra a faixa dourada quando o RDO inteiro conta 100% de hora extra (domingo,
-// pela própria data, ou feriado digitado no campo do cabeçalho) — mesmo critério
-// (v_eh_100) que a trava usa no banco, só que aqui é só um aviso visual antecipado,
-// não faz nenhuma checagem nova.
+// Mostra a faixa colorida quando o RDO inteiro conta hora extra automática:
+// dourado = 100% (domingo, pela própria data, ou feriado digitado no campo do
+// cabeçalho); laranja = 70% (sábado). Mesmo critério (v_eh_100/v_eh_sabado) que a
+// trava usa no banco — aqui é só um aviso visual antecipado, não faz checagem nova.
 function atualizarFaixaFeriado(){
   const v=document.getElementById('h-data').value;
   const feriado=(document.getElementById('h-feriado')?.value||'').trim();
   const faixa=document.getElementById('faixa-feriado-100');
   if(!faixa) return;
-  const ehDomingo=v?(new Date(v+'T12:00:00').getDay()===0):false;
-  if(!ehDomingo&&!feriado){ faixa.style.display='none'; return; }
+  const diaSemana=v?new Date(v+'T12:00:00').getDay():null;
+  const ehDomingo=diaSemana===0;
+  const ehSabado=diaSemana===6;
+  const eh100=ehDomingo||!!feriado;
+  const eh70Sabado=ehSabado&&!eh100; // sábado que também é feriado conta 100%, não soma os dois
+  if(!eh100&&!eh70Sabado){ faixa.style.display='none'; return; }
   faixa.style.display='flex';
-  faixa.textContent=ehDomingo&&feriado
-    ? `🟡 DOMINGO + FERIADO (${feriado.toUpperCase()}) — TODAS AS HORAS DESTE RDO CONTAM 100% DE HORA EXTRA`
-    : ehDomingo
-      ? '🟡 DOMINGO — TODAS AS HORAS DESTE RDO CONTAM 100% DE HORA EXTRA AUTOMATICAMENTE'
-      : `🟡 FERIADO (${feriado.toUpperCase()}) — TODAS AS HORAS DESTE RDO CONTAM 100% DE HORA EXTRA`;
+  if(eh100){
+    faixa.style.background='linear-gradient(135deg,#f5c518,#d4a017)';
+    faixa.style.color='#3a2a00';
+    faixa.textContent=ehDomingo&&feriado
+      ? `🟡 DOMINGO + FERIADO (${feriado.toUpperCase()}) — TODAS AS HORAS DESTE RDO CONTAM 100% DE HORA EXTRA`
+      : ehDomingo
+        ? '🟡 DOMINGO — TODAS AS HORAS DESTE RDO CONTAM 100% DE HORA EXTRA AUTOMATICAMENTE'
+        : `🟡 FERIADO (${feriado.toUpperCase()}) — TODAS AS HORAS DESTE RDO CONTAM 100% DE HORA EXTRA`;
+  }else{
+    faixa.style.background='linear-gradient(135deg,#ffb347,#e08e1f)';
+    faixa.style.color='#3a2200';
+    faixa.textContent='🟠 SÁBADO — TODAS AS HORAS DESTE RDO CONTAM 70% DE HORA EXTRA AUTOMATICAMENTE';
+  }
 }
 function atualizarBannerObra(){
   const obra=document.getElementById('h-obra')?.value||'';
@@ -8884,7 +8898,7 @@ const FECHAR_MODAL_POR_ID={
   'dash-modal':fecharDashboardAoVivo,
 };
 const IDS_MODAIS_COM_ESC=['list-modal','search-modal','pendentes-modal','grafico-modal','frases-modal',
-  'multipdf-modal','extra-escopo-modal','andamento-modal','projetos-modal','check-modal',
+  'multipdf-modal','extra-escopo-modal','andamento-modal','horas-extras-modal','projetos-modal','check-modal',
   'novo-rdo-modal','backup-modal','dash-modal'];
 document.addEventListener('keydown',e=>{
   if(e.key!=='Escape') return;
@@ -9891,9 +9905,10 @@ function renderizarListaHorasExtras(registros){
     const[y,m,dd]=(r.data||'').split('-');
     const dataFmt=y?`${dd}/${m}/${y}`:'—';
     const corTipo=r.tipo==='100'?'#b45309':'#d97706';
+    const diaSemanaReg=y?new Date(r.data+'T12:00:00').getDay():null;
     const motivoTexto=r.tipo==='100'
       ?(r.feriadoNome?`Feriado: ${r.feriadoNome.toUpperCase()}`:'Domingo')
-      :`Motivo: ${r.justificativa||'—'}`;
+      :(diaSemanaReg===6&&!r.justificativa ? 'Sábado (70% automático)' : `Motivo: ${r.justificativa||'—'}`);
     return`<div style="border:1.5px solid ${corTipo};background:#fff8ee;border-radius:6px;padding:10px;margin-bottom:8px">
       <div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap">
         <div style="font-weight:900;font-size:13px">${(r.nome||'').toUpperCase()} — ${(r.funcao||'').toUpperCase()}</div>
