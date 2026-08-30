@@ -7416,7 +7416,7 @@ function getNomeArquivoBackup(){
   const agora=new Date();
   const diaSemana=dias[agora.getDay()];
   const dataFormatada=`${String(agora.getDate()).padStart(2,'0')}-${String(agora.getMonth()+1).padStart(2,'0')}-${agora.getFullYear()}`;
-  return `BACKUP-GERAL-DOS-RDOS-FEITO-${dataFormatada}-${diaSemana}.xlsx`;
+  return `RELATORIO-CONSOLIDADO-RDOS-${dataFormatada}-${diaSemana}.xlsx`;
 }
 
 function exportarPDF(){
@@ -11540,115 +11540,126 @@ async function exportarBackupCompletoExcel(btn){
     wb.created=new Date();
 
     const totalHorasGeral=registros.reduce((s,r)=>s+r.horas,0);
+    const totalHorasNormaisGeral=registros.filter(r=>r.status!=='ext').reduce((s,r)=>s+r.horas,0);
+    const totalHorasExtraGeral=registros.filter(r=>r.status==='ext').reduce((s,r)=>s+r.horas,0);
     const rdosUnicos=new Set(registros.map(r=>r.nrdo+'|'+r.obra+'|'+r.data)).size;
     const obrasUnicas=new Set(registros.map(r=>normalizarObra(r.obra))).size;
     const encarregadosUnicos=new Set(registros.map(r=>r.encarregado)).size;
 
-    // ── Agregações base ──
-    const porDisc={},porObraGeral={},porEncGeral={},porExtraObra={};
-    const obraEncMatriz={},obraDiscMatriz={};
-    const nomesEncarregados=new Set();
+    // ── Agregações (2026-08-30 — reestruturado): cada dimensão (Obra, Disciplina,
+    // Encarregado, e o Detalhamento cruzando as 3) já soma Normal x Extra Escopo
+    // separados desde aqui — nunca precisa de uma tabela "cruzada" nem de uma tabela
+    // "consolidada" à parte só repetindo a mesma soma de outro jeito. Funciona igual
+    // pra 1 obra ou pra 50 obras — cada uma vira só mais uma linha na tabela.
+    const porObra={},porDisc={},porEnc={},porDetalhe={};
     const nomesDisciplinasPorChave={};
-    const porEncObraDisc={},porEncObraDiscGeral={};
     registros.forEach(r=>{
       const chaveObra=normalizarObra(r.obra);
-      nomesEncarregados.add(r.encarregado);
-
-      // Total GERAL de uma obra específica — soma TODAS as disciplinas dela juntas.
-      if(!porObraGeral[chaveObra]) porObraGeral[chaveObra]={nome:r.obra,horas:0,rdos:new Set(),primeiraData:r.data,ultimaData:r.data};
-      const og=porObraGeral[chaveObra];
-      og.horas+=r.horas; og.rdos.add(r.nrdo);
-      if(r.data<og.primeiraData) og.primeiraData=r.data;
-      if(r.data>og.ultimaData) og.ultimaData=r.data;
-
-      // Total CONSOLIDADO de um encarregado — soma TODAS as obras dele juntas.
-      if(!porEncGeral[r.encarregado]) porEncGeral[r.encarregado]={horas:0,rdos:new Set(),obras:new Set(),primeiraData:r.data,ultimaData:r.data};
-      const eg=porEncGeral[r.encarregado];
-      eg.horas+=r.horas; eg.rdos.add(r.nrdo); eg.obras.add(chaveObra);
-      if(r.data<eg.primeiraData) eg.primeiraData=r.data;
-      if(r.data>eg.ultimaData) eg.ultimaData=r.data;
-
-      // Extra Escopo por Obra — só soma quando o status É Extra Escopo, agrupado por obra
-      if(r.status==='ext'){
-        if(!porExtraObra[chaveObra]) porExtraObra[chaveObra]={nome:r.obra,horas:0,rdos:new Set(),primeiraData:r.data,ultimaData:r.data};
-        const ex=porExtraObra[chaveObra];
-        ex.horas+=r.horas; ex.rdos.add(r.nrdo);
-        if(r.data<ex.primeiraData) ex.primeiraData=r.data;
-        if(r.data>ex.ultimaData) ex.ultimaData=r.data;
-      }
-
       const chaveDisc=normalizarObra(r.disc);
       if(!nomesDisciplinasPorChave[chaveDisc]) nomesDisciplinasPorChave[chaveDisc]=r.disc;
-      const nomeDiscCanonico=nomesDisciplinasPorChave[chaveDisc];
-      if(!porDisc[chaveDisc]) porDisc[chaveDisc]={nome:nomeDiscCanonico,horas:0,rdos:new Set(),primeiraData:r.data,ultimaData:r.data};
-      porDisc[chaveDisc].horas+=r.horas; porDisc[chaveDisc].rdos.add(r.nrdo);
-      if(r.data<porDisc[chaveDisc].primeiraData) porDisc[chaveDisc].primeiraData=r.data;
-      if(r.data>porDisc[chaveDisc].ultimaData) porDisc[chaveDisc].ultimaData=r.data;
+      const ehExtra=r.status==='ext';
 
-      if(!obraEncMatriz[chaveObra]) obraEncMatriz[chaveObra]={nomeObra:r.obra};
-      obraEncMatriz[chaveObra][r.encarregado]=(obraEncMatriz[chaveObra][r.encarregado]||0)+r.horas;
+      if(!porObra[chaveObra]) porObra[chaveObra]={nome:r.obra,normal:0,extra:0,rdos:new Set(),primeiraData:r.data,ultimaData:r.data};
+      const po=porObra[chaveObra];
+      if(ehExtra) po.extra+=r.horas; else po.normal+=r.horas;
+      po.rdos.add(r.nrdo);
+      if(r.data<po.primeiraData) po.primeiraData=r.data;
+      if(r.data>po.ultimaData) po.ultimaData=r.data;
 
-      if(!obraDiscMatriz[chaveObra]) obraDiscMatriz[chaveObra]={nomeObra:r.obra};
-      obraDiscMatriz[chaveObra][chaveDisc]=(obraDiscMatriz[chaveObra][chaveDisc]||0)+r.horas;
+      if(!porDisc[chaveDisc]) porDisc[chaveDisc]={nome:nomesDisciplinasPorChave[chaveDisc],normal:0,extra:0,rdos:new Set(),primeiraData:r.data,ultimaData:r.data};
+      const pd=porDisc[chaveDisc];
+      if(ehExtra) pd.extra+=r.horas; else pd.normal+=r.horas;
+      pd.rdos.add(r.nrdo);
+      if(r.data<pd.primeiraData) pd.primeiraData=r.data;
+      if(r.data>pd.ultimaData) pd.ultimaData=r.data;
 
-      // Agrupamento GERAL — Encarregado + Obra + Disciplina, somando TODOS os status
-      // juntos (não separa por Em Andamento/Extra Escopo aqui — isso é só pro resumo
-      // geral, pra não duplicar o mesmo RDO em duas linhas diferentes).
-      const chaveGeral=r.encarregado+'|'+chaveObra+'|'+chaveDisc;
-      if(!porEncObraDiscGeral[chaveGeral]) porEncObraDiscGeral[chaveGeral]={encarregado:r.encarregado,obra:r.obra,disc:nomeDiscCanonico,horas:0,rdos:new Set(),primeiraData:r.data,ultimaData:r.data};
-      const geral=porEncObraDiscGeral[chaveGeral];
-      geral.horas+=r.horas; geral.rdos.add(r.nrdo);
-      if(r.data<geral.primeiraData) geral.primeiraData=r.data;
-      if(r.data>geral.ultimaData) geral.ultimaData=r.data;
+      if(!porEnc[r.encarregado]) porEnc[r.encarregado]={normal:0,extra:0,rdos:new Set(),obras:new Set(),primeiraData:r.data,ultimaData:r.data};
+      const pe=porEnc[r.encarregado];
+      if(ehExtra) pe.extra+=r.horas; else pe.normal+=r.horas;
+      pe.rdos.add(r.nrdo); pe.obras.add(chaveObra);
+      if(r.data<pe.primeiraData) pe.primeiraData=r.data;
+      if(r.data>pe.ultimaData) pe.ultimaData=r.data;
 
-      // Agrupamento POR STATUS — usado só nas tabelas específicas de Em Andamento e
-      // Extra Escopo (cada uma filtra só o status dela, sem misturar com o resumo geral).
-      const chaveCombo=r.encarregado+'|'+chaveObra+'|'+chaveDisc+'|'+r.status;
-      if(!porEncObraDisc[chaveCombo]) porEncObraDisc[chaveCombo]={encarregado:r.encarregado,obra:r.obra,disc:nomeDiscCanonico,status:r.status,horas:0,rdos:new Set(),primeiraData:r.data,ultimaData:r.data};
-      const combo=porEncObraDisc[chaveCombo];
-      combo.horas+=r.horas; combo.rdos.add(r.nrdo);
-      if(r.data<combo.primeiraData) combo.primeiraData=r.data;
-      if(r.data>combo.ultimaData) combo.ultimaData=r.data;
+      // Detalhamento — a única tabela que cruza as 3 dimensões ao mesmo tempo
+      // (Obra + Disciplina + Encarregado), com Normal x Extra Escopo já divididos.
+      const chaveDet=r.encarregado+'|'+chaveObra+'|'+chaveDisc;
+      if(!porDetalhe[chaveDet]) porDetalhe[chaveDet]={encarregado:r.encarregado,obra:r.obra,disc:nomesDisciplinasPorChave[chaveDisc],normal:0,extra:0,rdos:new Set(),primeiraData:r.data,ultimaData:r.data};
+      const pdet=porDetalhe[chaveDet];
+      if(ehExtra) pdet.extra+=r.horas; else pdet.normal+=r.horas;
+      pdet.rdos.add(r.nrdo);
+      if(r.data<pdet.primeiraData) pdet.primeiraData=r.data;
+      if(r.data>pdet.ultimaData) pdet.ultimaData=r.data;
     });
-    const listaEncarregados=[...nomesEncarregados].sort();
-    const listaDisciplinasChaves=Object.keys(nomesDisciplinasPorChave).sort();
-    const listaDisciplinas=listaDisciplinasChaves.map(ch=>nomesDisciplinasPorChave[ch]);
 
     const NUM_COLS_DETALHE=9;
-    const largura=Math.max(NUM_COLS_DETALHE,listaEncarregados.length+2,listaDisciplinas.length+2);
-    const ws=wb.addWorksheet('BACKUP RDO Master Energy',{properties:{tabColor:{argb:'FF1457C8'}}});
+    const largura=NUM_COLS_DETALHE;
+    const ws=wb.addWorksheet('Relatorio Consolidado',{properties:{tabColor:{argb:'FF1457C8'}}});
 
     let L=1;
     ws.mergeCells(1,1,3,largura);
     const tituloCell=ws.getCell(1,1);
-    tituloCell.value='RDO BACKUP MASTER ENERGY';
-    tituloCell.font={name:'Arial',size:26,bold:true,color:{argb:'FFFFFFFF'}};
+    tituloCell.value='RDO MASTER ENERGY — RELATÓRIO CONSOLIDADO';
+    tituloCell.font={name:'Arial',size:24,bold:true,color:{argb:'FFFFFFFF'}};
     tituloCell.alignment={vertical:'middle',horizontal:'center'};
     for(let r=1;r<=3;r++) for(let c=1;c<=largura;c++) ws.getCell(r,c).fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF0A3C64'}};
     L=4;
     ws.mergeCells(L,1,L,largura);
     const subCell=ws.getCell(L,1);
-    subCell.value='Montagem e Manutenção Industrial — Relatório Consolidado de RDOs';
+    subCell.value=`Montagem e Manutenção Industrial — Gerado em ${new Date().toLocaleString('pt-BR')}`;
     subCell.font={name:'Arial',size:12,italic:true,color:{argb:'FF0A3C64'},bold:true};
     subCell.alignment={horizontal:'center'};
     ws.getRow(L).height=22;
     L+=2;
 
-    const linhasInfo=[
-      ['Gerado em:',new Date().toLocaleString('pt-BR')],
-      ['Total de RDOs:',rdosUnicos],
-      ['Quantidade de Obras:',obrasUnicas],
-      ['Quantidade de Encarregados:',encarregadosUnicos],
-      ['Quantidade de Disciplinas:',listaDisciplinas.length]
-    ];
-    linhasInfo.forEach(linha=>{
-      ws.getCell(L,1).value=linha[0]; ws.getCell(L,1).font={bold:true,size:11}; ws.getCell(L,1).alignment={horizontal:'left'};
-      const cVal=ws.getCell(L,2);
-      cVal.value=linha[1]; cVal.font={size:11}; cVal.alignment={horizontal:'left'};
-      if(typeof linha[1]==='number'&&!Number.isInteger(linha[1])) cVal.numFmt='0.0';
-      L++;
-    });
+    // ═══ 01 — RESUMO GERAL ═══
+    // Visão executiva rápida — quantas obras/disciplinas/encarregados/RDOs existem no
+    // total, e a divisão macro Normal x Extra Escopo x Total Geral.
+    const qtdDisciplinas=Object.keys(nomesDisciplinasPorChave).length;
+    desenharTabelaResumoIndicadores('01 — RESUMO GERAL','FF0A3C64',[
+      ['Obras',obrasUnicas],['Disciplinas',qtdDisciplinas],['Encarregados',encarregadosUnicos],['RDOs',rdosUnicos],
+      ['Horas Normais',Number(totalHorasNormaisGeral.toFixed(1))],
+      ['Extra Escopo',Number(totalHorasExtraGeral.toFixed(1))],
+      ['Total Geral de Horas',Number(totalHorasGeral.toFixed(1))]
+    ]);
     L+=1;
+
+    // Bloco simples de "Indicador | Total" — usado só na seção 01 (Resumo Geral),
+    // pra dar a visão executiva rápida antes de entrar nas tabelas detalhadas.
+    function desenharTabelaResumoIndicadores(titulo,corTitulo,pares){
+      const linhaTitulo=L;
+      ws.mergeCells(L,1,L,largura);
+      const tCell=ws.getCell(L,1);
+      tCell.value=titulo; tCell.font={bold:true,size:12,color:{argb:'FFFFFFFF'}};
+      tCell.fill={type:'pattern',pattern:'solid',fgColor:{argb:corTitulo}};
+      tCell.alignment={horizontal:'left',vertical:'middle'};
+      ws.getRow(L).height=20;
+      L++;
+      ['INDICADOR','TOTAL'].forEach((h,ci)=>{
+        const c=ws.getCell(L,ci+1);
+        c.value=h; c.font={bold:true,size:10};
+        c.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFE2E8F0'}};
+        c.alignment={horizontal:ci===0?'left':'center',vertical:'middle',indent:ci===0?1:0};
+        c.border={top:{style:'thin',color:{argb:'FF999999'}},bottom:{style:'thin',color:{argb:'FF999999'}}};
+      });
+      L++;
+      pares.forEach(([nome,valor],li)=>{
+        const c1=ws.getCell(L,1); c1.value=nome; c1.font={bold:true,size:10.5}; c1.alignment={horizontal:'left',vertical:'middle',indent:1};
+        const c2=ws.getCell(L,2); c2.value=valor; c2.numFmt='0.0'; c2.font={bold:true,size:10.5}; c2.alignment={horizontal:'center'};
+        for(let c=1;c<=2;c++) ws.getCell(L,c).fill={type:'pattern',pattern:'solid',fgColor:{argb:li%2===0?'FFFFFFFF':'FFF5F7FA'}};
+        L++;
+      });
+      const linhaFinal=L-1;
+      for(let c=1;c<=largura;c++){
+        const topo=ws.getCell(linhaTitulo,c); topo.border={...topo.border,top:{style:'medium',color:{argb:'FF000000'}}};
+      }
+      for(let r=linhaTitulo;r<=linhaFinal;r++){
+        const esq=ws.getCell(r,1); esq.border={...esq.border,left:{style:'medium',color:{argb:'FF000000'}}};
+        if(r>linhaTitulo){ const dir=ws.getCell(r,2); dir.border={...dir.border,right:{style:'medium',color:{argb:'FF000000'}}}; }
+      }
+      const baseTitulo=ws.getCell(linhaTitulo,largura); baseTitulo.border={...baseTitulo.border,right:{style:'medium',color:{argb:'FF000000'}}};
+      const baseFinal=ws.getCell(linhaFinal,1); baseFinal.border={...baseFinal.border,bottom:{style:'medium',color:{argb:'FF000000'}}};
+      const baseFinal2=ws.getCell(linhaFinal,2); baseFinal2.border={...baseFinal2.border,bottom:{style:'medium',color:{argb:'FF000000'}}};
+    }
 
     // Formata "3 (RDO-001, RDO-002, RDO-003)" em vez de só o número "3" — assim dá pra
     // saber a quantidade E quais são os RDOs, sem precisar abrir o Detalhamento.
@@ -11717,56 +11728,44 @@ async function exportarBackupCompletoExcel(btn){
       L+=2;
     }
 
-    // Constrói as linhas de uma tabela Encarregado × Obra × Disciplina, com período,
-    // opcionalmente filtrando por um status específico (Andamento, Extra Escopo, etc.)
-    function linhasComboGeral(){
-      return Object.values(porEncObraDiscGeral)
-        .sort((a,b)=> a.encarregado!==b.encarregado ? a.encarregado.localeCompare(b.encarregado) : b.horas-a.horas)
-        .map(c=>[c.encarregado,c.obra,c.disc,formatarDataBR(c.primeiraData),formatarDataBR(c.ultimaData),Number(c.horas.toFixed(1)),formatarListaRDOs(c.rdos)]);
-    }
-    function linhasComboFiltrado(statusFiltro){
-      return Object.values(porEncObraDisc)
-        .filter(c=>c.status===statusFiltro)
-        .sort((a,b)=> a.encarregado!==b.encarregado ? a.encarregado.localeCompare(b.encarregado) : b.horas-a.horas)
-        .map(c=>[c.encarregado,c.obra,c.disc,formatarDataBR(c.primeiraData),formatarDataBR(c.ultimaData),Number(c.horas.toFixed(1)),formatarListaRDOs(c.rdos)]);
-    }
-    const colunasCombo=['Encarregado','Obra/Cliente','Disciplina','Primeira Data','Última Data','Total de Horas','Qtd. e Números dos RDOs'];
-    const largurasCombo=[22,24,16,13,13,14,32];
+    // ═══ 02 — HORAS POR OBRA ═══
+    // Uma linha por obra (funciona igual pra 1 obra ou pra 50) — Normal x Extra
+    // Escopo já separados, ordenado da obra que mais consumiu horas pra menos.
+    desenharTabela('02 — HORAS POR OBRA','FFC2410C',
+      ['Obra/Cliente','🔵 Horas Normais','🟢 Extra Escopo','Total Geral','Primeira Data','Última Data','Qtd. e Números dos RDOs'],
+      Object.values(porObra).sort((a,b)=>(b.normal+b.extra)-(a.normal+a.extra)).map(info=>
+        [info.nome,Number(info.normal.toFixed(1)),Number(info.extra.toFixed(1)),Number((info.normal+info.extra).toFixed(1)),formatarDataBR(info.primeiraData),formatarDataBR(info.ultimaData),formatarListaRDOs(info.rdos)]),
+      [24,14,14,13,13,13,32]);
 
-    // Banner de seção — separa visualmente o que é "por obra" (local/regional) do que
-    // é "empresa toda" (consolidado/macro), pra nunca confundir os dois níveis.
-    function desenharDivisorDeSecao(titulo,corFundo){
-      ws.mergeCells(L,1,L+1,largura);
-      const c=ws.getCell(L,1);
-      c.value=titulo;
-      c.font={bold:true,size:14,color:{argb:'FFFFFFFF'}};
-      c.alignment={horizontal:'center',vertical:'middle'};
-      for(let r=L;r<=L+1;r++) for(let cc=1;cc<=largura;cc++) ws.getCell(r,cc).fill={type:'pattern',pattern:'solid',fgColor:{argb:corFundo}};
-      L+=3;
-    }
+    // ═══ 03 — HORAS POR DISCIPLINA ═══
+    // Responde direto "em qual disciplina está gastando mais horas" — já ordenado
+    // da disciplina que mais consumiu pra menos.
+    desenharTabela('03 — HORAS POR DISCIPLINA','FF6030BB',
+      ['Disciplina','🔵 Horas Normais','🟢 Extra Escopo','Total Geral','Primeira Data','Última Data','Qtd. e Números dos RDOs'],
+      Object.values(porDisc).sort((a,b)=>(b.normal+b.extra)-(a.normal+a.extra)).map(info=>
+        [info.nome,Number(info.normal.toFixed(1)),Number(info.extra.toFixed(1)),Number((info.normal+info.extra).toFixed(1)),formatarDataBR(info.primeiraData),formatarDataBR(info.ultimaData),formatarListaRDOs(info.rdos)]),
+      [20,14,14,13,13,13,32]);
 
-    // ═══ PARTE 1 — INFORMAÇÕES LOCAIS E REGIONAIS (DENTRO DE CADA OBRA) ═══
-    // "Local" = uma obra específica sozinha. "Regional" = comparando várias obras lado a
-    // lado (visão cruzada), mas ainda mostrando cada obra separada, sem virar 1 número só.
-    desenharDivisorDeSecao('📍 PARTE 1 — INFORMAÇÕES POR OBRA (LOCAL E REGIONAL, OBRA POR OBRA)','FF1E3A5F');
+    // ═══ 04 — TOTAL DE HORAS POR ENCARREGADO ═══
+    // Quem são os encarregados que preenchem os RDOs, e quanto cada um lançou no
+    // total (todas as obras dele somadas) — ordenado do que mais lançou pra menos.
+    desenharTabela('04 — TOTAL DE HORAS POR ENCARREGADO','FF9D174D',
+      ['Encarregado','🔵 Horas Normais','🟢 Extra Escopo','Total Geral','Obras Diferentes','Primeira Data','Última Data','Qtd. e Números dos RDOs'],
+      Object.entries(porEnc).sort((a,b)=>(b[1].normal+b[1].extra)-(a[1].normal+a[1].extra)).map(([nome,info])=>
+        [nome,Number(info.normal.toFixed(1)),Number(info.extra.toFixed(1)),Number((info.normal+info.extra).toFixed(1)),info.obras.size,formatarDataBR(info.primeiraData),formatarDataBR(info.ultimaData),formatarListaRDOs(info.rdos)]),
+      [22,14,14,13,14,13,13,32]);
 
-    desenharTabela('👷 TOTAL DE HORAS POR ENCARREGADO — DETALHADO POR OBRA E DISCIPLINA (LOCAL)','FF9D174D',colunasCombo,linhasComboGeral(),largurasCombo);
-
-    desenharTabela('👷 TOTAL DE HORAS POR ENCARREGADO — DETALHADO POR OBRA (REGIONAL, VISÃO CRUZADA)','FF9D174D',['Obra',...listaEncarregados],
-      Object.values(obraEncMatriz).map(linha=>[linha.nomeObra,...listaEncarregados.map(enc=>Number((linha[enc]||0).toFixed(1)))]));
-
-    desenharTabela('🔧 TOTAL DE HORAS POR DISCIPLINA — DETALHADO POR OBRA (REGIONAL, VISÃO CRUZADA)','FF1A52C8',['Obra',...listaDisciplinas],
-      Object.values(obraDiscMatriz).map(linha=>[linha.nomeObra,...listaDisciplinasChaves.map(chaveDisc=>Number((linha[chaveDisc]||0).toFixed(1)))]));
-
-    desenharTabela('🏭 TOTAL GERAL DA OBRA — TODAS AS DISCIPLINAS SOMADAS (LOCAL)','FFC2410C',
-      ['Obra/Cliente','Primeira Data','Última Data','Total de Horas','Qtd. e Números dos RDOs'],
-      Object.values(porObraGeral).sort((a,b)=>b.horas-a.horas).map(info=>[info.nome,formatarDataBR(info.primeiraData),formatarDataBR(info.ultimaData),Number(info.horas.toFixed(1)),formatarListaRDOs(info.rdos)]),
-      [24,13,13,14,32]);
-
-    desenharTabela('🟢 TOTAL DE HORAS EXTRAS (EXTRA ESCOPO / ADICIONAL) — POR OBRA (LOCAL)','FF158038',
-      ['Obra/Cliente','Primeira Data','Última Data','Total de Horas','Qtd. e Números dos RDOs'],
-      Object.values(porExtraObra).sort((a,b)=>b.horas-a.horas).map(info=>[info.nome,formatarDataBR(info.primeiraData),formatarDataBR(info.ultimaData),Number(info.horas.toFixed(1)),formatarListaRDOs(info.rdos)]),
-      [24,13,13,14,32]);
+    // ═══ 05 — HORAS POR OBRA, DISCIPLINA E ENCARREGADO ═══
+    // A única tabela que cruza as 3 dimensões ao mesmo tempo — pra saber
+    // exatamente quanto um encarregado específico trabalhou numa disciplina
+    // específica dentro de uma obra específica, com Normal x Extra Escopo já
+    // divididos. Ordenado por Obra, depois Disciplina, depois Encarregado.
+    desenharTabela('05 — HORAS POR OBRA, DISCIPLINA E ENCARREGADO','FF1A52C8',
+      ['Obra/Cliente','Disciplina','Encarregado','🔵 Horas Normais','🟢 Extra Escopo','Total Geral','Primeira Data','Última Data','Qtd. e Números dos RDOs'],
+      Object.values(porDetalhe).sort((a,b)=>
+        a.obra!==b.obra ? a.obra.localeCompare(b.obra) : a.disc!==b.disc ? a.disc.localeCompare(b.disc) : a.encarregado.localeCompare(b.encarregado)
+      ).map(c=>[c.obra,c.disc,c.encarregado,Number(c.normal.toFixed(1)),Number(c.extra.toFixed(1)),Number((c.normal+c.extra).toFixed(1)),formatarDataBR(c.primeiraData),formatarDataBR(c.ultimaData),formatarListaRDOs(c.rdos)]),
+      [24,16,22,14,14,13,13,13,32]);
 
     // ═══════════════════════════════════════════════════════════════════
     // DETALHAMENTO COMPLETO — UMA LINHA POR DIA DE TRABALHO DE CADA PESSOA
@@ -11777,7 +11776,7 @@ async function exportarBackupCompletoExcel(btn){
     ws.mergeCells(L,1,L,largura);
     for(let c=1;c<=largura;c++) ws.getCell(L,c).fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF0A3C64'}};
     const tituloDet=ws.getCell(L,1);
-    tituloDet.value='📊 DETALHAMENTO COMPLETO — TODOS OS RDOs DE TODOS OS ENCARREGADOS';
+    tituloDet.value='06 — DETALHAMENTO NARRATIVO — TODOS OS RDOs DE TODOS OS ENCARREGADOS';
     tituloDet.font={bold:true,color:{argb:'FFFFFFFF'},size:12};
     ws.getRow(L).height=22;
     L++;
@@ -11862,24 +11861,6 @@ async function exportarBackupCompletoExcel(btn){
     for(let c=10;c<=largura;c++) ws.getColumn(c).width=16;
     L+=2;
 
-    // ═══ PARTE 2 — CONSOLIDADO DA EMPRESA (TODAS AS OBRAS SOMADAS) ═══
-    // A partir daqui, tudo é visão macro — números que já não representam mais UMA obra
-    // sozinha, e sim a empresa inteira, todas as obras somadas de uma vez.
-    desenharDivisorDeSecao('🌍 PARTE 2 — CONSOLIDADO DA EMPRESA (TODAS AS OBRAS SOMADAS)','FF6B2D0A');
-
-    desenharTabela('👷 TOTAL CONSOLIDADO DE HORAS POR ENCARREGADO — TODAS AS OBRAS DA EMPRESA','FF9D174D',
-      ['Encarregado','Primeira Data','Última Data','Total de Horas','Obras Diferentes','Qtd. e Números dos RDOs'],
-      Object.entries(porEncGeral).sort((a,b)=>b[1].horas-a[1].horas).map(([nome,info])=>
-        [nome,formatarDataBR(info.primeiraData),formatarDataBR(info.ultimaData),Number(info.horas.toFixed(1)),info.obras.size,formatarListaRDOs(info.rdos)]),
-      [22,13,13,14,14,32]);
-
-    desenharTabela('🔧 TOTAL CONSOLIDADO POR DISCIPLINA — TODAS AS OBRAS DA EMPRESA','FF6030BB',
-      ['Disciplina','Primeira Data','Última Data','Total de Horas','Qtd. e Números dos RDOs'],
-      Object.values(porDisc).sort((a,b)=>b.horas-a.horas).map(info=>[info.nome,formatarDataBR(info.primeiraData),formatarDataBR(info.ultimaData),Number(info.horas.toFixed(1)),formatarListaRDOs(info.rdos)]),
-      [18,13,13,14,32]);
-
-    desenharTabela('🟢 TOTAL CONSOLIDADO DE EXTRA ESCOPO / ADICIONAL — TODAS AS OBRAS DA EMPRESA','FF158038',colunasCombo,linhasComboFiltrado('ext'),largurasCombo);
-
     // ═══════════════════════════════════════════════════════════════════
     // FECHAMENTO — o número final de tudo, sempre por último, depois de já
     // ter visto o detalhe de encarregado, disciplina, obra e extra escopo.
@@ -11898,7 +11879,7 @@ async function exportarBackupCompletoExcel(btn){
     a.href=url; a.download=getNomeArquivoBackup();
     a.click();
     setTimeout(()=>URL.revokeObjectURL(url),3000);
-    showToast(`✓ Backup completo gerado! ${rdosUnicos} RDO(s), ${totalHorasGeral.toFixed(1)}h no total.`,'#16a34a');
+    showToast(`✓ Relatório consolidado gerado! ${rdosUnicos} RDO(s), ${totalHorasGeral.toFixed(1)}h no total.`,'#16a34a');
   }catch(e){
     console.error('exportarBackupCompletoExcel error:',e);
     showToast('Erro ao gerar o backup completo.','#dc2626');
