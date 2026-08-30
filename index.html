@@ -2509,42 +2509,21 @@ async function fazerLogin(){
     salvarOuEsquecerEmailLembrado(email);
     await carregarPerfilUsuario(loginData?.user);
 
-    // Proteção contra "sujeira" de outro login no mesmo aparelho: dado de um rascunho
-    // não enviado não deveria ficar visível/enviável por outro encarregado que revezar
-    // o mesmo computador.
+    // CORREÇÃO DEFINITIVA (2026-08-29): esse trecho apagava o rascunho de "outra pessoa"
+    // sempre que alguém diferente logava no mesmo aparelho — mas isso continuava causando
+    // perda de dado real: Admin cria um rascunho, sai, um encarregado loga (e nesse login
+    // o rascunho do Admin é apagado, por não ser "dele"), o encarregado sai, o Admin volta
+    // — e o próprio rascunho já tinha sido apagado no meio do caminho, no login do
+    // encarregado. Ou seja, mesmo só apagando "o que não é meu", ainda apagava o
+    // de outros, incluindo o do Admin.
     //
-    // CORREÇÃO (2026-08-29): a versão anterior apagava TODOS os RDOs locais sempre que
-    // detectava um login diferente do último — inclusive o rascunho de quem está
-    // ENTRANDO agora (se essa pessoa já tinha usado esse mesmo aparelho antes e deixado
-    // algo pendente). Isso fazia dois encarregados revezando o mesmo computador apagarem
-    // o rascunho um do outro a cada login, mesmo sem nenhum dos dois ter apagado nada de
-    // propósito. Agora, em vez de apagar tudo, só remove o que realmente pertence a
-    // OUTRA pessoa — comparando primeiro pelo ID da conta (fixo, confiável, não depende
-    // de nome nenhum) e, só em rascunho salvo antes dessa correção (sem ID gravado
-    // ainda), cai pra comparação por nome como reserva. O rascunho de quem está logando
-    // agora nunca é tocado, esteja ele pendente de um login anterior dela mesma ou
-    // recém-criado. Admin Mestre nunca sofre essa filtragem, porque ele já enxerga e pode
-    // abrir o RDO de qualquer encarregado normalmente no resto do sistema — não faria
-    // sentido esconder dele só no login.
-    if(usuarioAtual && usuarioAtual.papel!=='admin_mestre'){
-      const meuNomeNormalizadoLogin=normalizarObra(usuarioAtual.nome||'');
-      Object.keys(localStorage).filter(k=>k.startsWith('rdo-')&&k!=='rdo-last-key'&&!CHAVES_META_BACKUP.includes(k)).forEach(k=>{
-        try{
-          const d=JSON.parse(localStorage.getItem(k));
-          const h=d?.header;
-          if(!h) return;
-          // Só remove quando dá pra confirmar com certeza que é de OUTRA pessoa —
-          // rascunho sem ID e sem Encarregado preenchido (ambíguo demais) nunca é
-          // removido aqui; se estiver genuinamente vazio, a limpeza de casca vazia
-          // cuida dele à parte.
-          if(h.encId){
-            if(h.encId!==usuarioAtual.id) localStorage.removeItem(k);
-          }else if(h.enc && h.enc.trim() && normalizarObra(h.enc)!==meuNomeNormalizadoLogin){
-            localStorage.removeItem(k);
-          }
-        }catch(e){ /* dado corrompido/ilegível — ignora, não mexe */ }
-      });
-    }
+    // A solução correta não é apagar nada aqui: hoje TODA TELA que lista ou abre
+    // rascunho sozinha (abertura automática do app, aviso piscante, lista de pendentes)
+    // já filtra por dono (ehMeuRascunho) — ninguém consegue ver nem enviar o rascunho de
+    // outra pessoa de jeito nenhum, então a proteção de privacidade já está garantida SEM
+    // precisar apagar nada. Rascunho de qualquer pessoa agora só é removido por ação
+    // explícita (apagar/descartar) ou depois de enviado — nunca mais por causa de outro
+    // login no mesmo aparelho.
     if(usuarioAtual) localStorage.setItem('rdo-ultimo-usuario-id',usuarioAtual.id);
 
     removerTelaLogin();
@@ -4211,12 +4190,17 @@ async function verificarEReenviarPendentes(){
     // navegador antes. A consulta abaixo só traz RDOs do usuário logado agora
     // (criado_por), então um RDO de outra pessoa nunca ia bater e entraria como
     // "pendente" — e reenviar aqui GRAVARIA ESSE RDO COM criado_por DO USUÁRIO ATUAL,
-    // trocando o dono dele no banco sem querer. Filtra ANTES: só mexe em RDO cujo
-    // campo Encarregado bate com quem está logado agora (Admin Mestre continua
-    // reconciliando tudo, como já é padrão no resto do sistema).
-    const ehAdminVerif=usuarioAtual.papel==='admin_mestre';
+    // trocando o dono dele no banco sem querer. Filtra ANTES: só mexe em RDO cujo campo
+    // Encarregado bate com quem está logado agora.
+    //
+    // CORREÇÃO (2026-08-29): a exceção que dava a "todos" pro Admin aqui era o mesmo erro
+    // da função de reconciliação automática — a consulta abaixo SEMPRE filtra só
+    // criado_por=usuarioAtual.id, então RDO de encarregado nunca bate mesmo estando 100%
+    // intacto na nuvem, e o Admin acabaria vendo (e podendo reenviar, trocando o dono por
+    // engano) RDOs que não tinham problema nenhum. Admin agora segue a mesma regra: só
+    // esta ferramenta específica de "reenviar" fica restrita ao que ele mesmo criou.
     const meuNomeNormalizadoVerif=normalizarObra(usuarioAtual.nome);
-    const enviados_meus=ehAdminVerif?enviados:enviados.filter(key=>{
+    const enviados_meus=enviados.filter(key=>{
       try{
         const d=JSON.parse(localStorage.getItem(key));
         return normalizarObra(d?.header?.enc)===meuNomeNormalizadoVerif;
@@ -4280,12 +4264,20 @@ async function reconciliarRDOsApagadosPeloAdmin(){
     // antes, elas nunca vão bater nessa consulta — não porque foram apagadas pelo
     // admin, mas porque pertencem a outra conta. Sem filtrar isso ANTES de comparar, o
     // RDO já enviado do encarregado anterior seria apagado daqui como se tivesse sido
-    // excluído — quando na verdade só não é "meu". Ignora de vez qualquer chave cujo
-    // Encarregado salvo não bate com quem está logado (Admin Mestre continua vendo/
-    // reconciliando tudo, sem esse filtro).
-    const ehAdminRec=usuarioAtual.papel==='admin_mestre';
+    // excluído — quando na verdade só não é "meu".
+    //
+    // CORREÇÃO (2026-08-29): a exceção que dava a "todos" pro Admin aqui estava errada —
+    // a consulta na nuvem SEMPRE filtra só o que o usuário logado criou
+    // (criado_por=usuarioAtual.id), então, mesmo pro Admin, ela nunca vai trazer RDO
+    // criado por um encarregado. Comparando a lista de enviados de TODO MUNDO contra uma
+    // consulta que só devolve os do Admin, todo RDO enviado por outro encarregado batia
+    // como "não existe mais na nuvem" e acabava sendo apagado do aparelho por engano —
+    // mesmo continuando 100% intacto no banco. Agora o Admin segue a mesma regra: só
+    // reconcilia os RDOs que ELE MESMO criou (RDO de encarregado continua acessível
+    // normalmente pelo Pesquisar RDOs, que consulta a nuvem de verdade, sem depender
+    // desse cache local).
     const meuNomeNormalizadoRec=normalizarObra(usuarioAtual.nome);
-    const enviadosMeus=ehAdminRec?enviados:enviados.filter(key=>{
+    const enviadosMeus=enviados.filter(key=>{
       try{
         const d=JSON.parse(localStorage.getItem(key));
         return normalizarObra(d?.header?.enc)===meuNomeNormalizadoRec;
