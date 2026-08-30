@@ -9987,6 +9987,17 @@ function renderizarListaHorasExtras(registros){
   }).join('')+`<div style="text-align:center;padding:10px 0 4px;font-size:11px;color:var(--text3);opacity:.7">— fim da lista (${extras.length} registro${extras.length>1?'s':''}) —</div>`;
 }
 
+// Descobre de ONDE veio a hora extra daquele registro — Semana (passou de 9h),
+// Sábado, Domingo ou Feriado — pra poder separar cada situação na planilha.
+function classificarOrigemHoraExtra(r){
+  if(r.tipo==='100') return r.feriadoNome ? 'feriado' : 'domingo';
+  if(r.tipo==='70'){
+    const dow=r.data?new Date(r.data+'T12:00:00').getDay():null;
+    return dow===6 ? 'sabado' : 'semana';
+  }
+  return null;
+}
+
 async function exportarHorasExtrasExcel(){
   if(!horasExtrasRegistrosAtuais.length){ showToast('Filtre um período com dados antes de exportar.','#d97706'); return; }
   if(typeof ExcelJS==='undefined'){ showToast('Biblioteca de Excel ainda carregando — espera 2 segundos e tenta de novo.','#d97706'); return; }
@@ -9995,7 +10006,7 @@ async function exportarHorasExtrasExcel(){
   wb.creator='Master Energy — Sistema de RDO';
   wb.created=new Date();
   const ws=wb.addWorksheet('Horas Extras',{properties:{tabColor:{argb:'FFD97706'}}});
-  const LARG=10;
+  const LARG=14;
 
   ws.mergeCells(1,1,3,LARG);
   const titulo=ws.getCell(1,1);
@@ -10011,12 +10022,10 @@ async function exportarHorasExtrasExcel(){
   ws.getCell(4,1).alignment={horizontal:'center'};
   ws.getRow(4).height=20;
 
-  // CABEÇALHO EM 2 LINHAS — separa claramente as 4 combinações possíveis
-  // (70%/100% cruzado com Projeto/Extra Escopo), pra nunca misturar uma coisa com
-  // a outra. Um registro NUNCA tem 70% e 100% ao mesmo tempo (são situações
-  // diferentes: semana passando de 9h = 70%; domingo/feriado = 100%), então cada
-  // linha da planilha só preenche as colunas que realmente se aplicam a ela,
-  // deixando as outras em branco — bem explícito, sem ambiguidade.
+  // CABEÇALHO EM 2 LINHAS, com 4 GRUPOS DE ORIGEM — cada situação (Semana passando
+  // de 9h, Sábado, Domingo, Feriado) tem sua própria cor de grupo, deixando bem
+  // visível de onde veio cada hora extra sem precisar ler célula por célula. Dentro
+  // de cada grupo, ainda separa Projeto (🔵) de Extra Escopo (🟢) — nunca mistura.
   const linhaGrupo=6, linhaSub=7;
   const colunasSimples=['DATA','Nº RDO','OBRA','ENCARREGADO','FUNCIONÁRIO','HORAS\nNORMAIS'];
   colunasSimples.forEach((h,ci)=>{
@@ -10026,85 +10035,122 @@ async function exportarHorasExtrasExcel(){
     c.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF0A3C64'}};
     c.alignment={horizontal:'center',vertical:'middle',wrapText:true};
   });
-  // Grupo "HORA EXTRA 70%" (semana, acima de 9h) — colunas 7 e 8
-  ws.mergeCells(linhaGrupo,7,linhaGrupo,8);
-  const cGrupo70=ws.getCell(linhaGrupo,7);
-  cGrupo70.value='HORA EXTRA 70%'; cGrupo70.font={bold:true,color:{argb:'FFFFFFFF'},size:10};
-  cGrupo70.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFD97706'}};
-  cGrupo70.alignment={horizontal:'center',vertical:'middle'};
-  // Grupo "HORA EXTRA 100%" (domingo/feriado) — colunas 9 e 10
-  ws.mergeCells(linhaGrupo,9,linhaGrupo,10);
-  const cGrupo100=ws.getCell(linhaGrupo,9);
-  cGrupo100.value='HORA EXTRA 100%'; cGrupo100.font={bold:true,color:{argb:'FFFFFFFF'},size:10};
-  cGrupo100.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFB45309'}};
-  cGrupo100.alignment={horizontal:'center',vertical:'middle'};
-  // Sub-cabeçalho: Projeto (azul) / Extra Escopo (verde), repetido nos 2 grupos —
-  // mesma cor já usada nos botões/painéis Andamento e Extra Escopo do sistema.
-  [[7,'🔵 PROJETO','FF1A52C8'],[8,'🟢 EXTRA ESCOPO','FF158038'],[9,'🔵 PROJETO','FF1A52C8'],[10,'🟢 EXTRA ESCOPO','FF158038']].forEach(([col,label,cor])=>{
-    const c=ws.getCell(linhaSub,col);
-    c.value=label; c.font={bold:true,color:{argb:'FFFFFFFF'},size:9};
-    c.fill={type:'pattern',pattern:'solid',fgColor:{argb:cor}};
+  // Os 4 grupos de origem — cada um com sua cor própria, bem forte, pra pular aos
+  // olhos qual é qual: Semana (laranja), Sábado (âmbar), Domingo (dourado), Feriado
+  // (roxo, pra se destacar mais ainda por ser o caso mais raro/especial).
+  const grupos=[
+    {chave:'semana',   titulo:'SEMANA — ACIMA DE 9H (70%)', cor:'FFD97706', colInicio:7},
+    {chave:'sabado',   titulo:'SÁBADO (70%)',                cor:'FFE08E1F', colInicio:9},
+    {chave:'domingo',  titulo:'DOMINGO (100%)',              cor:'FFD4A017', colInicio:11},
+    {chave:'feriado',  titulo:'FERIADO (100%)',              cor:'FF7C3AED', colInicio:13},
+  ];
+  grupos.forEach(g=>{
+    ws.mergeCells(linhaGrupo,g.colInicio,linhaGrupo,g.colInicio+1);
+    const c=ws.getCell(linhaGrupo,g.colInicio);
+    c.value=g.titulo; c.font={bold:true,color:{argb:'FFFFFFFF'},size:9.5};
+    c.fill={type:'pattern',pattern:'solid',fgColor:{argb:g.cor}};
     c.alignment={horizontal:'center',vertical:'middle'};
+    [[g.colInicio,'🔵 PROJETO','FF1A52C8'],[g.colInicio+1,'🟢 EXTRA ESCOPO','FF158038']].forEach(([col,label,corSub])=>{
+      const cs=ws.getCell(linhaSub,col);
+      cs.value=label; cs.font={bold:true,color:{argb:'FFFFFFFF'},size:9};
+      cs.fill={type:'pattern',pattern:'solid',fgColor:{argb:corSub}};
+      cs.alignment={horizontal:'center',vertical:'middle'};
+    });
   });
-  ws.getRow(linhaGrupo).height=22;
+  ws.getRow(linhaGrupo).height=24;
   ws.getRow(linhaSub).height=20;
   ws.views=[{state:'frozen',ySplit:linhaSub}];
 
+  // Fundos clarinhos únicos por grupo, usados só nas células que realmente têm
+  // valor — reforça visualmente a mesma cor do cabeçalho daquele grupo.
+  const fundosPorGrupo={
+    semana:'FFFCE8CE', sabado:'FFFCE0C2', domingo:'FFFAE7B8', feriado:'FFE8DCFB'
+  };
+  const textoPorGrupo={
+    semana:'FF8A5300', sabado:'FF8A4E00', domingo:'FF7A5A00', feriado:'FF4C1D95'
+  };
+
   let linha=linhaSub+1;
-  let totNormal=0,tot70Projeto=0,tot70ExtraEscopo=0,tot100Projeto=0,tot100ExtraEscopo=0;
+  const totais={};
+  grupos.forEach(g=>{ totais[g.chave]={projeto:0,extraescopo:0}; });
+  let totNormal=0;
+
   const ordenados=[...horasExtrasRegistrosAtuais].sort((a,b)=>a.data===b.data?String(a.nrdo).localeCompare(String(b.nrdo)):a.data.localeCompare(b.data));
   ordenados.forEach((r,idx)=>{
     const[y,m,dd]=(r.data||'').split('-');
     const dataFmt=y?`${dd}/${m}/${y}`:'—';
     const hNormal=r.normais||0;
-    // Um registro só tem 70% OU 100%, nunca os dois — por isso a divisão
-    // Projeto/Extra Escopo (que é sobre o TOTAL de hora extra daquele registro) só
-    // precisa "cair" na coluna 70% ou na coluna 100%, nunca nas duas.
-    const eh70=(r.extra70||0)>0;
-    const h70Projeto=eh70?(r.extraProjeto||0):0;
-    const h70ExtraEscopo=eh70?(r.extraEscopo||0):0;
-    const h100Projeto=!eh70?(r.extraProjeto||0):0;
-    const h100ExtraEscopo=!eh70?(r.extraEscopo||0):0;
-    totNormal+=hNormal; tot70Projeto+=h70Projeto; tot70ExtraEscopo+=h70ExtraEscopo;
-    tot100Projeto+=h100Projeto; tot100ExtraEscopo+=h100ExtraEscopo;
+    const origem=classificarOrigemHoraExtra(r); // 'semana'|'sabado'|'domingo'|'feriado'|null
+    totNormal+=hNormal;
+
+    // Monta as 8 colunas de hora extra (4 grupos x Projeto/Extra Escopo) — só a
+    // combinação que realmente se aplica a este registro recebe valor, todas as
+    // outras ficam em branco (0), sem ambiguidade nenhuma.
+    const valoresExtra=[];
+    grupos.forEach(g=>{
+      const proj=origem===g.chave?(r.extraProjeto||0):0;
+      const ext=origem===g.chave?(r.extraEscopo||0):0;
+      if(origem===g.chave){ totais[g.chave].projeto+=proj; totais[g.chave].extraescopo+=ext; }
+      valoresExtra.push(Number(proj.toFixed(1)), Number(ext.toFixed(1)));
+    });
+
     const valores=[dataFmt,r.nrdo||'',(r.obra||'').toUpperCase(),(r.encarregado||'').toUpperCase(),(r.nome||'').toUpperCase(),
-      Number(hNormal.toFixed(1)),Number(h70Projeto.toFixed(1)),Number(h70ExtraEscopo.toFixed(1)),
-      Number(h100Projeto.toFixed(1)),Number(h100ExtraEscopo.toFixed(1))];
+      Number(hNormal.toFixed(1)), ...valoresExtra];
     valores.forEach((v,ci)=>{
       const c=ws.getCell(linha,ci+1);
       c.value=v;
-      // Colunas Projeto (7,9) e Extra Escopo (8,10) pintadas na cor correspondente,
-      // só quando têm valor de verdade — pra destacar de relance de onde veio cada
-      // hora extra, igual já é feito nos painéis Andamento/Extra Escopo dos RDOs.
-      const ehProjetoCol=(ci===6||ci===8), ehExtraEscopoCol=(ci===7||ci===9);
-      if(ehProjetoCol&&v>0) c.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFD6E3F9'}};
-      else if(ehExtraEscopoCol&&v>0) c.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFD6EFE0'}};
-      else c.fill={type:'pattern',pattern:'solid',fgColor:{argb:idx%2===0?'FFFFFFFF':'FFFFF3E0'}};
+      // Colunas 7 em diante = pares Projeto/Extra Escopo dos 4 grupos, nessa ordem.
+      const idxGrupo=ci>=6?Math.floor((ci-6)/2):-1;
+      const grupoDaCol=idxGrupo>=0&&idxGrupo<4?grupos[idxGrupo].chave:null;
+      if(grupoDaCol&&v>0){
+        c.fill={type:'pattern',pattern:'solid',fgColor:{argb:fundosPorGrupo[grupoDaCol]}};
+      }else{
+        c.fill={type:'pattern',pattern:'solid',fgColor:{argb:idx%2===0?'FFFFFFFF':'FFFAFAFA'}};
+      }
       c.border={bottom:{style:'thin',color:{argb:'FFEEEEEE'}}};
       if(typeof v==='number'){
         c.numFmt='0.0'; c.alignment={horizontal:'center'};
-        c.font={bold:true,size:10,color:{argb:ehProjetoCol&&v>0?'FF0D3C8C':ehExtraEscopoCol&&v>0?'FF0D5228':'FF000000'}};
+        // Valor de destaque (>0 numa coluna de hora extra) fica maior e mais forte
+        // que os outros números — pra pular aos olhos, como pedido.
+        const destacar=grupoDaCol&&v>0;
+        c.font={bold:true,size:destacar?12:10,color:{argb:destacar?textoPorGrupo[grupoDaCol]:'FF000000'}};
       }
       else{ c.font={size:10}; c.alignment={horizontal:'left',vertical:'middle',indent:1}; }
     });
     linha++;
   });
 
+  // LINHA DE TOTAL GERAL — bem maior e mais destacada que as linhas normais, cada
+  // grupo com sua própria cor forte (a mesma do cabeçalho), pra ser a linha que
+  // mais chama atenção na planilha inteira.
   ws.mergeCells(linha,1,linha,5);
   ws.getCell(linha,1).value='TOTAL GERAL';
-  ws.getCell(linha,1).font={bold:true,size:11,color:{argb:'FFFFFFFF'}};
+  ws.getCell(linha,1).font={bold:true,size:13,color:{argb:'FFFFFFFF'}};
   ws.getCell(linha,1).alignment={horizontal:'right',vertical:'middle'};
-  [totNormal,tot70Projeto,tot70ExtraEscopo,tot100Projeto,tot100ExtraEscopo].forEach((v,ci)=>{
-    const c=ws.getCell(linha,6+ci);
-    c.value=Number(v.toFixed(1)); c.numFmt='0.0';
-    c.font={bold:true,size:12,color:{argb:'FFFFFFFF'}};
-    c.alignment={horizontal:'center'};
-  });
-  for(let c=1;c<=LARG;c++) ws.getCell(linha,c).fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFD97706'}};
+  ws.getCell(linha,1).fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF0A3C64'}};
 
-  ws.getColumn(1).width=12; ws.getColumn(2).width=12; ws.getColumn(3).width=24; ws.getColumn(4).width=20;
-  ws.getColumn(5).width=24; ws.getColumn(6).width=12; ws.getColumn(7).width=14; ws.getColumn(8).width=15;
-  ws.getColumn(9).width=14; ws.getColumn(10).width=15;
+  const cTotNormal=ws.getCell(linha,6);
+  cTotNormal.value=Number(totNormal.toFixed(1)); cTotNormal.numFmt='0.0';
+  cTotNormal.font={bold:true,size:13,color:{argb:'FFFFFFFF'}};
+  cTotNormal.alignment={horizontal:'center'};
+  cTotNormal.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF0A3C64'}};
+
+  grupos.forEach((g,gi)=>{
+    const colProjeto=7+gi*2, colExtraEscopo=8+gi*2;
+    [[colProjeto,totais[g.chave].projeto],[colExtraEscopo,totais[g.chave].extraescopo]].forEach(([col,v])=>{
+      const c=ws.getCell(linha,col);
+      c.value=Number(v.toFixed(1)); c.numFmt='0.0';
+      c.font={bold:true,size:14,color:{argb:'FFFFFFFF'}};
+      c.alignment={horizontal:'center'};
+      c.fill={type:'pattern',pattern:'solid',fgColor:{argb:g.cor}};
+      c.border={top:{style:'medium',color:{argb:'FF000000'}},bottom:{style:'medium',color:{argb:'FF000000'}}};
+    });
+  });
+  ws.getRow(linha).height=28;
+
+  ws.getColumn(1).width=12; ws.getColumn(2).width=12; ws.getColumn(3).width=22; ws.getColumn(4).width=18;
+  ws.getColumn(5).width=22; ws.getColumn(6).width=11;
+  for(let c=7;c<=14;c++) ws.getColumn(c).width=13;
 
   const buffer=await wb.xlsx.writeBuffer();
   const blob=new Blob([buffer],{type:'application/octet-stream'});
