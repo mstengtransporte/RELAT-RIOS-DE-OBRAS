@@ -2509,17 +2509,37 @@ async function fazerLogin(){
     salvarOuEsquecerEmailLembrado(email);
     await carregarPerfilUsuario(loginData?.user);
 
-    // Proteção contra "sujeira" de outro login no mesmo aparelho: se já tinha RDOs
-    // salvos localmente de uma conta DIFERENTE da que acabou de entrar, limpa
-    // automaticamente — sem isso, dados de um encarregado podiam aparecer misturados
-    // com os de outro só por terem usado o mesmo computador/navegador antes. Deixou de
-    // ser uma pergunta opcional: dado de outra conta neste aparelho nunca é necessário
-    // (os dados continuam seguros na nuvem, de quem os criou).
-    const ultimoUsuarioId=localStorage.getItem('rdo-ultimo-usuario-id');
-    const temRdosLocais=Object.keys(localStorage).some(k=>k.startsWith('rdo-')&&!CHAVES_META_BACKUP.includes(k));
-    if(usuarioAtual&&ultimoUsuarioId&&ultimoUsuarioId!==usuarioAtual.id&&temRdosLocais){
-      Object.keys(localStorage).filter(k=>k.startsWith('rdo-')&&!CHAVES_META_BACKUP.includes(k)).forEach(k=>localStorage.removeItem(k));
-      showToast('🧹 Dados de um login anterior neste aparelho foram limpos por segurança.','#d97706');
+    // Proteção contra "sujeira" de outro login no mesmo aparelho: dado de um rascunho
+    // não enviado não deveria ficar visível/enviável por outro encarregado que revezar
+    // o mesmo computador.
+    //
+    // CORREÇÃO (2026-08-29): a versão anterior apagava TODOS os RDOs locais sempre que
+    // detectava um login diferente do último — inclusive o rascunho de quem está
+    // ENTRANDO agora (se essa pessoa já tinha usado esse mesmo aparelho antes e deixado
+    // algo pendente). Isso fazia dois encarregados revezando o mesmo computador apagarem
+    // o rascunho um do outro a cada login, mesmo sem nenhum dos dois ter apagado nada de
+    // propósito. Agora, em vez de apagar tudo, só remove o que realmente pertence a
+    // OUTRA pessoa (comparando o campo Encarregado de cada rascunho, do mesmo jeito
+    // tolerante — sem acento/maiúscula — já usado no aviso de pendentes). O rascunho de
+    // quem está logando agora nunca é tocado, esteja ele pendente de um login anterior
+    // dela mesma ou recém-criado. Admin Mestre nunca sofre essa filtragem, porque ele já
+    // enxerga e pode abrir o RDO de qualquer encarregado normalmente no resto do
+    // sistema — não faria sentido esconder dele só no login.
+    if(usuarioAtual && usuarioAtual.papel!=='admin_mestre'){
+      const meuNomeNormalizadoLogin=normalizarObra(usuarioAtual.nome||'');
+      Object.keys(localStorage).filter(k=>k.startsWith('rdo-')&&k!=='rdo-last-key'&&!CHAVES_META_BACKUP.includes(k)).forEach(k=>{
+        try{
+          const d=JSON.parse(localStorage.getItem(k));
+          const enc=d?.header?.enc;
+          // Só remove se o rascunho JÁ TEM um encarregado preenchido e é claramente de
+          // outra pessoa — rascunho ainda sem encarregado definido fica intocado aqui
+          // (ambíguo demais pra apagar com segurança; se estiver genuinamente vazio, a
+          // limpeza de casca vazia already cuida dele à parte).
+          if(enc && enc.trim() && normalizarObra(enc)!==meuNomeNormalizadoLogin){
+            localStorage.removeItem(k);
+          }
+        }catch(e){ /* dado corrompido/ilegível — ignora, não mexe */ }
+      });
     }
     if(usuarioAtual) localStorage.setItem('rdo-ultimo-usuario-id',usuarioAtual.id);
 
@@ -3921,12 +3941,12 @@ function atualizarAvisoRDOsPendentes(forcar=false){
   // um RDO ainda sendo preenchido (ex: só a Obra escolhida, faltando Encarregado) é
   // trabalho normal em andamento, não um esquecimento, e não deveria alarmar ninguém.
   //
-  // TRAVA DE SEGURANÇA (computador compartilhado, 2026-08-18): também só conta RDO cujo
-  // campo Encarregado bate com quem está logado agora (Admin Mestre vê todos, como já
-  // é padrão no resto do sistema) — sem isso, o rascunho esquecido de OUTRO encarregado
-  // no mesmo aparelho ficava piscando "pendente" pra qualquer um que logasse depois,
-  // e essa pessoa podia acabar abrindo e enviando o RDO de quem não é ela.
-  const ehAdminPend=usuarioAtual&&usuarioAtual.papel==='admin_mestre';
+  // TRAVA (2026-08-29): Admin Mestre deixou de ter exceção aqui — o aviso piscante
+  // passa a mostrar só o PRÓPRIO rascunho pendente do Admin, nunca o de um encarregado.
+  // Isso não tira nenhum acesso dele: RDO de qualquer encarregado continua 100%
+  // acessível pelo Pesquisar RDOs e pelo Dashboard — só esse aviso específico (feito pra
+  // lembrar o DONO do rascunho de enviar) deixa de "vazar" o rascunho alheio pro Admin,
+  // que podia confundir ele na hora de fazer o próprio RDO num computador compartilhado.
   const meuNomeNormalizadoPend=usuarioAtual?normalizarObra(usuarioAtual.nome):null;
   const idsCompletosPendentes=new Set();
   const idsIncompletos=new Set();
@@ -3938,7 +3958,7 @@ function atualizarAvisoRDOsPendentes(forcar=false){
       const d=JSON.parse(localStorage.getItem(k));
       const h=d?.header;
       if(!h?.obra||!h.obra.trim()) continue; // sem Obra nenhuma ainda — nem rascunho de verdade é, ignora
-      if(!ehAdminPend&&meuNomeNormalizadoPend&&normalizarObra(h.enc)!==meuNomeNormalizadoPend) continue; // rascunho de outro encarregado
+      if(meuNomeNormalizadoPend&&normalizarObra(h.enc)!==meuNomeNormalizadoPend) continue; // rascunho de outro encarregado (ou de outro perfil) — nunca conta, nem pro Admin
       const id=extrairIdDaChave(k)||k; // agrupa pelo id fixo; sem id (RDO bem antigo), usa a própria chave
       if(rdoEstaCompleto(h)) idsCompletosPendentes.add(id);
       else idsIncompletos.add(id);
@@ -3971,9 +3991,10 @@ function atualizarAvisoRDOsPendentes(forcar=false){
 function abrirListaPendentes(){
   autoSilentSave();
   const pendentesPorId={};
-  // TRAVA DE SEGURANÇA (computador compartilhado, 2026-08-18): mesma regra das outras
-  // telas — encarregado só vê/abre os PRÓPRIOS RDOs pendentes; Admin Mestre vê todos.
-  const ehAdminList=usuarioAtual&&usuarioAtual.papel==='admin_mestre';
+  // AJUSTE (2026-08-29): esta lista é aberta ao clicar no aviso piscante, que agora só
+  // mostra o próprio rascunho do Admin — então aqui também só lista o dele, pra ficar
+  // consistente. O RDO de qualquer encarregado continua acessível normalmente pelo
+  // Pesquisar RDOs e pelo Dashboard, só não aparece mais por este caminho específico.
   const meuNomeNormalizadoList=usuarioAtual?normalizarObra(usuarioAtual.nome):null;
   for(let i=0;i<localStorage.length;i++){
     const k=localStorage.key(i);
@@ -3982,7 +4003,7 @@ function abrirListaPendentes(){
     try{
       const d=JSON.parse(localStorage.getItem(k));
       const h=d?.header;
-      if(!ehAdminList&&meuNomeNormalizadoList&&normalizarObra(h?.enc)!==meuNomeNormalizadoList) continue;
+      if(meuNomeNormalizadoList&&normalizarObra(h?.enc)!==meuNomeNormalizadoList) continue;
       if(h?.obra&&h.obra.trim()){
         const id=extrairIdDaChave(k)||k;
         if(!pendentesPorId[id]) pendentesPorId[id]={id,key:k,data:h.data||'',obra:h.obra,disc:h.disc||'',enc:h.enc||'',nrdo:h.nrdo||'',todasChaves:[]};
@@ -6568,7 +6589,12 @@ function restoreRow(w,i){
 // não tem esse filtro (já enxerga tudo normalmente em outras telas do sistema).
 function iniciarRDOEmBrancoNoBoot(){
   const hoje=hojeLocal();
-  const ehAdmin=usuarioAtual&&usuarioAtual.papel==='admin_mestre';
+  // AJUSTE (2026-08-29): Admin Mestre deixou de ter exceção aqui — ele também só
+  // reaproveita sozinho o PRÓPRIO rascunho de hoje, nunca o de um encarregado, pra não
+  // ficar confuso na hora de fazer o próprio RDO num computador compartilhado. Isso não
+  // tira nenhum acesso dele: continua podendo abrir/editar o RDO de qualquer encarregado
+  // normalmente pela lista de pendentes, pelo Pesquisar RDOs ou pelo Dashboard — só não
+  // é mais a TELA QUE ABRE SOZINHA ao entrar no sistema.
   const meuNomeNormalizado=usuarioAtual?normalizarObra(usuarioAtual.nome):null;
   const candidatosHoje=[];
   for(let i=0;i<localStorage.length;i++){
@@ -6579,7 +6605,7 @@ function iniciarRDOEmBrancoNoBoot(){
     try{
       const d=JSON.parse(localStorage.getItem(k));
       if(!(d?.header?.obra||'').trim()) continue;
-      if(!ehAdmin&&meuNomeNormalizado&&normalizarObra(d.header.enc)!==meuNomeNormalizado) continue; // rascunho de OUTRO encarregado — nunca reaproveita
+      if(meuNomeNormalizado&&normalizarObra(d.header.enc)!==meuNomeNormalizado) continue; // rascunho de OUTRO encarregado (ou de outro perfil) — nunca reaproveita, nem pro Admin
       candidatosHoje.push({key:k,id:idDaChave,dados:d});
     }catch(e){}
   }
