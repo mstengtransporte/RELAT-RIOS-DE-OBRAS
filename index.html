@@ -2519,23 +2519,27 @@ async function fazerLogin(){
     // algo pendente). Isso fazia dois encarregados revezando o mesmo computador apagarem
     // o rascunho um do outro a cada login, mesmo sem nenhum dos dois ter apagado nada de
     // propósito. Agora, em vez de apagar tudo, só remove o que realmente pertence a
-    // OUTRA pessoa (comparando o campo Encarregado de cada rascunho, do mesmo jeito
-    // tolerante — sem acento/maiúscula — já usado no aviso de pendentes). O rascunho de
-    // quem está logando agora nunca é tocado, esteja ele pendente de um login anterior
-    // dela mesma ou recém-criado. Admin Mestre nunca sofre essa filtragem, porque ele já
-    // enxerga e pode abrir o RDO de qualquer encarregado normalmente no resto do
-    // sistema — não faria sentido esconder dele só no login.
+    // OUTRA pessoa — comparando primeiro pelo ID da conta (fixo, confiável, não depende
+    // de nome nenhum) e, só em rascunho salvo antes dessa correção (sem ID gravado
+    // ainda), cai pra comparação por nome como reserva. O rascunho de quem está logando
+    // agora nunca é tocado, esteja ele pendente de um login anterior dela mesma ou
+    // recém-criado. Admin Mestre nunca sofre essa filtragem, porque ele já enxerga e pode
+    // abrir o RDO de qualquer encarregado normalmente no resto do sistema — não faria
+    // sentido esconder dele só no login.
     if(usuarioAtual && usuarioAtual.papel!=='admin_mestre'){
       const meuNomeNormalizadoLogin=normalizarObra(usuarioAtual.nome||'');
       Object.keys(localStorage).filter(k=>k.startsWith('rdo-')&&k!=='rdo-last-key'&&!CHAVES_META_BACKUP.includes(k)).forEach(k=>{
         try{
           const d=JSON.parse(localStorage.getItem(k));
-          const enc=d?.header?.enc;
-          // Só remove se o rascunho JÁ TEM um encarregado preenchido e é claramente de
-          // outra pessoa — rascunho ainda sem encarregado definido fica intocado aqui
-          // (ambíguo demais pra apagar com segurança; se estiver genuinamente vazio, a
-          // limpeza de casca vazia already cuida dele à parte).
-          if(enc && enc.trim() && normalizarObra(enc)!==meuNomeNormalizadoLogin){
+          const h=d?.header;
+          if(!h) return;
+          // Só remove quando dá pra confirmar com certeza que é de OUTRA pessoa —
+          // rascunho sem ID e sem Encarregado preenchido (ambíguo demais) nunca é
+          // removido aqui; se estiver genuinamente vazio, a limpeza de casca vazia
+          // cuida dele à parte.
+          if(h.encId){
+            if(h.encId!==usuarioAtual.id) localStorage.removeItem(k);
+          }else if(h.enc && h.enc.trim() && normalizarObra(h.enc)!==meuNomeNormalizadoLogin){
             localStorage.removeItem(k);
           }
         }catch(e){ /* dado corrompido/ilegível — ignora, não mexe */ }
@@ -3804,6 +3808,21 @@ function normalizarObra(texto){
     .trim();
 }
 
+// CORREÇÃO (2026-08-29): até aqui, "esse rascunho é seu?" era decidido só comparando o
+// NOME salvo no rascunho com o nome de quem está logado agora. Isso é frágil — se a
+// busca do nome no perfil (carregarPerfilUsuario) falhar ou demorar por uma instabilidade
+// de rede, o sistema caía pro e-mail de login como "nome", que nunca bate com o nome de
+// verdade salvo no rascunho, fazendo ele parecer "sumido" (não é apagado, só deixa de ser
+// reconhecido). Agora a comparação usa PRIMEIRO o ID da conta (fixo, interno, não depende
+// de buscar nome nenhum — vem direto da sessão de login) — só cai pra comparação por nome
+// em rascunhos SALVOS ANTES dessa correção (que ainda não têm o ID gravado neles).
+function ehMeuRascunho(h){
+  if(!usuarioAtual||!h) return false;
+  if(h.encId) return h.encId===usuarioAtual.id; // rascunho já salvo com o ID — comparação confiável, ponto final
+  if(!h.enc) return false; // rascunho antigo, sem ID e sem nome nenhum — não dá pra saber de quem é
+  return normalizarObra(h.enc)===normalizarObra(usuarioAtual.nome||'');
+}
+
 function chaveRDO(data){
   const d=data||'draft';
   return rdoAtualId ? `rdo-${d}__${rdoAtualId}` : `rdo-${d}`;
@@ -3947,7 +3966,6 @@ function atualizarAvisoRDOsPendentes(forcar=false){
   // acessível pelo Pesquisar RDOs e pelo Dashboard — só esse aviso específico (feito pra
   // lembrar o DONO do rascunho de enviar) deixa de "vazar" o rascunho alheio pro Admin,
   // que podia confundir ele na hora de fazer o próprio RDO num computador compartilhado.
-  const meuNomeNormalizadoPend=usuarioAtual?normalizarObra(usuarioAtual.nome):null;
   const idsCompletosPendentes=new Set();
   const idsIncompletos=new Set();
   for(let i=0;i<localStorage.length;i++){
@@ -3958,7 +3976,7 @@ function atualizarAvisoRDOsPendentes(forcar=false){
       const d=JSON.parse(localStorage.getItem(k));
       const h=d?.header;
       if(!h?.obra||!h.obra.trim()) continue; // sem Obra nenhuma ainda — nem rascunho de verdade é, ignora
-      if(meuNomeNormalizadoPend&&normalizarObra(h.enc)!==meuNomeNormalizadoPend) continue; // rascunho de outro encarregado (ou de outro perfil) — nunca conta, nem pro Admin
+      if(!ehMeuRascunho(h)) continue; // rascunho de outro encarregado (ou de outro perfil) — nunca conta, nem pro Admin
       const id=extrairIdDaChave(k)||k; // agrupa pelo id fixo; sem id (RDO bem antigo), usa a própria chave
       if(rdoEstaCompleto(h)) idsCompletosPendentes.add(id);
       else idsIncompletos.add(id);
@@ -3995,7 +4013,6 @@ function abrirListaPendentes(){
   // mostra o próprio rascunho do Admin — então aqui também só lista o dele, pra ficar
   // consistente. O RDO de qualquer encarregado continua acessível normalmente pelo
   // Pesquisar RDOs e pelo Dashboard, só não aparece mais por este caminho específico.
-  const meuNomeNormalizadoList=usuarioAtual?normalizarObra(usuarioAtual.nome):null;
   for(let i=0;i<localStorage.length;i++){
     const k=localStorage.key(i);
     if(!k||!k.startsWith('rdo-')||CHAVES_META_BACKUP.includes(k)) continue;
@@ -4003,7 +4020,7 @@ function abrirListaPendentes(){
     try{
       const d=JSON.parse(localStorage.getItem(k));
       const h=d?.header;
-      if(meuNomeNormalizadoList&&normalizarObra(h?.enc)!==meuNomeNormalizadoList) continue;
+      if(!ehMeuRascunho(h)) continue;
       if(h?.obra&&h.obra.trim()){
         const id=extrairIdDaChave(k)||k;
         if(!pendentesPorId[id]) pendentesPorId[id]={id,key:k,data:h.data||'',obra:h.obra,disc:h.disc||'',enc:h.enc||'',nrdo:h.nrdo||'',todasChaves:[]};
@@ -6321,7 +6338,7 @@ function getFormData(){
   for(let o=1;o<=NUM_OSE;o++){
     oses.push({name:document.getElementById(`ose-name-${o}`)?.value||'',status:document.getElementById(`ose-status-${o}`)?.value||'sem',desc:document.getElementById(`ose-desc-${o}`)?.innerHTML||'',descText:document.getElementById(`ose-desc-${o}`)?.innerText||'',resp:document.getElementById(`ose-resp-${o}`)?.value||''});
   }
-  return{header:{nrdo:document.getElementById('h-nrdo').value,data:document.getElementById('h-data').value,obra:document.getElementById('h-obra').value,enc:document.getElementById('h-enc').textContent,disc:document.getElementById('h-disc').value},rowCounter,workers,oses,namesList,funcsList,vehiclesList};
+  return{header:{nrdo:document.getElementById('h-nrdo').value,data:document.getElementById('h-data').value,obra:document.getElementById('h-obra').value,enc:document.getElementById('h-enc').textContent,encId:usuarioAtual?.id||null,disc:document.getElementById('h-disc').value},rowCounter,workers,oses,namesList,funcsList,vehiclesList};
 }
 
 // Trava contra clique duplo acidental nos botões de Salvar/Exportar — muito comum no
@@ -6595,7 +6612,6 @@ function iniciarRDOEmBrancoNoBoot(){
   // tira nenhum acesso dele: continua podendo abrir/editar o RDO de qualquer encarregado
   // normalmente pela lista de pendentes, pelo Pesquisar RDOs ou pelo Dashboard — só não
   // é mais a TELA QUE ABRE SOZINHA ao entrar no sistema.
-  const meuNomeNormalizado=usuarioAtual?normalizarObra(usuarioAtual.nome):null;
   const candidatosHoje=[];
   for(let i=0;i<localStorage.length;i++){
     const k=localStorage.key(i);
@@ -6605,7 +6621,7 @@ function iniciarRDOEmBrancoNoBoot(){
     try{
       const d=JSON.parse(localStorage.getItem(k));
       if(!(d?.header?.obra||'').trim()) continue;
-      if(meuNomeNormalizado&&normalizarObra(d.header.enc)!==meuNomeNormalizado) continue; // rascunho de OUTRO encarregado (ou de outro perfil) — nunca reaproveita, nem pro Admin
+      if(!ehMeuRascunho(d.header)) continue; // rascunho de OUTRO encarregado (ou de outro perfil) — nunca reaproveita, nem pro Admin
       candidatosHoje.push({key:k,id:idDaChave,dados:d});
     }catch(e){}
   }
