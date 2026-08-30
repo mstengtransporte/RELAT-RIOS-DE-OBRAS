@@ -10039,15 +10039,18 @@ async function exportarHorasExtrasExcel(){
   // olhos qual é qual: Semana (laranja), Sábado (âmbar), Domingo (dourado), Feriado
   // (roxo, pra se destacar mais ainda por ser o caso mais raro/especial).
   const grupos=[
-    {chave:'semana',   titulo:'SEMANA — ACIMA DE 9H (70%)', cor:'FFD97706', colInicio:7},
-    {chave:'sabado',   titulo:'SÁBADO (70%)',                cor:'FFE08E1F', colInicio:9},
-    {chave:'domingo',  titulo:'DOMINGO (100%)',              cor:'FFD4A017', colInicio:11},
-    {chave:'feriado',  titulo:'FERIADO (100%)',              cor:'FF7C3AED', colInicio:13},
+    {chave:'semana',   titulo:'SEMANA — ACIMA DE 9H (70%)', cor:'FF0A3C64', colInicio:7},  // azul bem escuro (cor principal da marca)
+    {chave:'sabado',   titulo:'SÁBADO (70%)',                cor:'FF1A52C8', colInicio:9}, // azul médio
+    {chave:'domingo',  titulo:'DOMINGO (100%)',              cor:'FF4A90D9', colInicio:11}, // azul claro
+    {chave:'feriado',  titulo:'FERIADO (100%)',              cor:'FF8BC1F0', colInicio:13}, // azul bem claro
   ];
   grupos.forEach(g=>{
     ws.mergeCells(linhaGrupo,g.colInicio,linhaGrupo,g.colInicio+1);
     const c=ws.getCell(linhaGrupo,g.colInicio);
-    c.value=g.titulo; c.font={bold:true,color:{argb:'FFFFFFFF'},size:9.5};
+    // Nos 2 tons mais claros (domingo/feriado), letra escura em vez de branca —
+    // garante boa leitura (branco em azul clarinho fica difícil de enxergar).
+    const corLetraGrupo=(g.chave==='domingo'||g.chave==='feriado')?'FF0A3C64':'FFFFFFFF';
+    c.value=g.titulo; c.font={bold:true,color:{argb:corLetraGrupo},size:9.5};
     c.fill={type:'pattern',pattern:'solid',fgColor:{argb:g.cor}};
     c.alignment={horizontal:'center',vertical:'middle'};
     [[g.colInicio,'🔵 PROJETO','FF1A52C8'],[g.colInicio+1,'🟢 EXTRA ESCOPO','FF158038']].forEach(([col,label,corSub])=>{
@@ -10137,12 +10140,15 @@ async function exportarHorasExtrasExcel(){
 
   grupos.forEach((g,gi)=>{
     const colProjeto=7+gi*2, colExtraEscopo=8+gi*2;
-    [[colProjeto,totais[g.chave].projeto],[colExtraEscopo,totais[g.chave].extraescopo]].forEach(([col,v])=>{
+    // Total sempre azul pra Projeto e verde pra Extra Escopo, seguindo a mesma cor
+    // do sub-cabeçalho — assim dá pra saber de relance qual total é qual, direto
+    // lá embaixo, sem precisar subir a vista até o cabeçalho pra conferir.
+    [[colProjeto,totais[g.chave].projeto,'FF1A52C8'],[colExtraEscopo,totais[g.chave].extraescopo,'FF158038']].forEach(([col,v,corTotal])=>{
       const c=ws.getCell(linha,col);
       c.value=Number(v.toFixed(1)); c.numFmt='0.0';
       c.font={bold:true,size:14,color:{argb:'FFFFFFFF'}};
       c.alignment={horizontal:'center'};
-      c.fill={type:'pattern',pattern:'solid',fgColor:{argb:g.cor}};
+      c.fill={type:'pattern',pattern:'solid',fgColor:{argb:corTotal}};
       c.border={top:{style:'medium',color:{argb:'FF000000'}},bottom:{style:'medium',color:{argb:'FF000000'}}};
     });
   });
