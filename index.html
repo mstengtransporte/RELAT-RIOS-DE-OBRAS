@@ -9879,6 +9879,21 @@ async function carregarHorasExtras(){
     const rdosPorId={}; rdosData.forEach(r=>rdosPorId[r.id]=r);
     const idsRdo=rdosData.map(r=>r.id);
 
+    // Busca o status de cada OSE (Andamento/Extra Escopo/etc.) de cada RDO — precisa
+    // disso pra dividir Projeto x Extra Escopo até nas HORAS NORMAIS, não só nas
+    // horas extras (Extra Escopo sempre precisa aparecer separado, com ou sem hora
+    // extra envolvida).
+    const{data:osesData,error:erroOses}=await supabaseClient
+      .from('rdo_oses')
+      .select('rdo_id,ose_numero,status')
+      .in('rdo_id',idsRdo);
+    if(erroOses) throw erroOses;
+    const statusPorRdo={}; // rdo_id -> { ose_numero: status }
+    (osesData||[]).forEach(o=>{
+      if(!statusPorRdo[o.rdo_id]) statusPorRdo[o.rdo_id]={};
+      statusPorRdo[o.rdo_id][o.ose_numero]=o.status;
+    });
+
     // Busca TODOS os funcionários desses RDOs (não só os com hora extra) — precisa
     // disso pra montar a coluna "Normal" no Excel também, não só 70%/100%.
     const{data:workersData,error:erroWorkers}=await supabaseClient
@@ -9900,9 +9915,24 @@ async function carregarHorasExtras(){
         const extra100=w.horas_extra_100!=null?Number(w.horas_extra_100):0;
         const extraProjeto=w.horas_extra_projeto!=null?Number(w.horas_extra_projeto):0;
         const extraEscopo=w.horas_extra_extraescopo!=null?Number(w.horas_extra_extraescopo):0;
+
+        // Divide as horas NORMAIS entre Projeto e Extra Escopo, olhando o status de
+        // cada OSE de onde vieram — assim Extra Escopo continua separado em TUDO,
+        // com ou sem hora extra envolvida, nunca só somado junto com Andamento.
+        const statusOse=statusPorRdo[w.rdo_id]||{};
+        let totalOseExtraEscopo=0, totalOseProjeto=0;
+        (w.hrs||[]).forEach((v,idx)=>{
+          const h=parseHrs(v||'');
+          if(statusOse[idx+1]==='ext') totalOseExtraEscopo+=h;
+          else totalOseProjeto+=h;
+        });
+        const normaisExtraEscopo=Math.max(0,totalOseExtraEscopo-extraEscopo);
+        const normaisProjeto=Math.max(0,totalOseProjeto-extraProjeto);
+
         return{
           data:r.data,nrdo:r.nrdo,obra:r.obra,encarregado:r.encarregado,feriadoNome:r.feriado_nome,
-          nome:w.nome,funcao:w.funcao,horas,normais,extra70,extra100,extraProjeto,extraEscopo,
+          nome:w.nome,funcao:w.funcao,horas,normais,normaisProjeto,normaisExtraEscopo,
+          extra70,extra100,extraProjeto,extraEscopo,
           tipo:w.tipo_hora_extra||null, // null = sem hora extra, '70'/'100' = tem alguma parte extra
           justificativa:w.justificativa_hora_extra||''
         };
@@ -9992,7 +10022,7 @@ async function exportarHorasExtrasExcel(){
   wb.creator='Master Energy — Sistema de RDO';
   wb.created=new Date();
   const ws=wb.addWorksheet('Horas Extras',{properties:{tabColor:{argb:'FFD97706'}}});
-  const LARG=14;
+  const LARG=15;
 
   ws.mergeCells(1,1,3,LARG);
   const titulo=ws.getCell(1,1);
@@ -10008,12 +10038,13 @@ async function exportarHorasExtrasExcel(){
   ws.getCell(4,1).alignment={horizontal:'center'};
   ws.getRow(4).height=20;
 
-  // CABEÇALHO EM 2 LINHAS, com 4 GRUPOS DE ORIGEM — cada situação (Semana passando
-  // de 9h, Sábado, Domingo, Feriado) tem sua própria cor de grupo, deixando bem
-  // visível de onde veio cada hora extra sem precisar ler célula por célula. Dentro
-  // de cada grupo, ainda separa Projeto (🔵) de Extra Escopo (🟢) — nunca mistura.
+  // CABEÇALHO EM 2 LINHAS, com 5 GRUPOS — HORAS NORMAIS entra como grupo agora
+  // também (Projeto/Extra Escopo separados desde as horas normais, não só nas
+  // horas extras), seguido dos 4 grupos de origem da hora extra (Semana, Sábado,
+  // Domingo, Feriado). Extra Escopo NUNCA fica só somado junto com Andamento, em
+  // NENHUMA situação, com ou sem hora extra envolvida.
   const linhaGrupo=6, linhaSub=7;
-  const colunasSimples=['DATA','Nº RDO','OBRA','ENCARREGADO','FUNCIONÁRIO','HORAS\nNORMAIS'];
+  const colunasSimples=['DATA','Nº RDO','OBRA','ENCARREGADO','FUNCIONÁRIO'];
   colunasSimples.forEach((h,ci)=>{
     ws.mergeCells(linhaGrupo,ci+1,linhaSub,ci+1);
     const c=ws.getCell(linhaGrupo,ci+1);
@@ -10021,14 +10052,15 @@ async function exportarHorasExtrasExcel(){
     c.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF0A3C64'}};
     c.alignment={horizontal:'center',vertical:'middle',wrapText:true};
   });
-  // Os 4 grupos de origem — cada um com sua cor própria, bem forte, pra pular aos
-  // olhos qual é qual: Semana (laranja), Sábado (âmbar), Domingo (dourado), Feriado
-  // (roxo, pra se destacar mais ainda por ser o caso mais raro/especial).
+  // 5 grupos: Normais (cinza-azulado neutro, é a base do dia) + os 4 de origem da
+  // hora extra — cada um com sua cor própria, do escuro (mais comum) ao claro
+  // (mais raro), seguindo o azul da marca.
   const grupos=[
-    {chave:'semana',   titulo:'SEMANA — ACIMA DE 9H (70%)', cor:'FF0A3C64', colInicio:7},  // azul bem escuro (cor principal da marca)
-    {chave:'sabado',   titulo:'SÁBADO (70%)',                cor:'FF1A52C8', colInicio:9}, // azul médio
-    {chave:'domingo',  titulo:'DOMINGO (100%)',              cor:'FF4A90D9', colInicio:11}, // azul claro
-    {chave:'feriado',  titulo:'FERIADO (100%)',              cor:'FF8BC1F0', colInicio:13}, // azul bem claro
+    {chave:'normal',   titulo:'HORAS NORMAIS',                cor:'FF374151', colInicio:6,  ehNormal:true},
+    {chave:'semana',   titulo:'SEMANA — ACIMA DE 9H (70%)',   cor:'FF0A3C64', colInicio:8},
+    {chave:'sabado',   titulo:'SÁBADO (70%)',                  cor:'FF1A52C8', colInicio:10},
+    {chave:'domingo',  titulo:'DOMINGO (100%)',                cor:'FF4A90D9', colInicio:12},
+    {chave:'feriado',  titulo:'FERIADO (100%)',                cor:'FF8BC1F0', colInicio:14},
   ];
   grupos.forEach(g=>{
     ws.mergeCells(linhaGrupo,g.colInicio,linhaGrupo,g.colInicio+1);
@@ -10053,44 +10085,43 @@ async function exportarHorasExtrasExcel(){
   // Fundos clarinhos únicos por grupo, usados só nas células que realmente têm
   // valor — reforça visualmente a mesma cor do cabeçalho daquele grupo.
   const fundosPorGrupo={
-    semana:'FFFCE8CE', sabado:'FFFCE0C2', domingo:'FFFAE7B8', feriado:'FFE8DCFB'
+    normal:'FFE5E7EB', semana:'FFFCE8CE', sabado:'FFFCE0C2', domingo:'FFFAE7B8', feriado:'FFE8DCFB'
   };
   const textoPorGrupo={
-    semana:'FF8A5300', sabado:'FF8A4E00', domingo:'FF7A5A00', feriado:'FF4C1D95'
+    normal:'FF1F2937', semana:'FF8A5300', sabado:'FF8A4E00', domingo:'FF7A5A00', feriado:'FF4C1D95'
   };
 
   let linha=linhaSub+1;
   const totais={};
   grupos.forEach(g=>{ totais[g.chave]={projeto:0,extraescopo:0}; });
-  let totNormal=0;
 
   const ordenados=[...horasExtrasRegistrosAtuais].sort((a,b)=>a.data===b.data?String(a.nrdo).localeCompare(String(b.nrdo)):a.data.localeCompare(b.data));
   ordenados.forEach((r,idx)=>{
     const[y,m,dd]=(r.data||'').split('-');
     const dataFmt=y?`${dd}/${m}/${y}`:'—';
-    const hNormal=r.normais||0;
     const origem=classificarOrigemHoraExtra(r); // 'semana'|'sabado'|'domingo'|'feriado'|null
-    totNormal+=hNormal;
+    totais.normal.projeto+=(r.normaisProjeto||0);
+    totais.normal.extraescopo+=(r.normaisExtraEscopo||0);
 
-    // Monta as 8 colunas de hora extra (4 grupos x Projeto/Extra Escopo) — só a
-    // combinação que realmente se aplica a este registro recebe valor, todas as
-    // outras ficam em branco (0), sem ambiguidade nenhuma.
-    const valoresExtra=[];
-    grupos.forEach(g=>{
+    // Monta as 10 colunas (5 grupos x Projeto/Extra Escopo) — só a combinação que
+    // realmente se aplica a este registro recebe valor nos grupos de hora extra;
+    // o grupo "Normais" sempre recebe valor (mesmo que seja 0 num dos dois lados).
+    const valoresGrupos=[Number((r.normaisProjeto||0).toFixed(1)), Number((r.normaisExtraEscopo||0).toFixed(1))];
+    grupos.slice(1).forEach(g=>{
       const proj=origem===g.chave?(r.extraProjeto||0):0;
       const ext=origem===g.chave?(r.extraEscopo||0):0;
       if(origem===g.chave){ totais[g.chave].projeto+=proj; totais[g.chave].extraescopo+=ext; }
-      valoresExtra.push(Number(proj.toFixed(1)), Number(ext.toFixed(1)));
+      valoresGrupos.push(Number(proj.toFixed(1)), Number(ext.toFixed(1)));
     });
 
     const valores=[dataFmt,r.nrdo||'',(r.obra||'').toUpperCase(),(r.encarregado||'').toUpperCase(),(r.nome||'').toUpperCase(),
-      Number(hNormal.toFixed(1)), ...valoresExtra];
+      ...valoresGrupos];
     valores.forEach((v,ci)=>{
       const c=ws.getCell(linha,ci+1);
       c.value=v;
-      // Colunas 7 em diante = pares Projeto/Extra Escopo dos 4 grupos, nessa ordem.
-      const idxGrupo=ci>=6?Math.floor((ci-6)/2):-1;
-      const grupoDaCol=idxGrupo>=0&&idxGrupo<4?grupos[idxGrupo].chave:null;
+      // Colunas 6 em diante = pares Projeto/Extra Escopo dos 5 grupos, nessa ordem.
+      const idxGrupo=ci>=5?Math.floor((ci-5)/2):-1;
+      const grupoDaCol=idxGrupo>=0&&idxGrupo<grupos.length?grupos[idxGrupo].chave:null;
       if(grupoDaCol&&v>0){
         c.fill={type:'pattern',pattern:'solid',fgColor:{argb:fundosPorGrupo[grupoDaCol]}};
       }else{
@@ -10100,8 +10131,9 @@ async function exportarHorasExtrasExcel(){
       if(typeof v==='number'){
         c.numFmt='0.0'; c.alignment={horizontal:'center'};
         // Valor de destaque (>0 numa coluna de hora extra) fica maior e mais forte
-        // que os outros números — pra pular aos olhos, como pedido.
-        const destacar=grupoDaCol&&v>0;
+        // que os outros números — pra pular aos olhos, como pedido. O grupo
+        // "Normais" fica sempre com destaque leve, por ser a base de todo registro.
+        const destacar=grupoDaCol&&(v>0||grupoDaCol==='normal');
         c.font={bold:true,size:destacar?12:10,color:{argb:destacar?textoPorGrupo[grupoDaCol]:'FF000000'}};
       }
       else{ c.font={size:10}; c.alignment={horizontal:'left',vertical:'middle',indent:1}; }
@@ -10110,25 +10142,17 @@ async function exportarHorasExtrasExcel(){
   });
 
   // LINHA DE TOTAL GERAL — bem maior e mais destacada que as linhas normais, cada
-  // grupo com sua própria cor forte (a mesma do cabeçalho), pra ser a linha que
-  // mais chama atenção na planilha inteira.
+  // par Projeto/Extra Escopo sempre azul/verde (não a cor do grupo), pra bater com
+  // a mesma cor do sub-cabeçalho e não precisar subir a vista pra conferir qual é
+  // qual.
   ws.mergeCells(linha,1,linha,5);
   ws.getCell(linha,1).value='TOTAL GERAL';
   ws.getCell(linha,1).font={bold:true,size:13,color:{argb:'FFFFFFFF'}};
   ws.getCell(linha,1).alignment={horizontal:'right',vertical:'middle'};
   ws.getCell(linha,1).fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF0A3C64'}};
 
-  const cTotNormal=ws.getCell(linha,6);
-  cTotNormal.value=Number(totNormal.toFixed(1)); cTotNormal.numFmt='0.0';
-  cTotNormal.font={bold:true,size:13,color:{argb:'FFFFFFFF'}};
-  cTotNormal.alignment={horizontal:'center'};
-  cTotNormal.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF0A3C64'}};
-
   grupos.forEach((g,gi)=>{
-    const colProjeto=7+gi*2, colExtraEscopo=8+gi*2;
-    // Total sempre azul pra Projeto e verde pra Extra Escopo, seguindo a mesma cor
-    // do sub-cabeçalho — assim dá pra saber de relance qual total é qual, direto
-    // lá embaixo, sem precisar subir a vista até o cabeçalho pra conferir.
+    const colProjeto=6+gi*2, colExtraEscopo=7+gi*2;
     [[colProjeto,totais[g.chave].projeto,'FF1A52C8'],[colExtraEscopo,totais[g.chave].extraescopo,'FF158038']].forEach(([col,v,corTotal])=>{
       const c=ws.getCell(linha,col);
       c.value=Number(v.toFixed(1)); c.numFmt='0.0';
@@ -10141,8 +10165,8 @@ async function exportarHorasExtrasExcel(){
   ws.getRow(linha).height=28;
 
   ws.getColumn(1).width=12; ws.getColumn(2).width=12; ws.getColumn(3).width=22; ws.getColumn(4).width=18;
-  ws.getColumn(5).width=22; ws.getColumn(6).width=11;
-  for(let c=7;c<=14;c++) ws.getColumn(c).width=13;
+  ws.getColumn(5).width=22;
+  for(let c=6;c<=15;c++) ws.getColumn(c).width=13;
 
   const buffer=await wb.xlsx.writeBuffer();
   const blob=new Blob([buffer],{type:'application/octet-stream'});
