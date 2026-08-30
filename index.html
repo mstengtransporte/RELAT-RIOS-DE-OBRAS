@@ -2295,24 +2295,10 @@ body.dark #workers-body tr:hover{background-color:rgba(58,110,232,.08)}
     </div>
     <div class="multipdf-body">
       <div style="font-size:12px;color:var(--text2);line-height:1.5">
-        Todos os RDOs salvos ficam guardados só neste aparelho. Se o celular quebrar, resetar
-        ou trocar de dono, esse histórico se perde. Exporte um arquivo de backup de vez em
-        quando e guarde num lugar seguro (Google Drive, e-mail, etc).
+        Todo RDO enviado já fica protegido na nuvem — recuperável a qualquer momento,
+        de qualquer aparelho, usando "Restaurar da nuvem" abaixo.
       </div>
       <div id="backup-info" style="font-size:11px;font-weight:700;color:var(--text3)"></div>
-      <div id="backup-ultima-info" style="font-size:11.5px;font-weight:800;padding:8px 10px;background:var(--surface2);border:2px solid var(--border2)"></div>
-      <div style="display:flex;gap:8px">
-        <button type="button" onclick="exportarBackupCompleto()" style="flex:1;background:#158038;color:#fff;border:2px solid #0d5228;padding:12px 8px;font-size:12.5px;font-weight:900;cursor:pointer;text-transform:uppercase">⬇️ Baixar</button>
-        <button type="button" onclick="compartilharBackup()" style="flex:1;background:#107870;color:#fff;border:2px solid #085048;padding:12px 8px;font-size:12.5px;font-weight:900;cursor:pointer;text-transform:uppercase">📤 Compartilhar</button>
-      </div>
-      <div style="border-top:2px dashed var(--border);margin:4px 0"></div>
-      <label style="font-size:11px;font-weight:900;text-transform:uppercase;color:var(--text3)">Restaurar de um arquivo de backup</label>
-      <div style="font-size:11px;color:#d97706;font-weight:700">⚠️ Isso substitui os RDOs que tiverem o mesmo dia salvos neste aparelho.</div>
-      <div style="font-size:10.5px;color:var(--text3);line-height:1.5;background:var(--surface2);padding:8px 10px;border-left:3px solid #1457c8">
-        📱 <b>Recebeu o backup pelo WhatsApp no celular?</b> Segure o arquivo → "Salvar em Arquivos/Downloads" → volte aqui e toque no botão abaixo → escolha o arquivo salvo. Todos os RDOs do arquivo entram de uma vez.
-      </div>
-      <button type="button" onclick="document.getElementById('backup-file-input').click()" style="background:#1457c8;color:#fff;border:2px solid #0a3a94;padding:14px 12px;font-size:13px;font-weight:900;cursor:pointer;text-transform:uppercase;min-height:48px">📂 ESCOLHER ARQUIVO E ATUALIZAR TODOS OS RDOs</button>
-      <input type="file" id="backup-file-input" accept="application/json" onchange="importarBackupArquivo(this)" style="display:none">
       <div style="border-top:2px dashed var(--border);margin:4px 0"></div>
       <label style="font-size:11px;font-weight:900;text-transform:uppercase;color:var(--text3)">Restaurar da nuvem (Supabase)</label>
       <div style="font-size:10.5px;color:var(--text3);line-height:1.5;background:var(--surface2);padding:8px 10px;border-left:3px solid #7c3aed">
@@ -2323,7 +2309,7 @@ body.dark #workers-body tr:hover{background-color:rgba(58,110,232,.08)}
         ⚠️ Se algum RDO seu tiver ficado só neste aparelho sem chegar no admin (por queda de internet, por exemplo), use o botão abaixo pra conferir e reenviar. Ele nunca apaga nem duplica nada — só reenvia o que realmente ainda não chegou.
       </div>
       <button type="button" onclick="verificarEReenviarPendentes()" style="background:#d97706;color:#fff;border:2px solid #92400e;padding:14px 12px;font-size:13px;font-weight:900;cursor:pointer;text-transform:uppercase;min-height:48px">🔄 CONFERIR E REENVIAR PENDENTES</button>
-      <button type="button" class="admin-only-btn" onclick="exportarBackupCompletoExcel(this)" style="background:#0d5228;color:#fff;border:2px solid #063d1c;padding:14px 12px;font-size:13px;font-weight:900;cursor:pointer;text-transform:uppercase;min-height:48px">📗 BACKUP COMPLETO EM EXCEL (TODOS OS RDOs)</button>
+      <button type="button" class="admin-only-btn" onclick="exportarBackupCompletoExcel(this)" style="background:#0d5228;color:#fff;border:2px solid #063d1c;padding:14px 12px;font-size:13px;font-weight:900;cursor:pointer;text-transform:uppercase;min-height:48px">📊 RELATÓRIO CONSOLIDADO EM EXCEL (TODOS OS RDOs)</button>
       <div style="border-top:2px dashed var(--border);margin:4px 0"></div>
       <div id="usuario-logado-info" style="font-size:11.5px;color:var(--text3);text-align:center"></div>
       <button type="button" onclick="fazerLogout()" style="background:transparent;color:#dc2626;border:2px solid #dc2626;padding:11px 12px;font-size:12.5px;font-weight:900;cursor:pointer;text-transform:uppercase;min-height:44px">🚪 SAIR DA CONTA</button>
@@ -12226,7 +12212,6 @@ function abrirBackup(){
   const total=Object.keys(coletarTodosOsDadosParaBackup().rdos).length;
   const info=document.getElementById('backup-info');
   if(info) info.textContent=`📦 ${total} RDO(s) salvos neste aparelho no momento.`;
-  atualizarAvisoUltimoBackup();
   const userInfo=document.getElementById('usuario-logado-info');
   if(userInfo){
     userInfo.textContent=usuarioAtual
