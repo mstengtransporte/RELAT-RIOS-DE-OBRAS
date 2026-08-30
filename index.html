@@ -3558,14 +3558,20 @@ async function _syncSalvarSupabaseReal(d,rdoKey){
     }));
     const workersRows=(d.workers||[])
       .filter(w=>w.name||(w.hrs||[]).some(v=>v))
-      .map((w,idx)=>({
-        worker_index:idx,nome:w.name||null,funcao:w.func||null,veiculo:w.vehicle||null,hrs:w.hrs||[],hst:w.hst||[],
-        status_dia:statusDiaPorRotulo(w.vehicle),
+      .map((w,idx)=>{
         // Justificativa de hora extra, se o encarregado já preencheu numa tentativa
         // anterior deste mesmo envio (guardada em memória, por nome normalizado —
-        // ver mostrarModalHoraExtra). Fica vazio/ausente em qualquer envio normal.
-        justificativa_he:(w.name&&window._justificativasHoraExtra?.[normalizarObra(w.name)])||undefined
-      }));
+        // ver mostrarModalHoraExtra). {motivo, projeto, extraescopo} — fica ausente
+        // em qualquer envio normal, sem hora extra.
+        const jHE=w.name?window._justificativasHoraExtra?.[normalizarObra(w.name)]:null;
+        return{
+          worker_index:idx,nome:w.name||null,funcao:w.func||null,veiculo:w.vehicle||null,hrs:w.hrs||[],hst:w.hst||[],
+          status_dia:statusDiaPorRotulo(w.vehicle),
+          justificativa_he:jHE?.motivo||undefined,
+          horas_extra_projeto_he:jHE&&jHE.projeto!=null?jHE.projeto:undefined,
+          horas_extra_extraescopo_he:jHE&&jHE.extraescopo!=null?jHE.extraescopo:undefined
+        };
+      });
     const{data:rpcResultado,error:erroRdo}=await supabaseClient.rpc('salvar_rdo_completo_v2',{
       p_rdo_key:rdoKey,
       p_nrdo:h.nrdo||null,
@@ -6339,20 +6345,33 @@ function mostrarModalHoraExtra(excedentes){
     const box=document.createElement('div');
     box.style.cssText='background:var(--surface,#fff);border:2.5px solid #000;box-shadow:6px 6px 0 #000;max-width:520px;width:100%;max-height:90vh;overflow-y:auto';
     let camposHtml='';
-    (excedentes||[]).forEach(ex=>{
+    (excedentes||[]).forEach((ex,idxEx)=>{
       const nomeSeguro=(ex.nome||'').replace(/"/g,'&quot;');
+      const horasExc=Number(ex.horas_excedentes||0);
       camposHtml+=`
         <div style="margin-bottom:14px;padding:10px;border:1.5px solid #f0ad4e;background:#fff8ee;border-radius:6px">
           <div style="font-weight:900;font-size:13px;margin-bottom:2px;color:#000">⚠️ ${(ex.nome||'').toUpperCase()}</div>
-          <div style="font-size:11.5px;color:#7a5a1e;margin-bottom:8px">Já tem ${fmt(ex.total_outros_rdos||0)}h em outro(s) RDO(s) hoje + ${fmt(ex.total_neste_rdo||0)}h neste RDO = ${fmt(ex.total_hoje||0)}h no total. Passou de 9h.</div>
+          <div style="font-size:11.5px;color:#7a5a1e;margin-bottom:8px">Já tem ${fmt(ex.total_outros_rdos||0)}h em outro(s) RDO(s) hoje + ${fmt(ex.total_neste_rdo||0)}h neste RDO = ${fmt(ex.total_hoje||0)}h no total. Deste RDO, <b>${fmt(horasExc)}h são excedentes</b> (acima de 9h).</div>
           <label style="font-size:10.5px;font-weight:900;text-transform:uppercase;color:var(--text3);display:block;margin-bottom:3px">Motivo da hora extra (obrigatório pra enviar assim mesmo):</label>
-          <textarea data-nome-he="${nomeSeguro}" rows="2" style="width:100%;padding:6px;font-size:13px;border:1.5px solid #000;box-sizing:border-box;font-family:inherit" placeholder="Ex: atendimento emergencial solicitado pela obra"></textarea>
+          <textarea data-nome-he="${nomeSeguro}" rows="2" style="width:100%;padding:6px;font-size:13px;border:1.5px solid #000;box-sizing:border-box;font-family:inherit;margin-bottom:8px" placeholder="Ex: atendimento emergencial solicitado pela obra"></textarea>
+          <label style="font-size:10.5px;font-weight:900;text-transform:uppercase;color:var(--text3);display:block;margin-bottom:3px">Dessas ${fmt(horasExc)}h excedentes, quantas são de cada:</label>
+          <div style="display:flex;gap:8px;align-items:center">
+            <div style="flex:1">
+              <label style="font-size:10px;color:#1a52c8;font-weight:900">🔵 Projeto (Andamento)</label>
+              <input type="number" step="0.5" min="0" data-projeto-he="${nomeSeguro}" data-max-he="${horasExc}" data-idx-he="${idxEx}" style="width:100%;padding:6px;font-size:13px;border:1.5px solid #1a52c8;box-sizing:border-box">
+            </div>
+            <div style="flex:1">
+              <label style="font-size:10px;color:#158038;font-weight:900">🟢 Extra Escopo</label>
+              <input type="number" step="0.5" min="0" data-extraescopo-he="${nomeSeguro}" data-idx-he="${idxEx}" style="width:100%;padding:6px;font-size:13px;border:1.5px solid #158038;box-sizing:border-box">
+            </div>
+          </div>
+          <div data-soma-he="${idxEx}" style="font-size:10.5px;margin-top:4px;font-weight:900;color:#dc2626">Soma precisa dar exatamente ${fmt(horasExc)}h</div>
         </div>`;
     });
     box.innerHTML=`
       <div style="background:linear-gradient(135deg,#d97706,#b45309);color:#fff;padding:14px 18px;font-weight:900;font-size:14px">⏱️ Horas acima de 9h detectadas</div>
       <div style="padding:16px">
-        <p style="font-size:12.5px;color:var(--text2);margin:0 0 14px">Antes de enviar, corrija as horas se foi engano de digitação, ou explique o motivo de cada excedente pra confirmar que é hora extra de verdade.</p>
+        <p style="font-size:12.5px;color:var(--text2);margin:0 0 14px">Antes de enviar, corrija as horas se foi engano de digitação, ou explique o motivo de cada excedente e informe se é hora extra de Projeto ou de Extra Escopo (a soma tem que fechar certinho).</p>
         ${camposHtml}
       </div>
       <div style="display:flex;gap:8px;padding:12px 16px;border-top:2px solid #000">
@@ -6361,17 +6380,37 @@ function mostrarModalHoraExtra(excedentes){
       </div>`;
     overlay.appendChild(box);
     document.body.appendChild(overlay);
+
+    // Confere a soma ao vivo, a cada dígito, em cada par de campos
+    (excedentes||[]).forEach((ex,idxEx)=>{
+      const horasExc=Number(ex.horas_excedentes||0);
+      const nomeSeguro=(ex.nome||'').replace(/"/g,'&quot;');
+      const inpProjeto=box.querySelector(`input[data-projeto-he="${nomeSeguro}"]`);
+      const inpExtra=box.querySelector(`input[data-extraescopo-he="${nomeSeguro}"]`);
+      const somaEl=box.querySelector(`[data-soma-he="${idxEx}"]`);
+      const conferir=()=>{
+        const p=parseFloat(inpProjeto.value)||0, e=parseFloat(inpExtra.value)||0;
+        const bate=Math.abs((p+e)-horasExc)<0.05;
+        somaEl.style.color=bate?'#158038':'#dc2626';
+        somaEl.textContent=bate?`✔️ Soma confere: ${fmt(p+e)}h`:`Soma precisa dar exatamente ${fmt(horasExc)}h (está em ${fmt(p+e)}h)`;
+      };
+      inpProjeto.oninput=conferir; inpExtra.oninput=conferir;
+    });
+
     box.querySelector('#btn-cancelar-he').onclick=()=>{overlay.remove();resolve(null);};
     box.querySelector('#btn-confirmar-he').onclick=()=>{
-      const textareas=box.querySelectorAll('textarea[data-nome-he]');
       const justificativas={};
       let faltando=false;
-      textareas.forEach(t=>{
-        const v=t.value.trim();
-        if(!v) faltando=true;
-        justificativas[normalizarObra(t.dataset.nomeHe)]=v;
+      (excedentes||[]).forEach(ex=>{
+        const nomeSeguro=(ex.nome||'').replace(/"/g,'&quot;');
+        const horasExc=Number(ex.horas_excedentes||0);
+        const motivo=box.querySelector(`textarea[data-nome-he="${nomeSeguro}"]`).value.trim();
+        const p=parseFloat(box.querySelector(`input[data-projeto-he="${nomeSeguro}"]`).value)||0;
+        const e=parseFloat(box.querySelector(`input[data-extraescopo-he="${nomeSeguro}"]`).value)||0;
+        if(!motivo||Math.abs((p+e)-horasExc)>=0.05) faltando=true;
+        justificativas[normalizarObra(ex.nome)]={motivo,projeto:p,extraescopo:e};
       });
-      if(faltando){ showToast('Preencha o motivo de todos os funcionários listados.','#d97706'); return; }
+      if(faltando){ showToast('Preencha o motivo e confirme que a soma Projeto + Extra Escopo bate certinho, pra todos os funcionários listados.','#d97706'); return; }
       overlay.remove();
       resolve(justificativas);
     };
@@ -9858,7 +9897,7 @@ async function carregarHorasExtras(){
     // disso pra montar a coluna "Normal" no Excel também, não só 70%/100%.
     const{data:workersData,error:erroWorkers}=await supabaseClient
       .from('rdo_workers')
-      .select('rdo_id,nome,funcao,hrs,tipo_hora_extra,justificativa_hora_extra')
+      .select('rdo_id,nome,funcao,hrs,horas_normais,horas_extra_70,horas_extra_100,horas_extra_projeto,horas_extra_extraescopo,tipo_hora_extra,justificativa_hora_extra')
       .in('rdo_id',idsRdo);
     if(erroWorkers) throw erroWorkers;
 
@@ -9867,10 +9906,18 @@ async function carregarHorasExtras(){
       .map(w=>{
         const r=rdosPorId[w.rdo_id]||{};
         const horas=(w.hrs||[]).reduce((s,v)=>s+parseHrs(v||''),0);
+        // A divisão real (quanto é normal, quanto é 70%, quanto é 100%, e quanto
+        // disso é Projeto x Extra Escopo) já vem calculada e conferida pelo banco —
+        // nunca marca o registro inteiro como hora extra, só a parte que excedeu.
+        const normais=w.horas_normais!=null?Number(w.horas_normais):horas;
+        const extra70=w.horas_extra_70!=null?Number(w.horas_extra_70):0;
+        const extra100=w.horas_extra_100!=null?Number(w.horas_extra_100):0;
+        const extraProjeto=w.horas_extra_projeto!=null?Number(w.horas_extra_projeto):0;
+        const extraEscopo=w.horas_extra_extraescopo!=null?Number(w.horas_extra_extraescopo):0;
         return{
           data:r.data,nrdo:r.nrdo,obra:r.obra,encarregado:r.encarregado,feriadoNome:r.feriado_nome,
-          nome:w.nome,funcao:w.funcao,horas,
-          tipo:w.tipo_hora_extra||null, // null = normal, '70' ou '100' = hora extra
+          nome:w.nome,funcao:w.funcao,horas,normais,extra70,extra100,extraProjeto,extraEscopo,
+          tipo:w.tipo_hora_extra||null, // null = sem hora extra, '70'/'100' = tem alguma parte extra
           justificativa:w.justificativa_hora_extra||''
         };
       });
@@ -9885,16 +9932,20 @@ async function carregarHorasExtras(){
 function renderizarListaHorasExtras(registros){
   const wrap=document.getElementById('he-lista-wrap');
   const resumo=document.getElementById('he-resumo');
-  const extras=registros.filter(r=>r.tipo==='70'||r.tipo==='100');
+  const extras=registros.filter(r=>r.extra70>0||r.extra100>0);
 
-  const total70=extras.filter(r=>r.tipo==='70').reduce((s,r)=>s+r.horas,0);
-  const total100=extras.filter(r=>r.tipo==='100').reduce((s,r)=>s+r.horas,0);
+  const total70=extras.reduce((s,r)=>s+(r.extra70||0),0);
+  const total100=extras.reduce((s,r)=>s+(r.extra100||0),0);
+  const totalProjeto=extras.reduce((s,r)=>s+(r.extraProjeto||0),0);
+  const totalExtraEscopo=extras.reduce((s,r)=>s+(r.extraEscopo||0),0);
   const pessoasUnicas=new Set(extras.map(r=>normalizarObra(r.nome))).size;
 
   resumo.innerHTML=`
     <div class="ee-card"><div style="font-size:10px;font-weight:900;opacity:.7">HORAS 70%</div><div style="font-size:20px;font-weight:900;color:#d97706">${fmt(total70)}h</div></div>
     <div class="ee-card"><div style="font-size:10px;font-weight:900;opacity:.7">HORAS 100%</div><div style="font-size:20px;font-weight:900;color:#b45309">${fmt(total100)}h</div></div>
-    <div class="ee-card"><div style="font-size:10px;font-weight:900;opacity:.7">FUNCIONÁRIOS ENVOLVIDOS</div><div style="font-size:20px;font-weight:900">${pessoasUnicas}</div></div>`;
+    <div class="ee-card"><div style="font-size:10px;font-weight:900;opacity:.7">FUNCIONÁRIOS ENVOLVIDOS</div><div style="font-size:20px;font-weight:900">${pessoasUnicas}</div></div>
+    <div class="ee-card"><div style="font-size:10px;font-weight:900;opacity:.7">🔵 EXTRA — PROJETO</div><div style="font-size:20px;font-weight:900;color:#1a52c8">${fmt(totalProjeto)}h</div></div>
+    <div class="ee-card"><div style="font-size:10px;font-weight:900;opacity:.7">🟢 EXTRA — EXTRA ESCOPO</div><div style="font-size:20px;font-weight:900;color:#158038">${fmt(totalExtraEscopo)}h</div></div>`;
 
   if(!extras.length){
     wrap.innerHTML='<div style="text-align:center;padding:30px;opacity:.6">Nenhuma hora extra registrada nesse período — ótimo sinal.</div>';
@@ -9904,18 +9955,32 @@ function renderizarListaHorasExtras(registros){
   wrap.innerHTML=ordenados.map(r=>{
     const[y,m,dd]=(r.data||'').split('-');
     const dataFmt=y?`${dd}/${m}/${y}`:'—';
-    const corTipo=r.tipo==='100'?'#b45309':'#d97706';
+    const ehPrincipalmente100=(r.extra100||0)>=(r.extra70||0);
+    const corTipo=ehPrincipalmente100?'#b45309':'#d97706';
     const diaSemanaReg=y?new Date(r.data+'T12:00:00').getDay():null;
-    const motivoTexto=r.tipo==='100'
+    const motivoTexto=r.extra100>0
       ?(r.feriadoNome?`Feriado: ${r.feriadoNome.toUpperCase()}`:'Domingo')
       :(diaSemanaReg===6&&!r.justificativa ? 'Sábado (70% automático)' : `Motivo: ${r.justificativa||'—'}`);
+    // Mostra as duas partes quando o registro tem as duas (ex: 9h normais + 4h a
+    // 70% no mesmo RDO) — nunca soma tudo junto como se fosse tudo extra.
+    const badgeHoras=[
+      r.extra70>0?`${fmt(r.extra70)}h — 70%`:'',
+      r.extra100>0?`${fmt(r.extra100)}h — 100%`:''
+    ].filter(Boolean).join(' + ');
+    // Divisão Projeto (azul) x Extra Escopo (verde) — mesma cor já usada nos
+    // botões/painéis Andamento e Extra Escopo, pra ficar reconhecível de cara.
+    const badgeDivisao=[
+      r.extraProjeto>0?`<span style="color:#1a52c8">🔵 ${fmt(r.extraProjeto)}h Projeto</span>`:'',
+      r.extraEscopo>0?`<span style="color:#158038">🟢 ${fmt(r.extraEscopo)}h Extra Escopo</span>`:''
+    ].filter(Boolean).join(' &nbsp;+&nbsp; ');
     return`<div style="border:1.5px solid ${corTipo};background:#fff8ee;border-radius:6px;padding:10px;margin-bottom:8px">
       <div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap">
         <div style="font-weight:900;font-size:13px">${(r.nome||'').toUpperCase()} — ${(r.funcao||'').toUpperCase()}</div>
-        <div style="font-weight:900;font-size:13px;color:${corTipo}">${fmt(r.horas)}h — ${r.tipo}%</div>
+        <div style="font-weight:900;font-size:13px;color:${corTipo}">${badgeHoras}</div>
       </div>
-      <div style="font-size:11.5px;color:var(--text2);margin-top:2px">${dataFmt} — ${(r.obra||'').toUpperCase()} — ${r.nrdo||''} — Encarregado: ${(r.encarregado||'').toUpperCase()}</div>
+      <div style="font-size:11.5px;color:var(--text2);margin-top:2px">${dataFmt} — ${(r.obra||'').toUpperCase()} — ${r.nrdo||''} — Encarregado: ${(r.encarregado||'').toUpperCase()} — Total do dia neste RDO: ${fmt(r.horas)}h (${fmt(r.normais)}h normais)</div>
       <div style="font-size:11px;color:#7a5a1e;margin-top:4px;font-style:italic">${motivoTexto}</div>
+      ${badgeDivisao?`<div style="font-size:11.5px;font-weight:900;margin-top:5px">${badgeDivisao}</div>`:''}
     </div>`;
   }).join('')+`<div style="text-align:center;padding:10px 0 4px;font-size:11px;color:var(--text3);opacity:.7">— fim da lista (${extras.length} registro${extras.length>1?'s':''}) —</div>`;
 }
@@ -9928,7 +9993,7 @@ async function exportarHorasExtrasExcel(){
   wb.creator='Master Energy — Sistema de RDO';
   wb.created=new Date();
   const ws=wb.addWorksheet('Horas Extras',{properties:{tabColor:{argb:'FFD97706'}}});
-  const LARG=8;
+  const LARG=10;
 
   ws.mergeCells(1,1,3,LARG);
   const titulo=ws.getCell(1,1);
@@ -9945,33 +10010,47 @@ async function exportarHorasExtrasExcel(){
   ws.getRow(4).height=20;
 
   const headerRow=6;
-  ['DATA','Nº RDO','OBRA','ENCARREGADO','FUNCIONÁRIO','HORAS NORMAIS','HORAS 70%','HORAS 100%'].forEach((h,ci)=>{
+  const headers=['DATA','Nº RDO','OBRA','ENCARREGADO','FUNCIONÁRIO','HORAS NORMAIS','HORAS 70%','HORAS 100%','🔵 EXTRA — PROJETO','🟢 EXTRA — EXTRA ESCOPO'];
+  headers.forEach((h,ci)=>{
     const c=ws.getCell(headerRow,ci+1);
     c.value=h; c.font={bold:true,color:{argb:'FFFFFFFF'},size:10};
-    c.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF0A3C64'}};
+    // As 2 últimas colunas (Projeto/Extra Escopo) já nascem com o cabeçalho na cor
+    // correspondente, pra ficar reconhecível de cara — mesma cor usada nos botões/
+    // painéis Andamento (azul) e Extra Escopo (verde) no resto do sistema.
+    c.fill={type:'pattern',pattern:'solid',fgColor:{argb:ci===8?'FF1A52C8':ci===9?'FF158038':'FF0A3C64'}};
     c.alignment={horizontal:'center',vertical:'middle'};
   });
   ws.getRow(headerRow).height=24;
   ws.views=[{state:'frozen',ySplit:headerRow}];
 
   let linha=headerRow+1;
-  let totNormal=0,tot70=0,tot100=0;
+  let totNormal=0,tot70=0,tot100=0,totProjeto=0,totExtraEscopo=0;
   const ordenados=[...horasExtrasRegistrosAtuais].sort((a,b)=>a.data===b.data?String(a.nrdo).localeCompare(String(b.nrdo)):a.data.localeCompare(b.data));
   ordenados.forEach((r,idx)=>{
     const[y,m,dd]=(r.data||'').split('-');
     const dataFmt=y?`${dd}/${m}/${y}`:'—';
-    const hNormal=r.tipo?0:r.horas;
-    const h70=r.tipo==='70'?r.horas:0;
-    const h100=r.tipo==='100'?r.horas:0;
-    totNormal+=hNormal; tot70+=h70; tot100+=h100;
+    const hNormal=r.normais||0;
+    const h70=r.extra70||0;
+    const h100=r.extra100||0;
+    const hProjeto=r.extraProjeto||0;
+    const hExtraEscopo=r.extraEscopo||0;
+    totNormal+=hNormal; tot70+=h70; tot100+=h100; totProjeto+=hProjeto; totExtraEscopo+=hExtraEscopo;
     const valores=[dataFmt,r.nrdo||'',(r.obra||'').toUpperCase(),(r.encarregado||'').toUpperCase(),(r.nome||'').toUpperCase(),
-      Number(hNormal.toFixed(1)),Number(h70.toFixed(1)),Number(h100.toFixed(1))];
+      Number(hNormal.toFixed(1)),Number(h70.toFixed(1)),Number(h100.toFixed(1)),Number(hProjeto.toFixed(1)),Number(hExtraEscopo.toFixed(1))];
     valores.forEach((v,ci)=>{
       const c=ws.getCell(linha,ci+1);
       c.value=v;
-      c.fill={type:'pattern',pattern:'solid',fgColor:{argb:idx%2===0?'FFFFFFFF':'FFFFF3E0'}};
+      // Colunas Projeto (índice 8) e Extra Escopo (índice 9) pintadas na cor
+      // correspondente, só quando têm valor — pra destacar de relance de onde veio
+      // cada hora extra, igual pedido ("assim como já é feito nos RDOs").
+      if(ci===8&&v>0) c.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFD6E3F9'}};
+      else if(ci===9&&v>0) c.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFD6EFE0'}};
+      else c.fill={type:'pattern',pattern:'solid',fgColor:{argb:idx%2===0?'FFFFFFFF':'FFFFF3E0'}};
       c.border={bottom:{style:'thin',color:{argb:'FFEEEEEE'}}};
-      if(typeof v==='number'){ c.numFmt='0.0'; c.font={bold:true,size:10}; c.alignment={horizontal:'center'}; }
+      if(typeof v==='number'){
+        c.numFmt='0.0'; c.alignment={horizontal:'center'};
+        c.font={bold:true,size:10,color:{argb:ci===8&&v>0?'FF0D3C8C':ci===9&&v>0?'FF0D5228':'FF000000'}};
+      }
       else{ c.font={size:10}; c.alignment={horizontal:'left',vertical:'middle',indent:1}; }
     });
     linha++;
@@ -9981,7 +10060,7 @@ async function exportarHorasExtrasExcel(){
   ws.getCell(linha,1).value='TOTAL GERAL';
   ws.getCell(linha,1).font={bold:true,size:11,color:{argb:'FFFFFFFF'}};
   ws.getCell(linha,1).alignment={horizontal:'right',vertical:'middle'};
-  [totNormal,tot70,tot100].forEach((v,ci)=>{
+  [totNormal,tot70,tot100,totProjeto,totExtraEscopo].forEach((v,ci)=>{
     const c=ws.getCell(linha,6+ci);
     c.value=Number(v.toFixed(1)); c.numFmt='0.0';
     c.font={bold:true,size:12,color:{argb:'FFFFFFFF'}};
@@ -9991,6 +10070,7 @@ async function exportarHorasExtrasExcel(){
 
   ws.getColumn(1).width=12; ws.getColumn(2).width=12; ws.getColumn(3).width=24; ws.getColumn(4).width=20;
   ws.getColumn(5).width=24; ws.getColumn(6).width=14; ws.getColumn(7).width=12; ws.getColumn(8).width=12;
+  ws.getColumn(9).width=16; ws.getColumn(10).width=18;
 
   const buffer=await wb.xlsx.writeBuffer();
   const blob=new Blob([buffer],{type:'application/octet-stream'});
