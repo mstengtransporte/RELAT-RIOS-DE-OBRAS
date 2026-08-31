@@ -1865,6 +1865,7 @@ body.dark #workers-body tr:hover{background-color:rgba(58,110,232,.08)}
       <button class="btn-manage-list admin-only-btn" onclick="abrirListModal('names')">✏️ Editar Lista de Nomes</button>
       <button class="btn-manage-list admin-only-btn" onclick="abrirListModal('funcs')">🔧 Editar Lista de Funções</button>
       <button class="btn-manage-list admin-only-btn" onclick="abrirListModal('vehicles')">🚚 Editar Lista de Veículos</button>
+      <button class="btn-manage-list" style="background:#b91c1c;color:#fff;border-color:#7f1414" onclick="limparPlanilha()" title="Apaga nomes, funções, veículos, horas e descrições desta tela — a obra, data e disciplina continuam as mesmas">🧹 Limpar Planilha</button>
     </span>
   </div>
   <div class="table-wrap">
@@ -5788,6 +5789,20 @@ function salvarListModal(){
 }
 
 // ── WORKERS ──
+// Apaga todo o conteúdo preenchido na planilha atual (nomes, funções, veículos, horas
+// de cada funcionário, e nome/descrição/status de cada OSE) — mantém o cabeçalho
+// (Obra, Disciplina, Data, Nº RDO, Feriado) exatamente como estava. Pede confirmação
+// antes, porque não tem "desfazer" pra essa ação específica.
+function limparPlanilha(){
+  const ok=confirm('Limpar toda a planilha?\n\nIsso apaga TODOS os nomes, funções, veículos, horas e descrições preenchidos nesta tela. A obra, disciplina e data no topo continuam as mesmas.\n\nSe este RDO já tinha sido salvo antes, o que já estava enviado não é afetado — só a tela atual é limpa.');
+  if(!ok) return;
+  buildWorkersTable(1); // volta a tabela pra 1 linha em branco só
+  buildOSECards(); // volta as OSEs pra "Sem Atividade", sem nome/descrição
+  atualizarBannerObra();
+  autoSilentSave();
+  showToast('🧹 Planilha limpa — obra e data continuam as mesmas.','#374151');
+}
+
 function buildWorkersTable(n){
   rowCounter=0;
   document.getElementById('workers-body').innerHTML='';
