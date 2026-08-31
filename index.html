@@ -2973,6 +2973,15 @@ function fecharDashboardAoVivo(){
   clearInterval(_intervalDashboardAoVivo);
   document.getElementById('dash-modal')?.remove();
 }
+// Executivo e Clientes seguem o mesmo padrão do Dashboard (painel criado do zero ao
+// abrir, apagado ao fechar — nunca usa a classe "show") — por isso também precisam de
+// uma função de fechar própria, em vez de só remover uma classe que eles nunca têm.
+function fecharPainelExecutivo(){
+  document.getElementById('exec-modal')?.remove();
+}
+function fecharGerenciarClientes(){
+  document.getElementById('clientes-modal')?.remove();
+}
 
 function renderizarDashboardAoVivo(){
   const resumo=coletarResumoPorEncarregado();
@@ -8933,10 +8942,12 @@ const FECHAR_MODAL_POR_ID={
   'frases-modal':fecharFrases,
   'novo-rdo-modal':fecharNovoRDOModal,
   'dash-modal':fecharDashboardAoVivo,
+  'exec-modal':fecharPainelExecutivo,
+  'clientes-modal':fecharGerenciarClientes,
 };
 const IDS_MODAIS_COM_ESC=['list-modal','search-modal','pendentes-modal','grafico-modal','frases-modal',
   'multipdf-modal','extra-escopo-modal','andamento-modal','horas-extras-modal','projetos-modal','check-modal',
-  'novo-rdo-modal','backup-modal','dash-modal'];
+  'novo-rdo-modal','backup-modal','dash-modal','absenteismo-periodo-modal','exec-modal','clientes-modal'];
 document.addEventListener('keydown',e=>{
   if(e.key!=='Escape') return;
   // Painéis criados dinamicamente (símbolos especiais, prefixo de linha) ficam por cima
@@ -8945,10 +8956,16 @@ document.addEventListener('keydown',e=>{
   if(simbolos){ simbolos.remove(); return; }
   const prefixo=document.getElementById('prefix-modal');
   if(prefixo){ prefixo.remove(); return; }
-  // Caixas normais (.show) — fecha só a primeira que encontrar aberta.
+  // Caixas normais (.show) — fecha só a primeira que encontrar aberta. Painéis do tipo
+  // "criado ao abrir, apagado ao fechar" (Dashboard/Executivo/Clientes) nunca usam a
+  // classe "show" — por isso, quando existe uma função de fechar dedicada pra aquele
+  // ID, o simples fato do elemento EXISTIR na tela já conta como "está aberto".
   for(const id of IDS_MODAIS_COM_ESC){
     const el=document.getElementById(id);
-    if(el && el.classList.contains('show')){
+    if(!el) continue;
+    const abertoPorClasse=el.classList.contains('show');
+    const abertoPorExistir=!!FECHAR_MODAL_POR_ID[id];
+    if(abertoPorClasse||abertoPorExistir){
       const fechar=FECHAR_MODAL_POR_ID[id];
       if(fechar) fechar(); else el.classList.remove('show');
       return;
