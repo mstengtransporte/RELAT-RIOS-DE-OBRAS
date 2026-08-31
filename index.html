@@ -9001,11 +9001,19 @@ let _ultimaSincronizacaoEncarregado=0;
 
 async function abrirBuscaRDO(){
   autoSilentSave(); // garante que as edições atuais na tela entram na busca, sem esperar o autosave
+  // CORREÇÃO DE VELOCIDADE (2026-08-30): antes, a caixa só aparecia DEPOIS de esperar a
+  // sincronização inteira terminar — clicava e não via nada até tudo pronto, parecendo
+  // travado. Agora abre JÁ com o que existir local (rápido), e atualiza sozinha assim
+  // que a busca de verdade na nuvem terminar — mesma técnica já usada em Dashboard/
+  // Executivo/Extra Escopo/Andamento/Horas-Projeto.
+  document.getElementById('search-modal').classList.add('show');
+  buscarRDOs();
   // Admin busca sempre atualizado com a nuvem primeiro — sem isso, um admin entrando
   // num aparelho novo (ou que nunca sincronizou) veria a Busca vazia, mesmo tendo os
   // mesmos acessos de outro admin cujo aparelho já tinha dados salvos localmente.
   if(usuarioAtual&&usuarioAtual.papel==='admin_mestre'){
     await sincronizarSeAdmin(true);
+    buscarRDOs();
   } else if(usuarioAtual){
     // Encarregado: "Buscar todos RDOs" precisa mostrar o HISTÓRICO COMPLETO criado por
     // ele, não só o que sobrou salvo neste aparelho específico — sincroniza com a nuvem
@@ -9018,11 +9026,9 @@ async function abrirBuscaRDO(){
     const agora=Date.now();
     if(agora-_ultimaSincronizacaoEncarregado>=500){
       const{erro}=await buscarERestaurarDaNuvem(null,null);
-      if(!erro) _ultimaSincronizacaoEncarregado=agora;
+      if(!erro){ _ultimaSincronizacaoEncarregado=agora; buscarRDOs(); }
     }
   }
-  buscarRDOs();
-  document.getElementById('search-modal').classList.add('show');
 }
 function fecharBuscaRDO(){
   document.getElementById('search-modal').classList.remove('show');
@@ -9372,10 +9378,14 @@ function deletarFrase(idx){
 // ════════════════════════════════════════════════════════════
 async function abrirMultiPDF(){
   if(!exigirAdmin()) return;
-  await sincronizarSeAdmin(true); // mesmo problema do Buscar: sem isso, um admin em aparelho sem dados locais gerava relatório vazio
   autoSilentSave(); // garante que o RDO de hoje entra na lista com as horas mais recentes
-  popularListaMultiPDF();
+  // CORREÇÃO DE VELOCIDADE (2026-08-30): mesma técnica já usada nos outros painéis —
+  // abre já com o que existir local (rápido), atualiza sozinho quando a nuvem responder,
+  // em vez de travar a tela até a sincronização inteira terminar.
   document.getElementById('multipdf-modal').classList.add('show');
+  popularListaMultiPDF();
+  await sincronizarSeAdmin(true); // mesmo problema do Buscar: sem isso, um admin em aparelho sem dados locais gerava relatório vazio
+  popularListaMultiPDF();
 }
 
 function popularListaMultiPDF(){
@@ -9929,28 +9939,28 @@ async function carregarHorasExtras(){
     const rdosPorId={}; rdosData.forEach(r=>rdosPorId[r.id]=r);
     const idsRdo=rdosData.map(r=>r.id);
 
+    // CORREÇÃO DE VELOCIDADE (2026-08-30): antes, essas 2 buscas rodavam uma depois da
+    // outra (esperava OSEs terminar pra só então começar a buscar funcionários) — mas
+    // nenhuma depende da outra, só de idsRdo. Rodando as duas ao mesmo tempo, o tempo
+    // total de espera cai bastante (não soma mais os dois tempos, só espera a mais
+    // lenta das duas).
+    const[resultadoOses,resultadoWorkers]=await Promise.all([
+      supabaseClient.from('rdo_oses').select('rdo_id,ose_numero,status').in('rdo_id',idsRdo).limit(50000),
+      supabaseClient.from('rdo_workers').select('rdo_id,nome,funcao,hrs,horas_normais,horas_extra_70,horas_extra_100,horas_extra_projeto,horas_extra_extraescopo,tipo_hora_extra,justificativa_hora_extra').in('rdo_id',idsRdo).limit(50000)
+    ]);
+    if(resultadoOses.error) throw resultadoOses.error;
+    if(resultadoWorkers.error) throw resultadoWorkers.error;
+    const osesData=resultadoOses.data, workersData=resultadoWorkers.data;
+
     // Busca o status de cada OSE (Andamento/Extra Escopo/etc.) de cada RDO — precisa
     // disso pra dividir Projeto x Extra Escopo até nas HORAS NORMAIS, não só nas
     // horas extras (Extra Escopo sempre precisa aparecer separado, com ou sem hora
     // extra envolvida).
-    const{data:osesData,error:erroOses}=await supabaseClient
-      .from('rdo_oses')
-      .select('rdo_id,ose_numero,status')
-      .in('rdo_id',idsRdo);
-    if(erroOses) throw erroOses;
     const statusPorRdo={}; // rdo_id -> { ose_numero: status }
     (osesData||[]).forEach(o=>{
       if(!statusPorRdo[o.rdo_id]) statusPorRdo[o.rdo_id]={};
       statusPorRdo[o.rdo_id][o.ose_numero]=o.status;
     });
-
-    // Busca TODOS os funcionários desses RDOs (não só os com hora extra) — precisa
-    // disso pra montar a coluna "Normal" no Excel também, não só 70%/100%.
-    const{data:workersData,error:erroWorkers}=await supabaseClient
-      .from('rdo_workers')
-      .select('rdo_id,nome,funcao,hrs,horas_normais,horas_extra_70,horas_extra_100,horas_extra_projeto,horas_extra_extraescopo,tipo_hora_extra,justificativa_hora_extra')
-      .in('rdo_id',idsRdo);
-    if(erroWorkers) throw erroWorkers;
 
     const registros=(workersData||[])
       .filter(w=>w.nome&&w.nome.trim())
@@ -12201,13 +12211,20 @@ async function exportarProjetosExcel(){
 // ════════════════════════════════════════════════════════════
 async function abrirCheckIntegridade(){
   if(!exigirAdmin()) return;
-  await sincronizarSeAdmin(true); // essencial: sem isso, um admin em aparelho sem dados locais via "tudo certo" só por falta de dado, não por estar tudo certo mesmo
+  // CORREÇÃO DE VELOCIDADE (2026-08-30): mesma técnica dos outros painéis — mostra o
+  // resultado com o que já existe local na hora (marcado como "provisório" até a nuvem
+  // confirmar), e roda de novo automaticamente quando a sincronização terminar. O
+  // resultado FINAL continua tão confiável quanto antes — só muda a ORDEM de quando
+  // cada coisa aparece na tela, nunca deixa a pessoa agir em cima de um "tudo certo"
+  // que na verdade só está incompleto.
   autoSilentSave(); // ESSENCIAL: o check precisa analisar o estado ATUAL da tela, não uma versão desatualizada
-  executarCheckIntegridade();
   document.getElementById('check-modal').classList.add('show');
+  executarCheckIntegridade(true);
+  await sincronizarSeAdmin(true); // essencial: sem isso, um admin em aparelho sem dados locais via "tudo certo" só por falta de dado, não por estar tudo certo mesmo
+  executarCheckIntegridade(false);
 }
 
-function executarCheckIntegridade(){
+function executarCheckIntegridade(provisorio){
   autoSilentSave(); // trava de segurança: cobre também o botão "Verificar de Novo" dentro do painel,
                      // que chama esta função direto, sem passar por abrirCheckIntegridade()
   const problemas=[]; // {grave:bool, titulo, detalhe}
@@ -12304,6 +12321,7 @@ function executarCheckIntegridade(){
   const avisos=problemas.length-graves;
 
   document.getElementById('check-resumo').innerHTML=`
+    ${provisorio?'<div style="grid-column:1/-1;text-align:center;font-size:11px;font-weight:900;color:#d97706;padding:4px">🔄 Resultado provisório (só com dados deste aparelho) — confirmando com a nuvem...</div>':''}
     <div class="ee-card"><div class="v" style="color:${problemas.length?'#dc2626':'#158038'}">${problemas.length}</div><div class="l">Total encontrado</div></div>
     <div class="ee-card"><div class="v" style="color:#dc2626">${graves}</div><div class="l">Graves</div></div>
     <div class="ee-card"><div class="v" style="color:#d97706">${avisos}</div><div class="l">Avisos</div></div>
