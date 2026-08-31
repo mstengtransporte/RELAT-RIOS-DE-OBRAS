@@ -3681,8 +3681,13 @@ async function buscarERestaurarDaNuvem(dataDe,dataAte){
     // protegidas com retry, pelo mesmo motivo da busca acima.
     const resultadoFilhos=await comRetry(async()=>{
       const[oses,workers]=await Promise.all([
-        supabaseClient.from('rdo_oses').select('rdo_id,ose_numero,nome,status,descricao,responsavel').in('rdo_id',rdoIds),
-        supabaseClient.from('rdo_workers').select('rdo_id,worker_index,nome,funcao,veiculo,hrs,hst').in('rdo_id',rdoIds)
+        // LIMITE EXPLÍCITO (2026-08-30 — correção de risco de auditoria): sem
+        // .limit() aqui, o Supabase aplica um teto padrão (geralmente 1000 linhas)
+        // SEM avisar nem dar erro — só devolve as primeiras e para, fazendo o app
+        // achar que já trouxe tudo quando na verdade faltou gente/hora, silenciosamente.
+        // 50.000 é generoso o bastante pra nunca ser um problema real no uso normal.
+        supabaseClient.from('rdo_oses').select('rdo_id,ose_numero,nome,status,descricao,responsavel').in('rdo_id',rdoIds).limit(50000),
+        supabaseClient.from('rdo_workers').select('rdo_id,worker_index,nome,funcao,veiculo,hrs,hst').in('rdo_id',rdoIds).limit(50000)
       ]);
       if(oses.error) throw oses.error;
       if(workers.error) throw workers.error;
@@ -3739,7 +3744,14 @@ async function buscarERestaurarDaNuvem(dataDe,dataAte){
     }
 
     invalidarCacheResumoEncarregado(); // dados da nuvem podem ter mudado — próxima leitura do resumo já reflete isso, sem esperar o TTL de 8s
-    return{sucesso,falha,erro:null};
+    return{
+      sucesso,falha,erro:null,
+      // Contagens reais x limite técnico de cada busca — usado pra avisar o Admin
+      // explicitamente quando estiver chegando perto de qualquer um dos tetos.
+      totalRdos:rdosData.length, limiteRdos:5000,
+      totalOses:(osesData||[]).length, limiteOses:50000,
+      totalWorkers:(workersData||[]).length, limiteWorkers:50000
+    };
   }catch(e){
     console.error('buscarERestaurarDaNuvem error:',e);
     return{sucesso:0,falha:0,erro:'Falha de conexão — confira sua internet.'};
@@ -9773,6 +9785,9 @@ function coletarDadosExtraEscopo(dataInicio,dataFim){
 // que ele vê sempre reflete todo mundo, sem precisar lembrar de clicar em "Restaurar da
 // nuvem" antes. Encarregado comum nunca chama isso (só vê o próprio, local, é suficiente).
 let _ultimaSincronizacaoAdmin=0;
+// Guarda as contagens da ÚLTIMA sincronização bem-sucedida — qualquer parte do sistema
+// pode checar aqui se algum limite técnico está próximo, sem precisar buscar de novo.
+let ultimoSyncInfo=null;
 async function sincronizarSeAdmin(forcar=false){
   if(!usuarioAtual||usuarioAtual.papel!=='admin_mestre') return;
   // ACHADO DE AUDITORIA (correção de um efeito colateral): antes, ABRIR qualquer painel
@@ -9788,9 +9803,24 @@ async function sincronizarSeAdmin(forcar=false){
   if(!forcar&&agora-_ultimaSincronizacaoAdmin<30000) return;
   if(forcar&&agora-_ultimaSincronizacaoAdmin<500) return;
   showToast('☁️ Atualizando com dados de todos os encarregados...','#7c3aed');
-  const{erro}=await buscarERestaurarDaNuvem(null,null);
-  if(erro) showToast('⚠️ Não foi possível atualizar da nuvem agora — mostrando os dados que já estão neste aparelho.','#d97706');
-  else _ultimaSincronizacaoAdmin=agora;
+  const resultado=await buscarERestaurarDaNuvem(null,null);
+  const{erro}=resultado;
+  if(erro){
+    showToast('⚠️ Não foi possível atualizar da nuvem agora — mostrando os dados que já estão neste aparelho.','#d97706');
+  }else{
+    _ultimaSincronizacaoAdmin=agora;
+    ultimoSyncInfo=resultado;
+    // AVISO EXPLÍCITO DE LIMITE (2026-08-30): se qualquer uma das buscas já estiver
+    // em 80% ou mais do teto técnico, avisa o Admin na hora — antes que o corte
+    // realmente aconteça e comece a faltar RDO/gente silenciosamente nos relatórios.
+    const proximos=[];
+    if(resultado.totalRdos>=resultado.limiteRdos*0.8) proximos.push(`RDOs: ${resultado.totalRdos}/${resultado.limiteRdos}`);
+    if(resultado.totalOses>=resultado.limiteOses*0.8) proximos.push(`OSEs: ${resultado.totalOses}/${resultado.limiteOses}`);
+    if(resultado.totalWorkers>=resultado.limiteWorkers*0.8) proximos.push(`Funcionários/linha: ${resultado.totalWorkers}/${resultado.limiteWorkers}`);
+    if(proximos.length){
+      showToast(`⚠️ ATENÇÃO: chegando perto do limite técnico — ${proximos.join(' | ')}. Fale com quem cuida do sistema pra aumentar o teto.`,'#dc2626');
+    }
+  }
 }
 
 // Botão "Atualizar agora" dentro de cada painel — ignora o limite de 30 segundos e força
@@ -11524,6 +11554,49 @@ function coletarTodosOsRegistrosFlat(){
   return registros;
 }
 
+// Busca as horas extras (70%/100%) direto do Supabase — essa classificação só existe
+// lá (calculada pelo banco na hora do envio, salvar_rdo_completo_v2), nunca fica salva
+// localmente. Agrega já por Obra/Disciplina/Encarregado/Detalhamento, nos MESMOS
+// critérios (normalizarObra) usados no resto do relatório, pra bater certinho na hora
+// de juntar com os totais Normal x Extra Escopo que já vêm do aparelho.
+async function buscarHorasExtrasParaBackup(){
+  const supabaseClient=getSupabaseClient();
+  if(!supabaseClient) return null;
+  try{
+    const{data:rdosData,error:erroRdos}=await supabaseClient.from('rdos').select('id,obra,disciplina,encarregado').limit(50000);
+    if(erroRdos) throw erroRdos;
+    if(!rdosData||!rdosData.length) return{porObra:{},porDisc:{},porEnc:{},porDetalhe:{},totalWorkers:0,limiteWorkers:50000};
+    const rdosPorId={}; rdosData.forEach(r=>rdosPorId[r.id]=r);
+
+    const{data:workersData,error:erroWorkers}=await supabaseClient
+      .from('rdo_workers').select('rdo_id,horas_extra_70,horas_extra_100')
+      .not('tipo_hora_extra','is',null).limit(50000);
+    if(erroWorkers) throw erroWorkers;
+
+    const porObra={},porDisc={},porEnc={},porDetalhe={};
+    const somar=(mapa,chave,e70,e100)=>{
+      if(!mapa[chave]) mapa[chave]={e70:0,e100:0};
+      mapa[chave].e70+=e70; mapa[chave].e100+=e100;
+    };
+    (workersData||[]).forEach(w=>{
+      const r=rdosPorId[w.rdo_id]; if(!r) return;
+      const e70=Number(w.horas_extra_70||0), e100=Number(w.horas_extra_100||0);
+      if(!e70&&!e100) return;
+      const chaveObra=normalizarObra(r.obra||'');
+      const chaveDisc=normalizarObra(r.disciplina||'');
+      const enc=(r.encarregado||'').trim().toUpperCase();
+      somar(porObra,chaveObra,e70,e100);
+      somar(porDisc,chaveDisc,e70,e100);
+      somar(porEnc,enc,e70,e100);
+      somar(porDetalhe,enc+'|'+chaveObra+'|'+chaveDisc,e70,e100);
+    });
+    return{porObra,porDisc,porEnc,porDetalhe,totalWorkers:(workersData||[]).length,limiteWorkers:50000};
+  }catch(e){
+    console.error('buscarHorasExtrasParaBackup:',e);
+    return null; // se falhar, o relatório segue sem essas 2 colunas, em vez de travar tudo
+  }
+}
+
 async function exportarBackupCompletoExcel(btn){
   if(!exigirAdmin()) return;
   if(typeof ExcelJS==='undefined'){ showToast('Biblioteca de Excel ainda carregando — espera 2 segundos e tenta de novo.','#d97706'); return; }
@@ -11534,6 +11607,7 @@ async function exportarBackupCompletoExcel(btn){
     autoSilentSave();
     const registros=coletarTodosOsRegistrosFlat();
     if(!registros.length){ showToast('Nenhum RDO com atividade lançada encontrado.','#d97706'); return; }
+    const dadosHoraExtra=await buscarHorasExtrasParaBackup(); // null se não conseguir — tratado mais abaixo
 
     const wb=new ExcelJS.Workbook();
     wb.creator='Master Energy — Sistema de RDO';
@@ -11591,8 +11665,8 @@ async function exportarBackupCompletoExcel(btn){
       if(r.data>pdet.ultimaData) pdet.ultimaData=r.data;
     });
 
-    const NUM_COLS_DETALHE=9;
-    const largura=NUM_COLS_DETALHE;
+    const NUM_COLS_DETALHE=9; // colunas próprias da tabela narrativa (06) — não mudou
+    const largura=11; // largura geral da planilha — agora a maior tabela (05) tem 11 colunas, com as 2 novas de hora extra
     const ws=wb.addWorksheet('Relatorio Consolidado',{properties:{tabColor:{argb:'FF1457C8'}}});
 
     let L=1;
@@ -11613,19 +11687,48 @@ async function exportarBackupCompletoExcel(btn){
 
     // ═══ 01 — RESUMO GERAL ═══
     // Visão executiva rápida — quantas obras/disciplinas/encarregados/RDOs existem no
-    // total, e a divisão macro Normal x Extra Escopo x Total Geral.
+    // total, a divisão macro Normal x Extra Escopo x Total Geral, e agora também
+    // quanto disso foi hora extra (70%/100%), somando todas as obras/encarregados.
     const qtdDisciplinas=Object.keys(nomesDisciplinasPorChave).length;
-    desenharTabelaResumoIndicadores('01 — RESUMO GERAL','FF0A3C64',[
+    let totalHoraExtra70Geral=0, totalHoraExtra100Geral=0;
+    if(dadosHoraExtra){
+      Object.values(dadosHoraExtra.porObra).forEach(v=>{ totalHoraExtra70Geral+=v.e70; totalHoraExtra100Geral+=v.e100; });
+    }
+    const paresResumo=[
       ['Obras',obrasUnicas],['Disciplinas',qtdDisciplinas],['Encarregados',encarregadosUnicos],['RDOs',rdosUnicos],
       ['Horas Normais',Number(totalHorasNormaisGeral.toFixed(1))],
       ['Extra Escopo',Number(totalHorasExtraGeral.toFixed(1))],
+      ['Hora Extra 70% (semana/sábado)',Number(totalHoraExtra70Geral.toFixed(1))],
+      ['Hora Extra 100% (domingo/feriado)',Number(totalHoraExtra100Geral.toFixed(1))],
       ['Total Geral de Horas',Number(totalHorasGeral.toFixed(1))]
-    ]);
+    ];
+    // AVISO EXPLÍCITO DE LIMITE — fica gravado dentro do próprio relatório (não é só
+    // um toast que passa e some), pra quem olhar o arquivo mais tarde também ver que
+    // os dados podem estar incompletos. Aparece só quando algum teto técnico está a
+    // 80% ou mais do limite.
+    let avisoLimite=null;
+    if(ultimoSyncInfo){
+      const partes=[];
+      if(ultimoSyncInfo.totalRdos>=ultimoSyncInfo.limiteRdos*0.8) partes.push(`RDOs (${ultimoSyncInfo.totalRdos}/${ultimoSyncInfo.limiteRdos})`);
+      if(ultimoSyncInfo.totalOses>=ultimoSyncInfo.limiteOses*0.8) partes.push(`OSEs (${ultimoSyncInfo.totalOses}/${ultimoSyncInfo.limiteOses})`);
+      if(ultimoSyncInfo.totalWorkers>=ultimoSyncInfo.limiteWorkers*0.8) partes.push(`Funcionários/linha (${ultimoSyncInfo.totalWorkers}/${ultimoSyncInfo.limiteWorkers})`);
+      if(dadosHoraExtra&&dadosHoraExtra.totalWorkers>=dadosHoraExtra.limiteWorkers*0.8) partes.push(`Registros de hora extra (${dadosHoraExtra.totalWorkers}/${dadosHoraExtra.limiteWorkers})`);
+      if(partes.length) avisoLimite=`⚠️ ATENÇÃO: chegando perto do limite técnico de busca — ${partes.join(' | ')}. Este relatório pode estar incompleto. Avise quem cuida do sistema pra aumentar o teto.`;
+    }
+    // Se a busca de hora extra falhou (rede, etc.), as colunas de H.E. 70%/100%
+    // aparecem como 0 — mas isso NÃO significa que não teve hora extra nenhuma,
+    // só que não foi possível confirmar. Avisa isso explicitamente, em vez de deixar
+    // parecer "zero hora extra" silenciosamente.
+    if(!dadosHoraExtra){
+      const avisoFalha='⚠️ Não foi possível buscar os dados de Hora Extra (70%/100%) agora — as colunas de Hora Extra neste relatório estão zeradas por esse motivo, NÃO porque não houve hora extra. Gere o relatório de novo com internet estável pra confirmar os números reais.';
+      avisoLimite=avisoLimite?avisoLimite+'\n\n'+avisoFalha:avisoFalha;
+    }
+    desenharTabelaResumoIndicadores('01 — RESUMO GERAL','FF0A3C64',paresResumo,avisoLimite);
     L+=1;
 
     // Bloco simples de "Indicador | Total" — usado só na seção 01 (Resumo Geral),
     // pra dar a visão executiva rápida antes de entrar nas tabelas detalhadas.
-    function desenharTabelaResumoIndicadores(titulo,corTitulo,pares){
+    function desenharTabelaResumoIndicadores(titulo,corTitulo,pares,avisoLimite){
       const linhaTitulo=L;
       ws.mergeCells(L,1,L,largura);
       const tCell=ws.getCell(L,1);
@@ -11659,6 +11762,21 @@ async function exportarBackupCompletoExcel(btn){
       const baseTitulo=ws.getCell(linhaTitulo,largura); baseTitulo.border={...baseTitulo.border,right:{style:'medium',color:{argb:'FF000000'}}};
       const baseFinal=ws.getCell(linhaFinal,1); baseFinal.border={...baseFinal.border,bottom:{style:'medium',color:{argb:'FF000000'}}};
       const baseFinal2=ws.getCell(linhaFinal,2); baseFinal2.border={...baseFinal2.border,bottom:{style:'medium',color:{argb:'FF000000'}}};
+
+      // AVISO DE LIMITE — faixa vermelha bem visível, gravada dentro do arquivo (não
+      // some como um toast), pra qualquer um que abrir o relatório mais tarde também
+      // saber que os dados podem estar incompletos.
+      if(avisoLimite){
+        L++;
+        ws.mergeCells(L,1,L+1,largura);
+        const cAviso=ws.getCell(L,1);
+        cAviso.value=avisoLimite;
+        cAviso.font={bold:true,size:11,color:{argb:'FFFFFFFF'}};
+        cAviso.alignment={horizontal:'center',vertical:'middle',wrapText:true};
+        for(let r=L;r<=L+1;r++) for(let c=1;c<=largura;c++) ws.getCell(r,c).fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFDC2626'}};
+        ws.getRow(L).height=28; ws.getRow(L+1).height=20;
+        L+=2;
+      }
     }
 
     // Formata "3 (RDO-001, RDO-002, RDO-003)" em vez de só o número "3" — assim dá pra
@@ -11728,44 +11846,64 @@ async function exportarBackupCompletoExcel(btn){
       L+=2;
     }
 
+    // Busca o valor de hora extra (70%/100%) de um mapa vindo do Supabase, pela mesma
+    // chave normalizada usada em cada agregação — 0 se não tiver dado (obra/disciplina/
+    // encarregado sem nenhuma hora extra, ou se a busca ao Supabase falhou).
+    function heDe(mapa,chave){ return mapa&&mapa[chave]?mapa[chave]:{e70:0,e100:0}; }
+    const heObra=dadosHoraExtra?.porObra||{}, heDisc=dadosHoraExtra?.porDisc||{}, heEnc=dadosHoraExtra?.porEnc||{}, heDet=dadosHoraExtra?.porDetalhe||{};
+
     // ═══ 02 — HORAS POR OBRA ═══
     // Uma linha por obra (funciona igual pra 1 obra ou pra 50) — Normal x Extra
-    // Escopo já separados, ordenado da obra que mais consumiu horas pra menos.
+    // Escopo já separados, ordenado da obra que mais consumiu horas pra menos. As 2
+    // colunas de Hora Extra são um SUBCONJUNTO do Total Geral (já estão contadas
+    // dentro de Normal/Extra Escopo) — não somam por cima, só mostram quanto desse
+    // total também era hora extra.
     desenharTabela('02 — HORAS POR OBRA','FFC2410C',
-      ['Obra/Cliente','🔵 Horas Normais','🟢 Extra Escopo','Total Geral','Primeira Data','Última Data','Qtd. e Números dos RDOs'],
-      Object.values(porObra).sort((a,b)=>(b.normal+b.extra)-(a.normal+a.extra)).map(info=>
-        [info.nome,Number(info.normal.toFixed(1)),Number(info.extra.toFixed(1)),Number((info.normal+info.extra).toFixed(1)),formatarDataBR(info.primeiraData),formatarDataBR(info.ultimaData),formatarListaRDOs(info.rdos)]),
-      [24,14,14,13,13,13,32]);
+      ['Obra/Cliente','🔵 Horas Normais','🟢 Extra Escopo','Total Geral','⏱️ H.E. 70%*','⏱️ H.E. 100%*','Primeira Data','Última Data','Qtd. e Números dos RDOs'],
+      Object.entries(porObra).sort((a,b)=>(b[1].normal+b[1].extra)-(a[1].normal+a[1].extra)).map(([chave,info])=>{
+        const he=heDe(heObra,chave);
+        return[info.nome,Number(info.normal.toFixed(1)),Number(info.extra.toFixed(1)),Number((info.normal+info.extra).toFixed(1)),Number(he.e70.toFixed(1)),Number(he.e100.toFixed(1)),formatarDataBR(info.primeiraData),formatarDataBR(info.ultimaData),formatarListaRDOs(info.rdos)];
+      }),
+      [24,14,14,13,11,12,13,13,32]);
 
     // ═══ 03 — HORAS POR DISCIPLINA ═══
     // Responde direto "em qual disciplina está gastando mais horas" — já ordenado
     // da disciplina que mais consumiu pra menos.
     desenharTabela('03 — HORAS POR DISCIPLINA','FF6030BB',
-      ['Disciplina','🔵 Horas Normais','🟢 Extra Escopo','Total Geral','Primeira Data','Última Data','Qtd. e Números dos RDOs'],
-      Object.values(porDisc).sort((a,b)=>(b.normal+b.extra)-(a.normal+a.extra)).map(info=>
-        [info.nome,Number(info.normal.toFixed(1)),Number(info.extra.toFixed(1)),Number((info.normal+info.extra).toFixed(1)),formatarDataBR(info.primeiraData),formatarDataBR(info.ultimaData),formatarListaRDOs(info.rdos)]),
-      [20,14,14,13,13,13,32]);
+      ['Disciplina','🔵 Horas Normais','🟢 Extra Escopo','Total Geral','⏱️ H.E. 70%*','⏱️ H.E. 100%*','Primeira Data','Última Data','Qtd. e Números dos RDOs'],
+      Object.entries(porDisc).sort((a,b)=>(b[1].normal+b[1].extra)-(a[1].normal+a[1].extra)).map(([chave,info])=>{
+        const he=heDe(heDisc,chave);
+        return[info.nome,Number(info.normal.toFixed(1)),Number(info.extra.toFixed(1)),Number((info.normal+info.extra).toFixed(1)),Number(he.e70.toFixed(1)),Number(he.e100.toFixed(1)),formatarDataBR(info.primeiraData),formatarDataBR(info.ultimaData),formatarListaRDOs(info.rdos)];
+      }),
+      [20,14,14,13,11,12,13,13,32]);
 
     // ═══ 04 — TOTAL DE HORAS POR ENCARREGADO ═══
     // Quem são os encarregados que preenchem os RDOs, e quanto cada um lançou no
     // total (todas as obras dele somadas) — ordenado do que mais lançou pra menos.
     desenharTabela('04 — TOTAL DE HORAS POR ENCARREGADO','FF9D174D',
-      ['Encarregado','🔵 Horas Normais','🟢 Extra Escopo','Total Geral','Obras Diferentes','Primeira Data','Última Data','Qtd. e Números dos RDOs'],
-      Object.entries(porEnc).sort((a,b)=>(b[1].normal+b[1].extra)-(a[1].normal+a[1].extra)).map(([nome,info])=>
-        [nome,Number(info.normal.toFixed(1)),Number(info.extra.toFixed(1)),Number((info.normal+info.extra).toFixed(1)),info.obras.size,formatarDataBR(info.primeiraData),formatarDataBR(info.ultimaData),formatarListaRDOs(info.rdos)]),
-      [22,14,14,13,14,13,13,32]);
+      ['Encarregado','🔵 Horas Normais','🟢 Extra Escopo','Total Geral','⏱️ H.E. 70%*','⏱️ H.E. 100%*','Obras Diferentes','Primeira Data','Última Data','Qtd. e Números dos RDOs'],
+      Object.entries(porEnc).sort((a,b)=>(b[1].normal+b[1].extra)-(a[1].normal+a[1].extra)).map(([nome,info])=>{
+        const he=heDe(heEnc,nome);
+        return[nome,Number(info.normal.toFixed(1)),Number(info.extra.toFixed(1)),Number((info.normal+info.extra).toFixed(1)),Number(he.e70.toFixed(1)),Number(he.e100.toFixed(1)),info.obras.size,formatarDataBR(info.primeiraData),formatarDataBR(info.ultimaData),formatarListaRDOs(info.rdos)];
+      }),
+      [22,14,14,13,11,12,14,13,13,32]);
 
     // ═══ 05 — HORAS POR OBRA, DISCIPLINA E ENCARREGADO ═══
     // A única tabela que cruza as 3 dimensões ao mesmo tempo — pra saber
     // exatamente quanto um encarregado específico trabalhou numa disciplina
     // específica dentro de uma obra específica, com Normal x Extra Escopo já
     // divididos. Ordenado por Obra, depois Disciplina, depois Encarregado.
+    // *As 2 colunas de Hora Extra são um SUBCONJUNTO do Total Geral (já contadas
+    // dentro de Normal/Extra Escopo) — não somam por cima do total.
     desenharTabela('05 — HORAS POR OBRA, DISCIPLINA E ENCARREGADO','FF1A52C8',
-      ['Obra/Cliente','Disciplina','Encarregado','🔵 Horas Normais','🟢 Extra Escopo','Total Geral','Primeira Data','Última Data','Qtd. e Números dos RDOs'],
-      Object.values(porDetalhe).sort((a,b)=>
-        a.obra!==b.obra ? a.obra.localeCompare(b.obra) : a.disc!==b.disc ? a.disc.localeCompare(b.disc) : a.encarregado.localeCompare(b.encarregado)
-      ).map(c=>[c.obra,c.disc,c.encarregado,Number(c.normal.toFixed(1)),Number(c.extra.toFixed(1)),Number((c.normal+c.extra).toFixed(1)),formatarDataBR(c.primeiraData),formatarDataBR(c.ultimaData),formatarListaRDOs(c.rdos)]),
-      [24,16,22,14,14,13,13,13,32]);
+      ['Obra/Cliente','Disciplina','Encarregado','🔵 Horas Normais','🟢 Extra Escopo','Total Geral','⏱️ H.E. 70%*','⏱️ H.E. 100%*','Primeira Data','Última Data','Qtd. e Números dos RDOs'],
+      Object.entries(porDetalhe).sort((a,b)=>
+        a[1].obra!==b[1].obra ? a[1].obra.localeCompare(b[1].obra) : a[1].disc!==b[1].disc ? a[1].disc.localeCompare(b[1].disc) : a[1].encarregado.localeCompare(b[1].encarregado)
+      ).map(([chave,c])=>{
+        const he=heDe(heDet,chave);
+        return[c.obra,c.disc,c.encarregado,Number(c.normal.toFixed(1)),Number(c.extra.toFixed(1)),Number((c.normal+c.extra).toFixed(1)),Number(he.e70.toFixed(1)),Number(he.e100.toFixed(1)),formatarDataBR(c.primeiraData),formatarDataBR(c.ultimaData),formatarListaRDOs(c.rdos)];
+      }),
+      [24,16,22,14,14,13,11,12,13,13,32]);
 
     // ═══════════════════════════════════════════════════════════════════
     // DETALHAMENTO COMPLETO — UMA LINHA POR DIA DE TRABALHO DE CADA PESSOA
