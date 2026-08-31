@@ -11947,9 +11947,24 @@ async function exportarBackupCompletoExcel(btn){
     });
 
     let corFaixaAtual=true, chaveRdoAnterior=null;
+    // Rastreia os intervalos de linha de cada RDO e de cada OSE, pra mesclar
+    // verticalmente no final — assim ENCARREGADO/DATA/OBRA (repetem por RDO
+    // inteiro) e OSE/STATUS/DESCRIÇÃO (repetem por OSE) aparecem só UMA VEZ,
+    // em vez de reescritos em toda linha de funcionário.
+    const mergesRdo=[]; let inicioRdoRow=null;
+    const mergesOse=[]; let inicioOseRow=null, chaveOseAnterior=null;
     registrosOrdenados.forEach(r=>{
       const chaveRdo=r.encarregado+'|'+r.data+'|'+r.nrdo+'|'+normalizarObra(r.obra);
-      if(chaveRdo!==chaveRdoAnterior){ corFaixaAtual=!corFaixaAtual; chaveRdoAnterior=chaveRdo; }
+      const chaveOse=chaveRdo+'|'+r.oseNumero;
+      if(chaveRdo!==chaveRdoAnterior){
+        corFaixaAtual=!corFaixaAtual;
+        if(inicioRdoRow!==null) mergesRdo.push([inicioRdoRow,L-1]);
+        inicioRdoRow=L; chaveRdoAnterior=chaveRdo;
+      }
+      if(chaveOse!==chaveOseAnterior){
+        if(inicioOseRow!==null) mergesOse.push([inicioOseRow,L-1]);
+        inicioOseRow=L; chaveOseAnterior=chaveOse;
+      }
       const corFundo=corFaixaAtual?'FFFFFFFF':'FFEDF1F8';
       const infoStatus=STATUS_INFO_EXCEL[r.status]||{nome:r.status.toUpperCase(),cor:'FF888888'};
       const oseAtividade=`OSE${String(r.oseNumero).padStart(2,'0')}${r.nomeProjeto&&r.nomeProjeto!=='—'?' — '+r.nomeProjeto:''}`;
@@ -11974,6 +11989,25 @@ async function exportarBackupCompletoExcel(btn){
       ws.getCell(L,10).numFmt='0.0';
       ws.getCell(L,10).font={bold:true,size:10.5};
       L++;
+    });
+    if(inicioRdoRow!==null) mergesRdo.push([inicioRdoRow,L-1]);
+    if(inicioOseRow!==null) mergesOse.push([inicioOseRow,L-1]);
+
+    // Aplica as mesclagens — só quando o bloco tem mais de 1 linha (mesclar uma
+    // célula sozinha com ela mesma não faz sentido nem é necessário).
+    mergesRdo.forEach(([ini,fim])=>{
+      if(fim<=ini) return;
+      [1,2,3,4,5].forEach(col=>{
+        ws.mergeCells(ini,col,fim,col);
+        ws.getCell(ini,col).alignment={...ws.getCell(ini,col).alignment,vertical:'middle'};
+      });
+    });
+    mergesOse.forEach(([ini,fim])=>{
+      if(fim<=ini) return;
+      [6,7,8].forEach(col=>{
+        ws.mergeCells(ini,col,fim,col);
+        ws.getCell(ini,col).alignment={...ws.getCell(ini,col).alignment,vertical:'middle'};
+      });
     });
 
     // Moldura externa mais forte em volta de toda a tabela de Detalhamento (do
