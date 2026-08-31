@@ -11823,11 +11823,24 @@ async function exportarBackupCompletoExcel(btn){
           cel.fill={type:'pattern',pattern:'solid',fgColor:{argb:li%2===0?'FFFFFFFF':'FFF5F7FA'}};
           cel.border={top:{style:'thin',color:{argb:'FFDDDDDD'}},bottom:{style:'thin',color:{argb:'FFDDDDDD'}},left:{style:'thin',color:{argb:'FFDDDDDD'}},right:{style:'thin',color:{argb:'FFDDDDDD'}}};
         }
+        // Calcula a altura certa da linha ANTES de escrever — sem isso, texto longo
+        // (principalmente a lista de números de RDO) fica cortado/"vazando" da caixa,
+        // porque o Excel não recalcula altura de linha sozinho num arquivo gerado por
+        // código — precisa ser calculado e informado aqui.
+        let maiorNumLinhas=1;
+        linha.forEach((val,ci)=>{
+          if(typeof val!=='number'){
+            const larguraCol=(largurasColunas&&largurasColunas[ci])||14;
+            const charsPorLinha=Math.max(8,Math.floor(larguraCol*1.7));
+            maiorNumLinhas=Math.max(maiorNumLinhas,Math.ceil(String(val||'').length/charsPorLinha));
+          }
+        });
+        ws.getRow(L).height=Math.max(15,maiorNumLinhas*13);
         linha.forEach((val,ci)=>{
           const c=ws.getCell(L,ci+1);
           c.value=val;
           if(typeof val==='number'){ c.numFmt='0.0'; c.alignment={horizontal:'center',vertical:'middle'}; c.font={bold:true,size:10}; }
-          else{ c.font={size:10}; c.alignment={horizontal:'left',vertical:'middle',indent:1}; }
+          else{ c.font={size:10}; c.alignment={horizontal:'left',vertical:'middle',indent:1,wrapText:true}; }
         });
         L++;
       });
@@ -11992,6 +12005,24 @@ async function exportarBackupCompletoExcel(btn){
     });
     if(inicioRdoRow!==null) mergesRdo.push([inicioRdoRow,L-1]);
     if(inicioOseRow!==null) mergesOse.push([inicioOseRow,L-1]);
+
+    // Calcula e aplica a altura certa de cada bloco mesclado ANTES de mesclar —
+    // sem isso, a descrição (texto mais longo da tabela) fica cortada/"vazando" da
+    // caixa, porque o Excel não recalcula altura de linha sozinho num arquivo
+    // gerado por código. Divide a altura necessária pelas linhas do bloco, em vez
+    // de dar a altura inteira pra cada uma (senão o bloco fica alto demais à toa).
+    function alturaNecessariaTexto(texto,largura){
+      const charsPorLinha=Math.max(8,Math.floor(largura*1.7));
+      const linhas=Math.max(1,Math.ceil(String(texto||'').length/charsPorLinha));
+      return Math.max(15,linhas*13);
+    }
+    mergesOse.forEach(([ini,fim])=>{
+      const textoDesc=ws.getCell(ini,8).value;
+      const alturaTotal=alturaNecessariaTexto(textoDesc,42); // 42 = largura da coluna Descrição
+      const numLinhasBloco=fim-ini+1;
+      const alturaPorLinha=Math.max(15,Math.ceil(alturaTotal/numLinhasBloco));
+      for(let r=ini;r<=fim;r++) ws.getRow(r).height=Math.max(ws.getRow(r).height||15,alturaPorLinha);
+    });
 
     // Aplica as mesclagens — só quando o bloco tem mais de 1 linha (mesclar uma
     // célula sozinha com ela mesma não faz sentido nem é necessário).
