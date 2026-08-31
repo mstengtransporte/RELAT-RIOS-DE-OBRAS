@@ -8948,6 +8948,13 @@ const FECHAR_MODAL_POR_ID={
 const IDS_MODAIS_COM_ESC=['list-modal','search-modal','pendentes-modal','grafico-modal','frases-modal',
   'multipdf-modal','extra-escopo-modal','andamento-modal','horas-extras-modal','projetos-modal','check-modal',
   'novo-rdo-modal','backup-modal','dash-modal','absenteismo-periodo-modal','exec-modal','clientes-modal'];
+// Só estes 3 são do tipo "criado ao abrir, apagado ao fechar" (nunca usam a classe
+// "show") — os outros, mesmo tendo função de fechar registrada acima, são do tipo
+// normal (sempre presentes no HTML, só escondidos/mostrados pela classe "show").
+// Misturar os dois tipos na mesma checagem foi o bug: list-modal (tipo normal, com
+// função de fechar) sempre existe no HTML, então "existe = está aberto" disparava
+// nele primeiro, sempre, mesmo fechado — o ESC nunca chegava a testar os outros.
+const IDS_MODAIS_CRIA_APAGA=['dash-modal','exec-modal','clientes-modal'];
 document.addEventListener('keydown',e=>{
   if(e.key!=='Escape') return;
   // Painéis criados dinamicamente (símbolos especiais, prefixo de linha) ficam por cima
@@ -8956,15 +8963,11 @@ document.addEventListener('keydown',e=>{
   if(simbolos){ simbolos.remove(); return; }
   const prefixo=document.getElementById('prefix-modal');
   if(prefixo){ prefixo.remove(); return; }
-  // Caixas normais (.show) — fecha só a primeira que encontrar aberta. Painéis do tipo
-  // "criado ao abrir, apagado ao fechar" (Dashboard/Executivo/Clientes) nunca usam a
-  // classe "show" — por isso, quando existe uma função de fechar dedicada pra aquele
-  // ID, o simples fato do elemento EXISTIR na tela já conta como "está aberto".
   for(const id of IDS_MODAIS_COM_ESC){
     const el=document.getElementById(id);
     if(!el) continue;
     const abertoPorClasse=el.classList.contains('show');
-    const abertoPorExistir=!!FECHAR_MODAL_POR_ID[id];
+    const abertoPorExistir=IDS_MODAIS_CRIA_APAGA.includes(id);
     if(abertoPorClasse||abertoPorExistir){
       const fechar=FECHAR_MODAL_POR_ID[id];
       if(fechar) fechar(); else el.classList.remove('show');
