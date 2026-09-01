@@ -2870,7 +2870,7 @@ function coletarResumoPorEncarregado(){
         trabalhadores
       });
     });
-    r.rdosDetalhe.push({key:k,data:h.data,obra:h.obra||'—',nrdo:h.nrdo||'—',disc:h.disc||'—',totalHoras:totalRDO,atividades});
+    r.rdosDetalhe.push({key:k,data:h.data,obra:h.obra||'—',nrdo:h.nrdo||'—',disc:h.disc||'—',totalHoras:totalRDO,atividades,criadoEm:d.criadoEm||null});
   }
   const resultado=Object.values(porEnc).map(r=>({...r,rdos:r.rdos.size,obras:r.obras.size,rdosDetalhe:r.rdosDetalhe.sort((a,b)=>b.data.localeCompare(a.data))}));
   _cacheResumoEncarregado=resultado;
@@ -2935,6 +2935,7 @@ async function abrirDashboardAoVivo(){
         <div class="dash-title">Dashboard Ao Vivo — Master Energy</div>
         <div class="dash-subtitle"><span class="dash-live-dot"></span><span id="dash-status-sync">Atualiza sozinho a cada 90 segundos</span> · <span id="dash-ultima-att">agora</span></div>
       </div>
+      <button class="dash-btn-fechar" id="dash-btn-atualizar" style="background:#1457c8;border-color:#0a3c8a" onclick="forcarAtualizacaoPainel('dashboard',this)">🔄 Atualizar</button>
       <button class="dash-btn-fechar" onclick="fecharDashboardAoVivo()">✕ Fechar</button>
     </div>
     <div class="dash-body" id="dash-body">
@@ -3001,6 +3002,26 @@ function renderizarDashboardAoVivo(){
   const horasHoje=rdosHoje.reduce((s,a)=>s+a.totalHoras,0);
   const encarregadosComRdoHoje=new Set(rdosHoje.map(a=>a.encarregado));
   const totalHorasGeral=resumo.reduce((s,r)=>s+r.total,0);
+
+  // NOVO (2026-08-31) — painel de adimplência: baseado em QUANDO o RDO foi realmente
+  // ENVIADO pro banco (criadoEm), não na data de execução escolhida no formulário.
+  // Cálculo SEPARADO do "rdosHoje" acima (que continua do jeito que estava, sem
+  // mudar nada do que já funciona) — só usado pela lista "RDOs de Hoje" mais abaixo.
+  // RDO sem criadoEm (sincronizado antes desta correção existir) simplesmente não entra
+  // aqui ainda — na próxima sincronização (automática, toda vez que o Dashboard abre)
+  // ele passa a ter o campo preenchido e entra certo sozinho, sem precisar de nada manual.
+  const enviosHojePorEncarregado={}; // nome -> {temParaHoje:bool, refData:'AAAA-MM-DD'}
+  todasAtividades.forEach(a=>{
+    if(!a.criadoEm) return;
+    const dc=new Date(a.criadoEm);
+    if(isNaN(dc.getTime())) return;
+    const criadoEmData=`${dc.getFullYear()}-${String(dc.getMonth()+1).padStart(2,'0')}-${String(dc.getDate()).padStart(2,'0')}`;
+    if(criadoEmData!==hoje) return; // só interessa quem enviou HOJE
+    const atual=enviosHojePorEncarregado[a.encarregado]||{temParaHoje:false,refData:a.data};
+    if(a.data===hoje) atual.temParaHoje=true;
+    else if(a.data>atual.refData) atual.refData=a.data;
+    enviosHojePorEncarregado[a.encarregado]=atual;
+  });
 
   // Garante que todo mundo cadastrado aparece na lista, mesmo sem RDO ainda
   const nomesTodos=new Set(resumo.map(r=>r.nome));
@@ -3141,13 +3162,21 @@ function renderizarDashboardAoVivo(){
         <div class="dash-panel">
           <div class="dash-panel-title">📋 RDOs de Hoje</div>
           ${[...nomesTodos].sort().map(nome=>{
-            const ativo=encarregadosComRdoHoje.has(nome);
-            const r=resumo.find(x=>x.nome===nome);
+            const envio=enviosHojePorEncarregado[nome];
             const horasHojeIndividual=rdosHoje.filter(a=>a.encarregado===nome).reduce((s,a)=>s+a.totalHoras,0);
+            let cor,texto;
+            if(envio&&envio.temParaHoje){
+              cor='#22c55e'; texto=`✓ ${fmt(horasHojeIndividual)}h hoje`; // 🟢 enviou hoje, RDO de hoje
+            }else if(envio){
+              const[,mRef,ddRef]=(envio.refData||'').split('-');
+              cor='#eab308'; texto=`⚠ enviado hoje — ref: ${ddRef||'--'}/${mRef||'--'}`; // 🟡 enviou hoje, mas de outro dia
+            }else{
+              cor='#dc2626'; texto='sem envio hoje'; // 🔴 nada enviado hoje
+            }
             return `<div class="dash-status-item">
-              <span class="dash-status-dot" style="background:${ativo?'#22c55e':'#3a4a5f'}"></span>
+              <span class="dash-status-dot" style="background:${cor}"></span>
               <span class="dash-status-name">${nome}</span>
-              <span class="dash-status-info">${ativo?`✓ ${fmt(horasHojeIndividual)}h hoje`:'sem envio hoje'}</span>
+              <span class="dash-status-info">${texto}</span>
             </div>`;
           }).join('')||'<div class="dash-empty">Nenhum encarregado cadastrado ainda.</div>'}
         </div>
@@ -3661,7 +3690,7 @@ async function buscarERestaurarDaNuvem(dataDe,dataAte){
     // Pede só as colunas realmente usadas (em vez de select('*')) — corta o tamanho do
     // que trafega pela rede e o quanto o navegador tem que processar, principalmente
     // relevante em rdo_workers, que costuma ter MUITO mais linhas que rdos/rdo_oses.
-    let query=supabaseClient.from('rdos').select('id,rdo_key,nrdo,data,obra,disciplina,encarregado,row_counter,names_list,funcs_list,vehicles_list').order('nrdo',{ascending:true}).limit(5000);
+    let query=supabaseClient.from('rdos').select('id,rdo_key,nrdo,data,obra,disciplina,encarregado,row_counter,names_list,funcs_list,vehicles_list,created_at').order('nrdo',{ascending:true}).limit(5000);
     if(dataDe) query=query.gte('data',dataDe);
     if(dataAte) query=query.lte('data',dataAte);
     // ACHADO DE AUDITORIA (causa real do "precisa dar F5 na troca de login"): ao trocar
@@ -3729,7 +3758,13 @@ async function buscarERestaurarDaNuvem(dataDe,dataAte){
           oses:osesArr,
           namesList:r.names_list||[],
           funcsList:r.funcs_list||[],
-          vehiclesList:r.vehicles_list||[]
+          vehiclesList:r.vehicles_list||[],
+          // Campo NOVO (2026-08-31), aditivo — data/hora real em que o RDO foi gravado
+          // no banco pela primeira vez (coluna created_at do Supabase, preenchida
+          // automaticamente pelo próprio banco). Usado só pelo Dashboard, pra
+          // diferenciar "enviado hoje" de "data de execução é hoje" — nenhum código
+          // existente lê esse campo, então nada que já funciona é afetado.
+          criadoEm:r.created_at||null
         };
         localStorage.setItem(r.rdo_key,JSON.stringify(d));
         marcarComoEnviado(r.rdo_key); // já está na nuvem, então já conta como enviado
@@ -9976,6 +10011,7 @@ async function forcarAtualizacaoPainel(painel,btn){
     else if(painel==='andamento') renderizarAndamento();
     else if(painel==='projetos') renderizarProjetos();
     else if(painel==='executivo') renderizarVisaoGeralExecutivo();
+    else if(painel==='dashboard'){ await carregarEncarregados(); renderizarDashboardAoVivo(); }
     showToast('✓ Atualizado com os dados mais recentes da nuvem.','#16a34a');
     if(btn){ btn.textContent='✅ Atualizado!'; }
   }catch(e){
