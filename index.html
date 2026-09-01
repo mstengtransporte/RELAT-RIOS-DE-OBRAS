@@ -3844,6 +3844,21 @@ function escapeHtmlGlobal(texto){
   return d.innerHTML;
 }
 
+// Normalização "agressiva" — usada SÓ pra comparar/agrupar nomes de PROJETO (painel
+// Horas/Projeto e o aviso de duplicidade ao digitar). Diferente da normalizarObra acima
+// (usada em outros lugares do sistema pra reconciliar OBRA/local de trabalho, que não
+// deve mudar), essa aqui remove TODO espaço e toda pontuação, não só os duplicados —
+// porque o erro mais comum é "esquecer" ou "sobrar" um espaço no meio do nome (ex:
+// "NR12" vs "NR 12"), e isso não é pego pela normalização padrão (que só junta espaço
+// duplicado, nunca cria/apaga um espaço que nunca existiu). Usar SÓ pra comparar —
+// nunca pra decidir o que aparece escrito na tela.
+function normalizarNomeProjetoAgrupar(texto){
+  return (texto||'')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g,''); // remove TUDO que não for letra ou número
+}
+
 function normalizarObra(texto){
   return (texto||'')
     .normalize('NFD').replace(/[\u0300-\u036f]/g,'') // remove acentos (á→a, ç→c, ã→a...)
@@ -4600,19 +4615,100 @@ document.addEventListener('DOMContentLoaded',()=>{
 // usados em qualquer RDO salvo — sugere o nome pra evitar erro de digitação (que separaria
 // o mesmo projeto em dois totais diferentes nos painéis de controle), mas não obriga:
 // digitar um nome novo continua funcionando normal, pra quando for outro projeto de verdade.
-function atualizarDatalistNomesProjetos(){
+let projetosCanonicoLookup={}; // chave normalizada agressiva -> {nome:'grafia mais usada', ocorrencias:N}
+async function atualizarDatalistNomesProjetos(){
   const dl=document.getElementById('ose-nomes-datalist');
-  if(!dl) return;
-  const nomes=new Set();
+  const contagem={}; // nome exato -> quantas vezes apareceu (local + nuvem juntos)
   for(let i=0;i<localStorage.length;i++){
     const k=localStorage.key(i);
     if(!k||!k.startsWith('rdo-')||CHAVES_META_BACKUP.includes(k)) continue;
     try{
       const d=JSON.parse(localStorage.getItem(k));
-      (d.oses||[]).forEach(o=>{ if(o.name&&o.name.trim()) nomes.add(o.name.trim()); });
+      (d.oses||[]).forEach(o=>{ if(o.name&&o.name.trim()){ const n=o.name.trim(); contagem[n]=(contagem[n]||0)+1; } });
     }catch(e){}
   }
-  dl.innerHTML=[...nomes].sort().map(n=>`<option value="${n.replace(/"/g,'&quot;')}">`).join('');
+  // CORREÇÃO (2026-08-31): antes só olhava o localStorage deste aparelho — não pegava
+  // nome de projeto que outro encarregado, em outro aparelho, já tivesse usado. Isso é
+  // exatamente o que permitia "PROJETO NR12" e "PROJETO NR 12" nascerem em dois RDOs
+  // diferentes sem ninguém perceber. Agora busca também da nuvem (todos os RDOs de
+  // todo mundo) — se a função ainda não existir no banco (SQL não rodado ainda), só
+  // ignora essa parte e segue só com o que já tinha local, sem quebrar nada.
+  try{
+    const{data,error}=await supabaseClient.rpc('nomes_projetos_existentes');
+    if(!error&&data) data.forEach(r=>{ if(r.nome) contagem[r.nome]=(contagem[r.nome]||0)+Number(r.ocorrencias||1); });
+  }catch(e){ console.warn('Busca de nomes de projeto na nuvem ainda não disponível (rode o SQL da correção):',e); }
+
+  if(dl) dl.innerHTML=Object.keys(contagem).sort().map(n=>`<option value="${n.replace(/"/g,'&quot;')}">`).join('');
+
+  // Monta o dicionário: pra cada "chave normalizada agressiva" (ignora espaço,
+  // pontuação, acento, maiúscula), guarda qual é a grafia MAIS USADA — é essa que vai
+  // ser sugerida no aviso de "nome parecido" ao digitar um nome novo parecido.
+  projetosCanonicoLookup={};
+  Object.keys(contagem).forEach(nome=>{
+    const chave=normalizarNomeProjetoAgrupar(nome);
+    if(!chave) return;
+    if(!projetosCanonicoLookup[chave]||contagem[nome]>projetosCanonicoLookup[chave].ocorrencias){
+      projetosCanonicoLookup[chave]={nome,ocorrencias:contagem[nome]};
+    }
+  });
+}
+
+// Mede quantas letras precisam mudar pra transformar um texto no outro — usado só
+// pra decidir se dois nomes de projeto são "parecidos o suficiente" pra avisar (typo
+// provável), sem confundir com nomes genuinamente diferentes.
+function distanciaEdicao(a,b){
+  const m=a.length,n=b.length;
+  if(m===0) return n;
+  if(n===0) return m;
+  let anterior=Array.from({length:n+1},(_,j)=>j);
+  for(let i=1;i<=m;i++){
+    const atual=[i];
+    for(let j=1;j<=n;j++){
+      const custo=a[i-1]===b[j-1]?0:1;
+      atual[j]=Math.min(atual[j-1]+1,anterior[j]+1,anterior[j-1]+custo);
+    }
+    anterior=atual;
+  }
+  return anterior[n];
+}
+
+// Dispara quando a pessoa termina de digitar o nome de uma OSE (sai do campo). Se o
+// nome digitado for PARECIDO com um já usado em outro RDO (do próprio aparelho ou de
+// outro encarregado, via nuvem) mas não EXATAMENTE igual, avisa e pergunta se é o
+// mesmo projeto — evita que "PROJETO NR12" e "PROJETO NR 12" virem dois projetos
+// diferentes nos relatórios sem ninguém perceber. Erro de acento/maiúscula/espaço/
+// pontuação nunca pergunta nada (a normalização agressiva já resolve sozinha, sem
+// interromper); só pergunta quando a diferença é de verdade uma ou duas letras.
+function checarNomeProjetoParecido(idx){
+  const input=document.getElementById(`ose-name-${idx}`);
+  if(!input) return;
+  const nomeDigitado=(input.value||'').trim();
+  if(!nomeDigitado||nomeDigitado.length<3) return;
+  const chaveDigitada=normalizarNomeProjetoAgrupar(nomeDigitado);
+  if(!chaveDigitada||!projetosCanonicoLookup||!Object.keys(projetosCanonicoLookup).length) return;
+
+  // Já bate exatamente (ignorando espaço/pontuação/acento/maiúscula) — nada a
+  // perguntar, mas padroniza a grafia pra mais usada, mantendo tudo consistente.
+  if(projetosCanonicoLookup[chaveDigitada]){
+    const canonico=projetosCanonicoLookup[chaveDigitada].nome;
+    if(canonico!==nomeDigitado) input.value=canonico;
+    return;
+  }
+
+  // Procura o nome já usado mais PARECIDO (não idêntico) — limite proporcional ao
+  // tamanho do nome, pra não incomodar em nomes muito curtos nem deixar passar erro
+  // grande em nomes longos.
+  const limiteEdicoes=Math.max(2,Math.round(chaveDigitada.length*0.18));
+  let melhorMatch=null,melhorDistancia=Infinity;
+  Object.keys(projetosCanonicoLookup).forEach(chaveExistente=>{
+    const d=distanciaEdicao(chaveDigitada,chaveExistente);
+    if(d<=limiteEdicoes&&d<melhorDistancia){ melhorDistancia=d; melhorMatch=projetosCanonicoLookup[chaveExistente]; }
+  });
+  if(!melhorMatch) return;
+
+  const nomeSugerido=melhorMatch.nome;
+  const usarSugerido=confirm(`Já existe um projeto parecido cadastrado:\n\n"${nomeSugerido}"\n\nVocê digitou:\n"${nomeDigitado}"\n\nÉ o MESMO projeto? Toque OK pra usar o nome já existente (mantém tudo somado junto nos relatórios), ou Cancelar se for um projeto diferente mesmo.`);
+  if(usarSugerido) input.value=nomeSugerido;
 }
 
 // Mantém o datalist de funcionários sincronizado com "namesList" (que já é
@@ -6165,7 +6261,7 @@ function makeOSECard(o){
   div.innerHTML=`
     <div class="ose-header" id="ose-header-${o}">
       <span class="ose-id">OSE 0${o}</span>
-      <input class="ose-name-input" type="text" placeholder="Nome / Projeto da OSE ${o}" id="ose-name-${o}" list="ose-nomes-datalist" oninput="updateSummaryOseLabel(${o})" title="Comece a digitar pra ver sugestões de projetos já usados, ou digite um nome novo se for outro projeto">
+      <input class="ose-name-input" type="text" placeholder="Nome / Projeto da OSE ${o}" id="ose-name-${o}" list="ose-nomes-datalist" oninput="updateSummaryOseLabel(${o})" onblur="checarNomeProjetoParecido(${o})" title="Comece a digitar pra ver sugestões de projetos já usados, ou digite um nome novo se for outro projeto">
       <select class="ose-status-sel" id="ose-status-${o}" onchange="updateOSEStatus(${o})">${opts}</select>
       <button type="button" id="ose-hide-${o}" onclick="esconderUltimaOSE(${o})" title="Esconder esta OSE (não está sendo usada)" style="display:none;background:none;border:1.5px solid rgba(255,255,255,.5);color:inherit;border-radius:4px;width:22px;height:22px;font-size:12px;cursor:pointer;flex-shrink:0;line-height:1">✕</button>
     </div>
@@ -10318,11 +10414,22 @@ function renderizarExtraEscopo(){
   const projetos={};
   Object.values(grupos).forEach(g=>{
     const chaveOriginal=g.servico!=='—'?g.servico:`(SEM NOME) ${g.ose}`;
-    const chaveProjeto=normalizarObra(chaveOriginal);
-    if(!projetos[chaveProjeto]) projetos[chaveProjeto]={nome:chaveOriginal,chave:chaveProjeto,dias:[]};
+    // CORREÇÃO (2026-08-31): normalização agressiva (ignora QUALQUER espaço/pontuação
+    // no meio do nome, não só duplicado) — mesma correção feita no Horas/Projeto, pra
+    // manter os 3 painéis consistentes entre si.
+    const chaveProjeto=normalizarNomeProjetoAgrupar(chaveOriginal);
+    if(!projetos[chaveProjeto]) projetos[chaveProjeto]={nome:chaveOriginal,variantes:{},chave:chaveProjeto,dias:[]};
+    const horasDoDia=g.trabalhadores.reduce((s,t)=>s+t.horas,0);
+    projetos[chaveProjeto].variantes[chaveOriginal]=(projetos[chaveProjeto].variantes[chaveOriginal]||0)+horasDoDia;
     projetos[chaveProjeto].dias.push(g);
   });
-  Object.values(projetos).forEach(p=>p.dias.sort((a,b)=>a.data.localeCompare(b.data)));
+  Object.values(projetos).forEach(p=>{
+    p.dias.sort((a,b)=>a.data.localeCompare(b.data));
+    // Nome de exibição = grafia com mais horas acumuladas (mesma regra do Horas/Projeto)
+    let melhorNome=p.nome,melhorHoras=-1;
+    Object.keys(p.variantes).forEach(v=>{ if(p.variantes[v]>melhorHoras){ melhorHoras=p.variantes[v]; melhorNome=v; } });
+    p.nome=melhorNome;
+  });
   extraEscopoProjetosAtuais=projetos;
 
   const listaProjetos=Object.values(projetos).sort((a,b)=>
@@ -11020,11 +11127,19 @@ function renderizarAndamento(){
   // pontuação, maiúscula/minúscula — mesmo tratamento do Horas/Projeto e Extra Escopo)
   const projetos={};
   Object.values(dias).forEach(g=>{
-    const chaveProjeto=normalizarObra(g.servico);
-    if(!projetos[chaveProjeto]) projetos[chaveProjeto]={nome:g.servico,chave:chaveProjeto,dias:[]};
+    // CORREÇÃO (2026-08-31): normalização agressiva, mesma dos outros 2 painéis.
+    const chaveProjeto=normalizarNomeProjetoAgrupar(g.servico);
+    if(!projetos[chaveProjeto]) projetos[chaveProjeto]={nome:g.servico,variantes:{},chave:chaveProjeto,dias:[]};
+    const horasDoDia=g.trabalhadores.reduce((s,t)=>s+t.horas,0);
+    projetos[chaveProjeto].variantes[g.servico]=(projetos[chaveProjeto].variantes[g.servico]||0)+horasDoDia;
     projetos[chaveProjeto].dias.push(g);
   });
-  Object.values(projetos).forEach(p=>p.dias.sort((a,b)=>a.data.localeCompare(b.data)));
+  Object.values(projetos).forEach(p=>{
+    p.dias.sort((a,b)=>a.data.localeCompare(b.data));
+    let melhorNome=p.nome,melhorHoras=-1;
+    Object.keys(p.variantes).forEach(v=>{ if(p.variantes[v]>melhorHoras){ melhorHoras=p.variantes[v]; melhorNome=v; } });
+    p.nome=melhorNome;
+  });
   andamentoProjetosAtuais=projetos;
 
   const listaProjetos=Object.values(projetos).sort((a,b)=>
@@ -11454,12 +11569,18 @@ function renderizarProjetos(){
   // pra abrir e ver o motivo de ter gastado mais ou menos tempo.
   const projetos={};
   dados.forEach(r=>{
-    // Agrupa pelo nome "normalizado" (ignora acento, espaço extra, maiúscula/minúscula) —
-    // sem isso, "PREF 21 (TK325)" e "PREF 21 (TK325) " (com espaço a mais) viravam dois
-    // projetos separados só por causa de diferença de digitação, fragmentando a soma.
-    const chaveProjeto=normalizarObra(r.projeto);
-    if(!projetos[chaveProjeto]) projetos[chaveProjeto]={nome:r.projeto,obra:r.obra,totalHoras:0,primeiraData:r.data,ultimaData:r.data,concluidoEm:null,statusAtual:r.status,porEncarregado:{},porDisciplina:{}};
+    // CORREÇÃO (2026-08-31): antes usava normalizarObra (só junta espaço duplicado) —
+    // "PROJETO NR12" e "PROJETO NR 12" (com espaço a mais no meio) continuavam sendo
+    // dois projetos diferentes, fragmentando a soma de horas sem motivo real. Agora usa
+    // a normalização agressiva (ignora QUALQUER espaço/pontuação/acento/maiúscula) —
+    // só nome genuinamente diferente continua separado.
+    const chaveProjeto=normalizarNomeProjetoAgrupar(r.projeto);
+    if(!projetos[chaveProjeto]) projetos[chaveProjeto]={nome:r.projeto,variantes:{},obra:r.obra,totalHoras:0,primeiraData:r.data,ultimaData:r.data,concluidoEm:null,statusAtual:r.status,porEncarregado:{},porDisciplina:{}};
     const p=projetos[chaveProjeto];
+    // Guarda quantas horas cada GRAFIA específica acumulou — no final, o nome exibido
+    // na caixa vai ser o da grafia com mais horas (a mais usada na prática), mesmo que
+    // não seja a primeira nem a mais recente.
+    p.variantes[r.projeto]=(p.variantes[r.projeto]||0)+r.horas;
     p.totalHoras+=r.horas;
     p.porEncarregado[r.encarregado]=(p.porEncarregado[r.encarregado]||0)+r.horas;
     if(!p.porDisciplina[r.disc]) p.porDisciplina[r.disc]={nome:r.disc,totalHoras:0,atividades:[]};
@@ -11468,6 +11589,17 @@ function renderizarProjetos(){
     if(r.data<p.primeiraData) p.primeiraData=r.data;
     if(r.data>=p.ultimaData){ p.ultimaData=r.data; p.statusAtual=r.status; } // status do dia mais recente
     if(r.status==='conc') p.concluidoEm = !p.concluidoEm || r.data>p.concluidoEm ? r.data : p.concluidoEm;
+  });
+  // Decide o nome de exibição de cada projeto: a grafia com MAIS horas acumuladas —
+  // normalmente é a forma mais usada pela maioria das pessoas, então tende a ser a
+  // "oficial" na prática, mesmo sem ninguém ter definido isso formalmente.
+  Object.values(projetos).forEach(p=>{
+    let melhorNome=p.nome,melhorHoras=-1;
+    Object.keys(p.variantes).forEach(nomeVariante=>{
+      if(p.variantes[nomeVariante]>melhorHoras){ melhorHoras=p.variantes[nomeVariante]; melhorNome=nomeVariante; }
+    });
+    p.nome=melhorNome;
+    p.temGrafiasDiferentes=Object.keys(p.variantes).length>1;
   });
   const listaProjetos=Object.values(projetos).sort((a,b)=>b.totalHoras-a.totalHoras);
   projetosAtuaisCache=projetos;
@@ -11521,7 +11653,7 @@ function renderizarProjetos(){
       <div style="width:100%">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
           <div>
-            <div class="pj-nome">📁 ${p.nome}</div>
+            <div class="pj-nome">📁 ${p.nome}${p.temGrafiasDiferentes?` <span title="Grafias diferentes juntadas nesta soma: ${Object.keys(p.variantes).join(' | ')}" style="font-size:9.5px;font-weight:800;color:#d97706;background:#fef3c7;border:1px solid #d97706;border-radius:4px;padding:1px 5px;cursor:help">🔗 nomes parecidos juntados</span>`:''}</div>
             <div class="pj-meta" style="font-weight:800">🏭 ${p.obra} · de ${id}/${im}/${iy} até ${ud}/${um}/${uy} ${statusHtml}</div>
             <div class="pj-meta" style="margin-top:2px">${encarregadosHtml}</div>
           </div>
@@ -12142,12 +12274,30 @@ async function exportarProjetosExcel(){
   // Uma linha por Projeto + Disciplina — nunca soma horas de disciplinas diferentes
   // juntas: se o mesmo projeto teve Mecânica e Elétrica trabalhando nele, cada uma vira
   // sua própria linha, com o total de horas dela específica, sem misturar com a outra.
+  // CORREÇÃO (2026-08-31): antes usava normalizarObra (só junta espaço duplicado) e
+  // mantinha o primeiro nome visto como título — causava o MESMO Excel mostrar
+  // "PROJETO NR12" e "PROJETO NR 12" como linhas separadas, mesmo já estando unificados
+  // na tela do painel. Agora usa a mesma normalização agressiva e a mesma regra de nome
+  // (grafia com mais horas) do painel, garantindo que o Excel bate com o que a pessoa vê.
+  const nomeCanonicoPorChave={}; // chave normalizada -> grafia com mais horas
+  { const horasPorVariante={};
+    dados.forEach(r=>{
+      const chave=normalizarNomeProjetoAgrupar(r.projeto);
+      if(!horasPorVariante[chave]) horasPorVariante[chave]={};
+      horasPorVariante[chave][r.projeto]=(horasPorVariante[chave][r.projeto]||0)+r.horas;
+    });
+    Object.keys(horasPorVariante).forEach(chave=>{
+      let melhorNome=null,melhorHoras=-1;
+      Object.keys(horasPorVariante[chave]).forEach(v=>{ if(horasPorVariante[chave][v]>melhorHoras){ melhorHoras=horasPorVariante[chave][v]; melhorNome=v; } });
+      nomeCanonicoPorChave[chave]=melhorNome;
+    });
+  }
   const projetos={};
   dados.forEach(r=>{
-    const chaveProjeto=normalizarObra(r.projeto);
+    const chaveProjeto=normalizarNomeProjetoAgrupar(r.projeto);
     const chaveDisc=normalizarObra(r.disc);
     const chaveCombo=chaveProjeto+'|'+chaveDisc;
-    if(!projetos[chaveCombo]) projetos[chaveCombo]={nome:r.projeto,obra:r.obra,disc:r.disc||'—',totalHoras:0,primeiraData:r.data,ultimaData:r.data,concluidoEm:null,statusAtual:r.status};
+    if(!projetos[chaveCombo]) projetos[chaveCombo]={nome:nomeCanonicoPorChave[chaveProjeto]||r.projeto,obra:r.obra,disc:r.disc||'—',totalHoras:0,primeiraData:r.data,ultimaData:r.data,concluidoEm:null,statusAtual:r.status};
     const p=projetos[chaveCombo];
     p.totalHoras+=r.horas;
     if(r.data<p.primeiraData) p.primeiraData=r.data;
