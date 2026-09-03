@@ -9487,13 +9487,22 @@ function abrirGrafico(){
   const modal=document.getElementById('grafico-modal');
   const barsEl=document.getElementById('grafico-bars');
   const statsEl=document.getElementById('grafico-stats');
-  // Coleta todos os RDOs salvos
+  // Coleta os RDOs salvos neste aparelho
   const dados=[];
   const keys=getAllRDOKeys();
+  // TRAVA (2026-08-31): esse gráfico é um resumo PESSOAL ("meu ritmo de trabalho
+  // recente") — um encarregado comum só pode ver o próprio H.H, nunca de outra
+  // pessoa, mesmo que o aparelho tenha RDO de outros salvos localmente (ex: computador
+  // compartilhado, ou aparelho de Admin que naturalmente acumula RDO de todo mundo por
+  // causa de outras telas). Admin Mestre é a exceção — ele já enxerga H.H de todo mundo
+  // em outros painéis (Dashboard, Executivo, Horas/Projeto), então aqui também vê tudo,
+  // sem essa restrição.
+  const souAdmin=usuarioAtual&&usuarioAtual.papel==='admin_mestre';
   keys.forEach(k=>{
     try{
       const d=JSON.parse(localStorage.getItem(k));
       if(!d||!d.header?.data) return;
+      if(!souAdmin&&!ehMeuRascunho(d.header)) return; // não é meu — some do gráfico
       let total=0;
       (d.workers||[]).forEach(w=>(w.hrs||[]).forEach(v=>{total+=parseHrs(v);}));
       dados.push({data:d.header.data,obra:d.header.obra||'',nrdo:d.header.nrdo||'',total,key:k});
