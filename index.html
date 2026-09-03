@@ -3998,6 +3998,61 @@ function estaEnviado(key){
   try{ return JSON.parse(localStorage.getItem(CHAVE_ENVIADOS)||'[]').includes(key); }catch(e){ return false; }
 }
 
+// ────────────────────────────────────────────────────────────────────────────
+// CORREÇÃO (2026-08-31) — fim do alarme falso "RDO não enviado" pra RDO que já
+// FOI enviado (só que de outro aparelho, ou numa tentativa anterior que sobrou
+// esquecida no armazenamento local). Antes, o aviso confiava CEGAMENTE numa
+// marcação local — se essa marcação não existisse NESTE aparelho específico
+// (mesmo o RDO já estando são e salvo na nuvem), soava o alarme urgente do
+// mesmo jeito, achando que a pessoa "esqueceu de enviar" algo que, na
+// realidade, já tinha sido enviado fazia tempo.
+//
+// IMPORTANTE — por que NÃO apaga nada sozinho: obra+data+encarregado NÃO é uma
+// identidade única — é perfeitamente possível (e legítimo) a mesma pessoa
+// preencher 2 RDOs de verdade, diferentes, na mesma obra, no mesmo dia. Por
+// isso essa comparação é só um SINAL DE ALERTA, nunca uma decisão automática —
+// quem decide se apaga, mantém ou reenvia é sempre a pessoa, olhando os dois
+// lado a lado. O único sinal forte o bastante pra quase certeza é o NÚMERO do
+// RDO batendo (esse sim é travado e único por obra, garantido pelo banco).
+// ────────────────────────────────────────────────────────────────────────────
+let _cacheEnviosNaNuvem=null; // [{nrdo,obra,data,encarregado}] — só do usuário logado agora
+let _ultimaVerificacaoNuvemPendentes=0;
+const TTL_VERIFICACAO_NUVEM_PENDENTES_MS=60000;
+
+async function verificarPendentesContraNuvem(forcar=false){
+  const supabaseClient=getSupabaseClient();
+  if(!usuarioAtual||!supabaseClient) return;
+  const agora=Date.now();
+  if(!forcar&&_cacheEnviosNaNuvem&&agora-_ultimaVerificacaoNuvemPendentes<TTL_VERIFICACAO_NUVEM_PENDENTES_MS) return;
+  try{
+    // Só os campos usados pra comparar — busca leve, restrita ao que o próprio usuário
+    // logado já enviou (mesma regra de sempre: nunca mistura com RDO de outra pessoa).
+    const{data,error}=await supabaseClient.from('rdos').select('nrdo,obra,data,encarregado').eq('criado_por',usuarioAtual.id).limit(5000);
+    if(error) return;
+    _cacheEnviosNaNuvem=data||[];
+    _ultimaVerificacaoNuvemPendentes=agora;
+    atualizarAvisoRDOsPendentes(true); // reclassifica o aviso já com a informação nova, sem esperar o próximo autosave
+  }catch(e){ console.warn('Verificação de pendentes contra a nuvem falhou (sem internet?):',e); }
+}
+
+// Procura, no que já foi confirmado como enviado na nuvem, algo que pareça ser o MESMO
+// RDO que esse rascunho local. Retorna null (nenhum sinal), ou um objeto dizendo se o
+// sinal é forte (número bateu — praticamente certeza) ou fraco (só obra+data+encarregado
+// bateram — pode ser coincidência de 2 RDOs reais no mesmo dia).
+function encontrarPossivelEnvioNaNuvem(h){
+  if(!_cacheEnviosNaNuvem||!h||!h.obra) return null;
+  const obraChave=normalizarObra(h.obra);
+  const nrdoLocal=(h.nrdo||'').match(/(\d+)/)?.[1];
+  if(nrdoLocal){
+    const bateuForte=_cacheEnviosNaNuvem.find(r=>normalizarObra(r.obra)===obraChave&&(r.nrdo||'').match(/(\d+)/)?.[1]===nrdoLocal);
+    if(bateuForte) return{forte:true,nrdo:bateuForte.nrdo};
+  }
+  const encChave=normalizarObra(h.enc);
+  const bateuFraco=_cacheEnviosNaNuvem.find(r=>normalizarObra(r.obra)===obraChave&&r.data===h.data&&normalizarObra(r.encarregado)===encChave);
+  if(bateuFraco) return{forte:false,nrdo:bateuFraco.nrdo};
+  return null;
+}
+
 // TRAVA DE HORÁRIO PRA EDIÇÃO: um RDO já enviado só pode ser editado pelo
 // encarregado que o criou até 23:59:59 do MESMO DIA em que foi enviado
 // (não a data do RDO — a data real de quando apertou "Salvar e Enviar").
@@ -4062,6 +4117,7 @@ function atualizarAvisoRDOsPendentes(forcar=false){
   // lembrar o DONO do rascunho de enviar) deixa de "vazar" o rascunho alheio pro Admin,
   // que podia confundir ele na hora de fazer o próprio RDO num computador compartilhado.
   const idsCompletosPendentes=new Set();
+  const idsPossivelDuplicado=new Set(); // completo, sem marcação local de enviado, MAS já existe algo parecido na nuvem
   const idsIncompletos=new Set();
   for(let i=0;i<localStorage.length;i++){
     const k=localStorage.key(i);
@@ -4073,10 +4129,16 @@ function atualizarAvisoRDOsPendentes(forcar=false){
       if(!h?.obra||!h.obra.trim()) continue; // sem Obra nenhuma ainda — nem rascunho de verdade é, ignora
       if(!ehMeuRascunho(h)) continue; // rascunho de outro encarregado (ou de outro perfil) — nunca conta, nem pro Admin
       const id=extrairIdDaChave(k)||k; // agrupa pelo id fixo; sem id (RDO bem antigo), usa a própria chave
-      if(rdoEstaCompleto(h)) idsCompletosPendentes.add(id);
-      else idsIncompletos.add(id);
+      if(!rdoEstaCompleto(h)){ idsIncompletos.add(id); continue; }
+      // CORREÇÃO (2026-08-31): antes de soar o alarme urgente, confere se já existe algo
+      // parecido confirmado na nuvem — se tiver, não é "esqueceu de enviar", é rastro
+      // órfão de uma tentativa anterior. Some do alarme vermelho, mas nunca é apagado
+      // sozinho — só fica visível numa lista separada, mais calma, pra pessoa conferir.
+      if(encontrarPossivelEnvioNaNuvem(h)) idsPossivelDuplicado.add(id);
+      else idsCompletosPendentes.add(id);
     }catch(e){}
   }
+  verificarPendentesContraNuvem(); // roda em segundo plano (throttle próprio de 60s) — não trava o aviso atual, só refina o próximo
   const pendentes=idsCompletosPendentes.size;
   if(pendentes>0){
     faixa.textContent=`⚠️ ATENÇÃO: VOCÊ TEM ${pendentes} RDO${pendentes>1?'S':''} PRONTO${pendentes>1?'S':''} MAS NÃO ENVIADO${pendentes>1?'S':''}! TOQUE AQUI PRA ENVIAR AGORA ⚠️`;
@@ -4087,6 +4149,12 @@ function atualizarAvisoRDOsPendentes(forcar=false){
     // parado, sem soar como "você esqueceu algo grave".
     const qtd=idsIncompletos.size;
     faixa.textContent=`📝 Você tem ${qtd} RDO${qtd>1?'S':''} ainda incompleto${qtd>1?'s':''} (faltando algum campo obrigatório) — toque aqui pra continuar preenchendo.`;
+    faixa.classList.add('show','info');
+  }else if(idsPossivelDuplicado.size>0){
+    // Também calmo — não é "esqueceu de enviar", é "sobrou rastro de uma tentativa
+    // antiga que já foi resolvida por outro caminho". Convida a conferir, sem alarmar.
+    const qtd=idsPossivelDuplicado.size;
+    faixa.textContent=`ℹ️ ${qtd} rascunho${qtd>1?'s':''} local${qtd>1?'is':''} parece${qtd>1?'m':''} já ter sido enviado${qtd>1?'s':''} por outro caminho — toque aqui pra conferir antes de decidir.`;
     faixa.classList.add('show','info');
   }else{
     faixa.classList.remove('show','info');
@@ -4103,6 +4171,15 @@ function atualizarAvisoRDOsPendentes(forcar=false){
 // um deles, um por um, até a contagem realmente zerar.
 function abrirListaPendentes(){
   autoSilentSave();
+  // Garante um retrato atualizado da nuvem toda vez que esse painel abre — se demorar
+  // ou falhar (sem internet), a lista já aparece do mesmo jeito com o que tinha antes,
+  // e se redesenha sozinha (só o DESENHO, sem buscar de novo) assim que a resposta
+  // nova chegar.
+  verificarPendentesContraNuvem(true).then(()=>{ if(document.getElementById('pendentes-modal')?.classList.contains('show')) renderizarListaPendentes(); });
+  renderizarListaPendentes();
+}
+
+function renderizarListaPendentes(){
   const pendentesPorId={};
   // AJUSTE (2026-08-29): esta lista é aberta ao clicar no aviso piscante, que agora só
   // mostra o próprio rascunho do Admin — então aqui também só lista o dele, pra ficar
@@ -4156,10 +4233,14 @@ function abrirListaPendentes(){
       if(!item.disc||!item.disc.trim()) faltando.push('Disciplina');
       if(!item.enc||!item.enc.trim()) faltando.push('Encarregado');
       const completo=faltando.length===0;
+      // CORREÇÃO (2026-08-31): confere se já existe algo parecido confirmado na nuvem —
+      // NUNCA decide sozinho (pode ser coincidência de 2 RDOs reais no mesmo dia), só
+      // avisa com destaque pra pessoa conferir antes de reenviar ou apagar.
+      const possivelMatch=completo?encontrarPossivelEnvioNaNuvem({obra:item.obra,data:item.data,enc:item.enc,nrdo:item.nrdo}):null;
 
       const linha=document.createElement('div');
       linha.className='rdo-result-item';
-      linha.style.borderColor=completo?'#d97706':'#6b7280';
+      linha.style.borderColor=possivelMatch?(possivelMatch.forte?'#0ea5e9':'#a855f7'):(completo?'#d97706':'#6b7280');
 
       const main=document.createElement('div');
       main.className='rdo-result-main';
@@ -4170,7 +4251,13 @@ function abrirListaPendentes(){
       infoEl.className='rdo-result-info';
       let infoTexto=(item.obra||'(sem obra)')+(item.nrdo?' | '+item.nrdo:'')+(item.enc?' | '+item.enc:'');
       if(item.todasChaves.length>1) infoTexto+=`  (+${item.todasChaves.length-1} versão(ões) antiga(s) junto)`;
-      infoTexto+=completo?'  ✅ PRONTO PRA ENVIAR':`  ⚠️ FALTA: ${faltando.join(', ')}`;
+      if(possivelMatch){
+        infoTexto+=possivelMatch.forte
+          ? `  🔵 JÁ EXISTE ENVIADO COM O MESMO NÚMERO (${possivelMatch.nrdo}) — provavelmente é este mesmo, confira antes de reenviar`
+          : `  🟣 JÁ EXISTE UM ENVIADO PARECIDO (${possivelMatch.nrdo}, mesma obra/data) — pode ser este mesmo ou um RDO diferente de verdade, confira antes de decidir`;
+      }else{
+        infoTexto+=completo?'  ✅ PRONTO PRA ENVIAR':`  ⚠️ FALTA: ${faltando.join(', ')}`;
+      }
       infoEl.textContent=infoTexto;
       main.appendChild(dataEl); main.appendChild(infoEl);
 
@@ -6652,6 +6739,26 @@ function toggleTheme(){
 }
 
 // ── SAVE / LOAD ──
+function nomeEncarregadoSeguro(){
+  // TRAVA DE SEGURANÇA (2026-08-31): um encarregado comum NUNCA pode enviar um RDO em
+  // nome de outra pessoa. O texto que aparece na tela DEVERIA sempre ser o nome de
+  // quem está logado — mas se por qualquer motivo (aparelho compartilhado, sessão
+  // trocada sem a tela ter sido atualizada corretamente, etc.) esse texto ficar
+  // desatualizado, essa função corrige na hora, ANTES de qualquer coisa ser lida pra
+  // salvar/exportar. O dado gravado no banco nunca fica errado, mesmo que a tela
+  // momentaneamente estivesse mostrando outro nome. Admin Mestre é a ÚNICA exceção —
+  // ele legitimamente pode preencher/corrigir um RDO em nome de um encarregado.
+  const textoTela=document.getElementById('h-enc')?.textContent||'';
+  if(usuarioAtual&&usuarioAtual.papel!=='admin_mestre'&&usuarioAtual.nome){
+    const nomeCorreto=usuarioAtual.nome.toUpperCase();
+    if(textoTela!==nomeCorreto){
+      aplicarNomeEncarregadoNoCampo(nomeCorreto); // corrige também o que aparece na tela, pra nunca mostrar um nome errado
+      return nomeCorreto;
+    }
+  }
+  return textoTela;
+}
+
 function getFormData(){
   const tbody=document.getElementById('workers-body');
   const rows=tbody.querySelectorAll('tr');
@@ -6676,7 +6783,7 @@ function getFormData(){
   for(let o=1;o<=NUM_OSE;o++){
     oses.push({name:document.getElementById(`ose-name-${o}`)?.value||'',status:document.getElementById(`ose-status-${o}`)?.value||'sem',desc:document.getElementById(`ose-desc-${o}`)?.innerHTML||'',descText:document.getElementById(`ose-desc-${o}`)?.innerText||'',resp:document.getElementById(`ose-resp-${o}`)?.value||''});
   }
-  return{header:{nrdo:document.getElementById('h-nrdo').value,data:document.getElementById('h-data').value,obra:document.getElementById('h-obra').value,enc:document.getElementById('h-enc').textContent,encId:usuarioAtual?.id||null,disc:document.getElementById('h-disc').value,feriado:document.getElementById('h-feriado')?.value||''},rowCounter,workers,oses,namesList,funcsList,vehiclesList};
+  return{header:{nrdo:document.getElementById('h-nrdo').value,data:document.getElementById('h-data').value,obra:document.getElementById('h-obra').value,enc:nomeEncarregadoSeguro(),encId:usuarioAtual?.id||null,disc:document.getElementById('h-disc').value,feriado:document.getElementById('h-feriado')?.value||''},rowCounter,workers,oses,namesList,funcsList,vehiclesList};
 }
 
 // Trava contra clique duplo acidental nos botões de Salvar/Exportar — muito comum no
