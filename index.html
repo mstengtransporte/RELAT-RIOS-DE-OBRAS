@@ -1818,7 +1818,9 @@ body.dark #workers-body tr:hover{background-color:rgba(58,110,232,.08)}
         <div style="flex:1;padding:5px 14px;border-right:2px solid #000;display:flex;flex-direction:column;gap:2px"><label style="font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.8px;color:var(--text3)">Data</label><input type="date" id="h-data" style="background:transparent;border:none;border-bottom:2px solid #000;padding:2px 0;font-size:15px;font-weight:900;color:var(--text);width:100%;outline:none;min-height:28px"></div>
         <div style="flex:1;padding:5px 14px;display:flex;flex-direction:column;gap:2px"><label style="font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.8px;color:var(--text3)">Dia da Semana</label><input type="text" id="h-dia" readonly style="background:transparent;border:none;border-bottom:2px solid #000;padding:2px 0;font-size:15px;font-weight:900;color:var(--text);width:100%;outline:none;min-height:28px"></div>
       </div>
-      <div class="hfield"><label>Obra / Projeto (Cliente)</label><select id="h-obra" onchange="onMudarClienteSelecionado();ajustarFontePorTextoSelect(this);revalidarNRDOSeNovo()" style="text-transform:uppercase"><option value="">Selecione...</option></select></div>
+      <div class="hfield"><label>Obra / Projeto (Cliente)</label><select id="h-obra" onchange="onMudarClienteSelecionado();ajustarFontePorTextoSelect(this);revalidarNRDOSeNovo();atualizarInfoUltimoRDOObra()" style="text-transform:uppercase"><option value="">Selecione...</option></select>
+        <div id="info-ultimo-rdo-obra" class="no-print" style="display:none;font-size:10.5px;font-weight:700;margin-top:3px"></div>
+      </div>
       <div class="hfield"><label>Disciplina</label><select id="h-disc" onchange="atualizarBannerObra();ajustarFontePorTextoSelect(this)" style="text-transform:uppercase">
         <option value="">— Selecione —</option>
         <option value="MECÂNICA">MECÂNICA</option>
@@ -2758,6 +2760,7 @@ function setObraSelecionada(valor){
     sel.value=valor;
   }
   atualizarBannerObra();
+  atualizarInfoUltimoRDOObra();
 }
 
 // Mesma ideia do setObraSelecionada, mas pra Disciplina — RDOs antigos podem ter uma
@@ -7206,7 +7209,54 @@ function diasUteisEntre(dataInicioISO,dataFimISO){
   return count;
 }
 
+// NOVO (2026-08-31) — informação pessoal, sob demanda: ao escolher/trocar a Obra no
+// cabeçalho, mostra quando foi o último RDO que O PRÓPRIO encarregado logado fez
+// NAQUELA obra específica (ou avisa que nunca fez, se for o caso). Busca sempre na
+// nuvem (nunca só localStorage) — precisa pegar RDO enviado de qualquer aparelho, não
+// só deste. É PURAMENTE INFORMATIVO: só leitura, nunca escreve nada, nunca influencia
+// o número do próximo RDO nem qualquer contagem — é decidido só pelo contador do banco,
+// sem nenhuma relação com esta função.
+async function atualizarInfoUltimoRDOObra(){
+  const elInfo=document.getElementById('info-ultimo-rdo-obra');
+  if(!elInfo) return;
+  const obra=(document.getElementById('h-obra')?.value||'').trim();
+  if(!obra||!usuarioAtual){ elInfo.style.display='none'; elInfo.textContent=''; return; }
+  const supabaseClient=getSupabaseClient();
+  if(!supabaseClient){ elInfo.style.display='none'; return; }
+  elInfo.style.display='block';
+  elInfo.style.color='var(--text3)';
+  elInfo.textContent='🔄 Consultando seu histórico nesta obra...';
+  try{
+    const{data,error}=await supabaseClient.from('rdos').select('data')
+      .eq('criado_por',usuarioAtual.id).ilike('obra',obra)
+      .order('data',{ascending:false}).limit(1).maybeSingle();
+    // Se a pessoa já trocou de obra de novo enquanto essa busca rodava, essa resposta
+    // ficou desatualizada — ignora, sem sobrescrever o que já deveria estar na tela agora.
+    if((document.getElementById('h-obra')?.value||'').trim()!==obra) return;
+    if(error||!data){
+      elInfo.style.color='var(--text3)';
+      elInfo.textContent='ℹ️ Você ainda não fez nenhum RDO nesta obra.';
+      return;
+    }
+    const dt=new Date(data.data+'T12:00:00');
+    const diasSemana=['domingo','segunda-feira','terça-feira','quarta-feira','quinta-feira','sexta-feira','sábado'];
+    const diffDias=Math.round((new Date(hojeLocal()+'T12:00:00')-dt)/86400000);
+    let quando;
+    if(diffDias<=0) quando='hoje';
+    else if(diffDias===1) quando='ontem';
+    else quando=`há ${diffDias} dias`;
+    elInfo.style.color='var(--text3)';
+    elInfo.textContent=`ℹ️ Seu último RDO nesta obra foi em ${formatarDataBR(data.data)} (${diasSemana[dt.getDay()]}) — ${quando}.`;
+  }catch(e){
+    elInfo.style.display='none'; // sem internet ou outra falha — some sem incomodar, não trava o preenchimento
+  }
+}
+
 function renderizarObrasParadas(){
+  const bar=document.getElementById('obras-paradas-bar');
+  if(bar) bar.style.display='none';
+}
+function renderizarObrasParadas_DESATIVADA_ANTIGA(){
   const bar=document.getElementById('obras-paradas-bar');
   const lista=document.getElementById('obras-paradas-lista');
   if(!bar||!lista) return;
@@ -7612,6 +7662,7 @@ function _criarRDOEmBranco(mensagemToast,focarObra){
   window._justificativasHoraExtra={}; // nunca deixa justificativa de um RDO vazar pro próximo
   localStorage.removeItem('rdo-last-key');
   ['h-obra','h-disc','h-feriado'].forEach(id=>{const el=document.getElementById(id); if(el) el.value='';});
+  atualizarInfoUltimoRDOObra(); // limpa a info da obra anterior — campo Obra acabou de ficar vazio
   popularSelectEncarregado(); // sempre o nome de quem está logado, mesmo depois de limpar o campo
   document.getElementById('h-data').value=novaData;
   updateDiaSemana();
@@ -9500,6 +9551,7 @@ function abrirGrafico(){
   const souAdmin=usuarioAtual&&usuarioAtual.papel==='admin_mestre';
   keys.forEach(k=>{
     try{
+      if(!estaEnviado(k)) return; // ESSENCIAL: rascunho ainda não enviado NUNCA conta — só o confirmado na nuvem, mesma trava dos outros painéis
       const d=JSON.parse(localStorage.getItem(k));
       if(!d||!d.header?.data) return;
       if(!souAdmin&&!ehMeuRascunho(d.header)) return; // não é meu — some do gráfico
