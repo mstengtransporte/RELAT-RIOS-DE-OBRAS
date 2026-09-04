@@ -7175,6 +7175,24 @@ function iniciarRDOEmBrancoNoBoot(){
     rdoAtualId=candidatosHoje[0].id;
     localStorage.setItem('rdo-last-key',candidatosHoje[0].key);
     restaurarEstadoCompleto(candidatosHoje[0].dados);
+    // CORREÇÃO (2026-08-31): rascunho de hoje ainda não enviado pode ter ficado com um
+    // número errado gravado (ex: "001" de antes da correção da busca por obra) — como
+    // ainda não foi enviado, é seguro corrigir o número agora, revalidando contra a
+    // nuvem de verdade, sem esperar a pessoa trocar a obra manualmente pra disparar
+    // essa correção sozinha. Só roda se o rascunho ainda NÃO foi enviado (nunca mexe
+    // no número de algo que já está confirmado no banco).
+    if(!estaEnviado(candidatosHoje[0].key)){
+      (async()=>{
+        const obraAtual=document.getElementById('h-obra')?.value||'';
+        if(!obraAtual) return;
+        const numeroCorreto=await gerarProximoNRDOAsync(obraAtual);
+        // Se a pessoa já mexeu no campo manualmente enquanto isso rodava, não sobrescreve.
+        const nrdoEl=document.getElementById('h-nrdo');
+        if(nrdoEl&&!nrdoEditadoManualmente&&document.getElementById('h-obra')?.value===obraAtual){
+          nrdoEl.value=numeroCorreto;
+        }
+      })();
+    }
     return;
   }
   document.getElementById('h-nrdo').value=gerarProximoNRDO(document.getElementById('h-obra')?.value||'');
