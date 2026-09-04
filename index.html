@@ -4068,8 +4068,16 @@ function encontrarPossivelEnvioNaNuvem(h){
   if(!_cacheEnviosNaNuvem||!h||!h.obra) return null;
   const obraChave=normalizarObra(h.obra);
   const nrdoLocal=(h.nrdo||'').match(/(\d+)/)?.[1];
-  if(nrdoLocal){
-    const bateuForte=_cacheEnviosNaNuvem.find(r=>normalizarObra(r.obra)===obraChave&&(r.nrdo||'').match(/(\d+)/)?.[1]===nrdoLocal);
+  // CORREÇÃO (2026-08-31): o sinal forte agora também exige a MESMA DATA — antes,
+  // comparava só obra+número, sem olhar a data. Isso causou um problema real: um bug
+  // separado (numeração sugerindo sempre "001") fazia o número do rascunho bater, por
+  // coincidência, com o RDO-001 de verdade da obra, de QUALQUER data antiga —
+  // rebaixando o aviso urgente de "pendente" pra "possível duplicado" por engano,
+  // mesmo sendo um RDO de um dia totalmente diferente. Exigir a mesma data também
+  // fecha essa brecha de vez, não importa se a numeração sugerida tiver outro
+  // problema no futuro.
+  if(nrdoLocal&&h.data){
+    const bateuForte=_cacheEnviosNaNuvem.find(r=>normalizarObra(r.obra)===obraChave&&r.data===h.data&&(r.nrdo||'').match(/(\d+)/)?.[1]===nrdoLocal);
     if(bateuForte) return{forte:true,nrdo:bateuForte.nrdo};
   }
   const encChave=normalizarObra(h.enc);
@@ -4976,7 +4984,11 @@ async function gerarProximoNRDOAsync(obra){
   const supabaseClient=getSupabaseClient();
   if(supabaseClient){
     try{
-      const{data,error}=await supabaseClient.from('rdos').select('nrdo').ilike('obra',obraTrim);
+      // CORREÇÃO (2026-08-31): faltava o curinga (%) — sem ele, o ilike exige texto
+      // IDÊNTICO ponta a ponta, não "contém". Qualquer diferença mínima (espaço a
+      // mais, acento) fazia a busca não achar nada, sugerindo sempre "001" mesmo já
+      // existindo dezenas de RDOs daquela obra na nuvem.
+      const{data,error}=await supabaseClient.from('rdos').select('nrdo').ilike('obra',`%${obraTrim}%`);
       if(!error&&data){
         data.forEach(row=>{
           const m=(row.nrdo||'').match(/(\d+)/);
@@ -7289,7 +7301,7 @@ async function atualizarInfoUltimoRDOObra(){
   elInfo.textContent='🔄 Consultando seu histórico nesta obra...';
   try{
     const{data,error}=await supabaseClient.from('rdos').select('data')
-      .eq('criado_por',usuarioAtual.id).ilike('obra',obra)
+      .eq('criado_por',usuarioAtual.id).ilike('obra',`%${obra}%`)
       .order('data',{ascending:false}).limit(1).maybeSingle();
     // Se a pessoa já trocou de obra de novo enquanto essa busca rodava, essa resposta
     // ficou desatualizada — ignora, sem sobrescrever o que já deveria estar na tela agora.
