@@ -3952,15 +3952,21 @@ function chaveRDO(data){
 // existiam por causa do autoSilentSave salvando telas em branco sozinho
 // (já corrigido, não acontece mais daqui pra frente) — isso aqui limpa
 // o que já tinha ficado pra trás, de uma vez.
+// Critério único de "rascunho genuinamente vazio" — sem Obra e sem nenhum funcionário
+// com nome preenchido. Reaproveitado tanto pela limpeza automática de RDOs fantasmas
+// quanto pela trava que decide se um rascunho pode ser descartado ao criar outro.
+function rdoEstaGenuinamenteVazio(d){
+  const temObra=(d?.header?.obra||'').trim().length>0;
+  const temFuncionario=(d?.workers||[]).some(w=>(w?.name||'').trim().length>0);
+  return !temObra && !temFuncionario;
+}
 function limparRDOsFantasmasVazios(){
   let removidos=0;
   const chaves=Object.keys(localStorage).filter(k=>k.startsWith('rdo-')&&k!=='rdo-last-key');
   chaves.forEach(k=>{
     try{
       const d=JSON.parse(localStorage.getItem(k));
-      const temObra=(d?.header?.obra||'').trim().length>0;
-      const temFuncionario=(d?.workers||[]).some(w=>(w?.name||'').trim().length>0);
-      if(!temObra && !temFuncionario){
+      if(rdoEstaGenuinamenteVazio(d)){
         localStorage.removeItem(k);
         removidos++;
       }
@@ -7699,9 +7705,20 @@ async function novoRDOComNomes(){
     // SUBSTITUI o formulário atual, nunca empilha mais uma gaveta ao lado da anterior.
     // Só um rascunho por vez fica esperando envio; clicar várias vezes seguidas no botão
     // nunca deixa "sobras" de rascunhos abandonados acumulando no aparelho.
+    // CORREÇÃO (2026-09-03): antes, apagava QUALQUER rascunho anterior não enviado, sem
+    // checar o conteúdo — isso destruía rascunhos reais e preenchidos (ex: RDO de um dia
+    // anterior, ainda esperando pra ser enviado) só porque a pessoa quis, no mesmo
+    // momento, começar o RDO de outro dia. Agora só apaga se o rascunho anterior estiver
+    // genuinamente vazio (sem obra, sem funcionário) — rascunho com conteúdo de verdade
+    // NUNCA é apagado sozinho, só deixa de ser o "último em edição" e continua acessível
+    // normalmente pela lista de RDOs Pendentes. Vale igual pra qualquer encarregado e
+    // pro Admin — a regra não depende de quem está logado.
     const chaveAntigaEmAndamento=localStorage.getItem('rdo-last-key');
     if(chaveAntigaEmAndamento && !estaEnviado(chaveAntigaEmAndamento)){
-      localStorage.removeItem(chaveAntigaEmAndamento);
+      try{
+        const dAntigo=JSON.parse(localStorage.getItem(chaveAntigaEmAndamento));
+        if(rdoEstaGenuinamenteVazio(dAntigo)) localStorage.removeItem(chaveAntigaEmAndamento);
+      }catch(e){ /* dado corrompido/ilegível — não mexe, mais seguro preservar */ }
     }
     await aplicarModeloNovoDia(d,proximoNRDO,false,novaData,manterDescricoes); // false = não mantém o status das OSEs
     rdoAtualId=gerarRdoId(); // identidade própria — nunca sobrescreve o RDO de origem, nem outro do mesmo dia
