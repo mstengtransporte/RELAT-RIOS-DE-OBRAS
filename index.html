@@ -796,9 +796,9 @@ input.login-input,
 .pdf-progress-bar{height:100%;background:#25d366;width:0%;transition:width .25s ease}
 
 /* Search Modal */
-.search-box{max-width:500px}
+.search-box{max-width:850px}
 .search-box-header h3{font-size:15px;font-weight:900;color:#fff;letter-spacing:.5px}
-.search-filters{display:flex;gap:6px;flex-wrap:wrap}
+.search-filters{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end}
 .search-filters input{
   flex:1;min-width:110px;padding:7px 10px;
   border:2px solid #000;background:var(--surface2);color:var(--text);
@@ -806,7 +806,10 @@ input.login-input,
 }
 .search-filters input:focus{border-color:var(--accent)}
 .search-filters button{padding:7px 14px;background:var(--accent);color:#fff;border:2px solid #000;font-size:11px;font-weight:900;cursor:pointer;white-space:nowrap}
-.search-results{display:flex;flex-direction:column;gap:5px;max-height:360px;overflow-y:auto}
+.search-results{display:flex;flex-direction:column;gap:5px;max-height:420px;overflow-y:auto}
+@media(min-width:680px){
+  #search-results{display:grid;grid-template-columns:1fr 1fr;gap:8px;align-content:start}
+}
 .search-empty{text-align:center;color:var(--text3);font-size:13px;padding:20px;text-transform:none}
 .rdo-result-item{
   display:flex;align-items:center;justify-content:space-between;
@@ -1661,7 +1664,7 @@ body.dark #workers-body tr:hover{background-color:rgba(58,110,232,.08)}
 #multipdf-modal.show .multipdf-box, #novo-rdo-modal.show .multipdf-box,
 #absenteismo-periodo-modal.show .multipdf-box, #backup-modal.show .multipdf-box,
 #extra-escopo-modal.show .multipdf-box, #andamento-modal.show .multipdf-box, #horas-extras-modal.show .multipdf-box,
-#duplicidade-obra-modal.show .multipdf-box{
+#duplicidade-obra-modal.show .multipdf-box, #search-modal.show .search-box{
   animation:polimento-entrada-modal .18s var(--ease);
 }
 @keyframes polimento-entrada-modal{
