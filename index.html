@@ -9578,7 +9578,7 @@ function renderizarPaginaBuscaRDOs(){
       ${possivelDuplicado?'<div style="font-size:10px;font-weight:900;color:#d97706;margin-bottom:2px">⚠️ POSSÍVEL DUPLICADO — mesma obra, número e data de outro RDO</div>':''}
       <div class="rdo-result-main">
         <span class="rdo-result-date">📅 ${dataFmt}${diaStr} ${isCurrent?'<span style="background:#16a34a;color:#fff;font-size:9px;padding:1px 5px;border-radius:8px;margin-left:4px">ABERTO</span>':''}</span>
-        <span class="rdo-result-info">${r.obra||'—'} ${r.nrdo?'| '+r.nrdo:''} ${r.enc?'| '+r.enc:''}</span>
+        <span class="rdo-result-info">${r.obra||'—'} ${r.nrdo?'| '+r.nrdo:''} ${r.disc?'<b style="color:var(--accent,#1457c8)">| '+r.disc+'</b>':''} ${r.enc?'| '+r.enc:''}</span>
       </div>
       <div class="rdo-result-actions">
         <button class="btn-open-rdo" onclick="abrirRDOSalvo('${r.key}')">📂 Abrir</button>
