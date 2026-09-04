@@ -7166,6 +7166,11 @@ function iniciarRDOEmBrancoNoBoot(){
   for(let i=0;i<localStorage.length;i++){
     const k=localStorage.key(i);
     if(!k||!k.startsWith(`rdo-${hoje}__`)) continue;
+    // CORREÇÃO (2026-09-04): faltava checar se já foi enviado — sem isso, um RDO de hoje
+    // JÁ MANDADO pro banco continuava sendo restaurado sozinho ao abrir o app, toda vez,
+    // mesmo não tendo mais nada pendente ali. Só rascunho de verdade (ainda não enviado)
+    // deve reabrir sozinho.
+    if(estaEnviado(k)) continue;
     const idDaChave=extrairIdDaChave(k);
     if(!idDaChave) continue; // formato antigo sem id — não reaproveita, mais seguro deixar como está
     try{
