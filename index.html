@@ -882,6 +882,8 @@ input.login-input,
 #backup-modal.show{display:flex}
 #novo-rdo-modal{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:9997;display:none;align-items:center;justify-content:center;padding:14px;backdrop-filter:blur(6px)}
 #novo-rdo-modal.show{display:flex}
+#duplicidade-obra-modal{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:9998;display:none;align-items:center;justify-content:center;padding:14px;backdrop-filter:blur(6px)}
+#duplicidade-obra-modal.show{display:flex}
 #extra-escopo-modal{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:9997;display:none;align-items:center;justify-content:center;padding:14px;backdrop-filter:blur(6px)}
 #extra-escopo-modal.show{display:flex}
 #andamento-modal{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:9997;display:none;align-items:center;justify-content:center;padding:14px;backdrop-filter:blur(6px)}
@@ -1658,7 +1660,8 @@ body.dark #workers-body tr:hover{background-color:rgba(58,110,232,.08)}
    aparecer seco. Discreto, sem "bounce" nem exagero. */
 #multipdf-modal.show .multipdf-box, #novo-rdo-modal.show .multipdf-box,
 #absenteismo-periodo-modal.show .multipdf-box, #backup-modal.show .multipdf-box,
-#extra-escopo-modal.show .multipdf-box, #andamento-modal.show .multipdf-box, #horas-extras-modal.show .multipdf-box{
+#extra-escopo-modal.show .multipdf-box, #andamento-modal.show .multipdf-box, #horas-extras-modal.show .multipdf-box,
+#duplicidade-obra-modal.show .multipdf-box{
   animation:polimento-entrada-modal .18s var(--ease);
 }
 @keyframes polimento-entrada-modal{
@@ -1818,7 +1821,7 @@ body.dark #workers-body tr:hover{background-color:rgba(58,110,232,.08)}
         <div style="flex:1;padding:5px 14px;border-right:2px solid #000;display:flex;flex-direction:column;gap:2px"><label style="font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.8px;color:var(--text3)">Data</label><input type="date" id="h-data" style="background:transparent;border:none;border-bottom:2px solid #000;padding:2px 0;font-size:15px;font-weight:900;color:var(--text);width:100%;outline:none;min-height:28px"></div>
         <div style="flex:1;padding:5px 14px;display:flex;flex-direction:column;gap:2px"><label style="font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.8px;color:var(--text3)">Dia da Semana</label><input type="text" id="h-dia" readonly style="background:transparent;border:none;border-bottom:2px solid #000;padding:2px 0;font-size:15px;font-weight:900;color:var(--text);width:100%;outline:none;min-height:28px"></div>
       </div>
-      <div class="hfield"><label>Obra / Projeto (Cliente)</label><select id="h-obra" onchange="onMudarClienteSelecionado();ajustarFontePorTextoSelect(this);revalidarNRDOSeNovo();atualizarInfoUltimoRDOObra()" style="text-transform:uppercase"><option value="">Selecione...</option></select>
+      <div class="hfield"><label>Obra / Projeto (Cliente)</label><select id="h-obra" onchange="onMudarClienteSelecionado();ajustarFontePorTextoSelect(this);revalidarNRDOSeNovo();atualizarInfoUltimoRDOObra();verificarDuplicidadeObraData()" style="text-transform:uppercase"><option value="">Selecione...</option></select>
         <div id="info-ultimo-rdo-obra" class="no-print" style="display:none;font-size:10.5px;font-weight:700;margin-top:3px"></div>
       </div>
       <div class="hfield"><label>Disciplina</label><select id="h-disc" onchange="atualizarBannerObra();ajustarFontePorTextoSelect(this)" style="text-transform:uppercase">
@@ -2140,6 +2143,25 @@ body.dark #workers-body tr:hover{background-color:rgba(58,110,232,.08)}
     <div class="multipdf-footer">
       <button class="multipdf-cancel" onclick="fecharNovoRDOModal()">Cancelar</button>
       <button class="multipdf-gerar" onclick="confirmarNovoRDO()" style="background:#158038">✔️ OK — CONFIRMAR</button>
+    </div>
+  </div>
+</div>
+
+<!-- Aviso "já existe um RDO enviado desta obra/data" — nunca bloqueia, só informa e
+     deixa a pessoa escolher. Nunca apaga nada, nunca decide sozinho. -->
+<div id="duplicidade-obra-modal">
+  <div class="multipdf-box" style="max-width:420px">
+    <div class="multipdf-header" style="background:linear-gradient(135deg,#d97706,#92400e)">
+      <span>ℹ️ RDO já existe</span>
+      <button onclick="fecharDuplicidadeObraModal()" style="background:none;border:none;color:#fff;font-size:20px;cursor:pointer">✕</button>
+    </div>
+    <div class="multipdf-body">
+      <div id="duplicidade-obra-texto" style="font-size:13px;color:var(--text2);line-height:1.6;font-weight:700"></div>
+    </div>
+    <div class="multipdf-footer" style="flex-direction:column;gap:8px">
+      <button class="multipdf-gerar" style="background:#158038;width:100%" onclick="duplicidadeObra_fazerOutro()">➕ Fazer outro RDO</button>
+      <button class="multipdf-gerar" style="background:#1457c8;width:100%" onclick="duplicidadeObra_editarExistente()">📂 Abrir e editar o RDO existente</button>
+      <button class="multipdf-cancel" style="width:100%" onclick="fecharDuplicidadeObraModal()">Fechar</button>
     </div>
   </div>
 </div>
@@ -4056,6 +4078,44 @@ function encontrarPossivelEnvioNaNuvem(h){
   return null;
 }
 
+// NOVO (2026-08-31) — avisa quando a combinação Obra+Data (a escrita no formulário,
+// nunca a data de hoje) já tem um RDO enviado desta mesma pessoa. NUNCA bloqueia,
+// NUNCA decide sozinho, NUNCA apaga nada — só mostra as 3 opções e deixa a pessoa
+// escolher. Não repete a pergunta pra mesma combinação já confirmada nesta sessão.
+let _combosDuplicidadeConfirmados=new Set();
+let _duplicidadeObraPendente=null;
+async function verificarDuplicidadeObraData(){
+  const obra=(document.getElementById('h-obra')?.value||'').trim();
+  const data=document.getElementById('h-data')?.value||'';
+  if(!obra||!data||!usuarioAtual) return;
+  // Se o RDO que está na tela agora É ELE MESMO o que já foi enviado (editando/
+  // reenviando o próprio), não é duplicidade nenhuma — não avisa.
+  if(estaEnviado(chaveRDO(data))) return;
+  const chaveCombo=normalizarObra(obra)+'|'+data;
+  if(_combosDuplicidadeConfirmados.has(chaveCombo)) return; // já perguntou, pessoa já decidiu — não repete
+  await verificarPendentesContraNuvem(); // usa o mesmo cache/throttle de 60s já existente, sem busca extra desnecessária
+  const match=encontrarPossivelEnvioNaNuvem({obra,data,enc:usuarioAtual.nome});
+  if(!match) return;
+  _duplicidadeObraPendente={obra,data,chaveCombo};
+  const textoEl=document.getElementById('duplicidade-obra-texto');
+  if(textoEl) textoEl.textContent=`Você já tem um RDO enviado desta obra para ${formatarDataBR(data)} (Nº ${match.nrdo}).`;
+  document.getElementById('duplicidade-obra-modal')?.classList.add('show');
+}
+function fecharDuplicidadeObraModal(){
+  document.getElementById('duplicidade-obra-modal')?.classList.remove('show');
+}
+function duplicidadeObra_fazerOutro(){
+  if(_duplicidadeObraPendente) _combosDuplicidadeConfirmados.add(_duplicidadeObraPendente.chaveCombo);
+  fecharDuplicidadeObraModal();
+}
+function duplicidadeObra_editarExistente(){
+  const obraAlvo=_duplicidadeObraPendente?.obra||'';
+  fecharDuplicidadeObraModal();
+  const campoObra=document.getElementById('search-obra');
+  if(campoObra) campoObra.value=obraAlvo;
+  abrirBuscaRDO();
+}
+
 // TRAVA DE HORÁRIO PRA EDIÇÃO: um RDO já enviado só pode ser editado pelo
 // encarregado que o criou até 23:59:59 do MESMO DIA em que foi enviado
 // (não a data do RDO — a data real de quando apertou "Salvar e Enviar").
@@ -4623,6 +4683,7 @@ function iniciarAppAposLogin(){
     const dataAnterior=_lastSaveKey?_lastSaveKey.match(/^rdo-([\d-]+|draft)/)?.[1]:null;
     updateDiaSemana();renderizarObrasParadas();
     autoSilentSave();
+    verificarDuplicidadeObraData();
     if(dataAnterior&&_lastSaveKey&&!_lastSaveKey.startsWith(`rdo-${dataAnterior}`)){
       localStorage.removeItem(`rdo-${dataAnterior}${rdoAtualId?'__'+rdoAtualId:''}`);
     }
@@ -9251,7 +9312,8 @@ const FECHAR_MODAL_POR_ID={
 };
 const IDS_MODAIS_COM_ESC=['list-modal','search-modal','pendentes-modal','grafico-modal','frases-modal',
   'multipdf-modal','extra-escopo-modal','andamento-modal','horas-extras-modal','projetos-modal','check-modal',
-  'novo-rdo-modal','backup-modal','dash-modal','absenteismo-periodo-modal','exec-modal','clientes-modal'];
+  'novo-rdo-modal','backup-modal','dash-modal','absenteismo-periodo-modal','exec-modal','clientes-modal',
+  'duplicidade-obra-modal'];
 // Só estes 3 são do tipo "criado ao abrir, apagado ao fechar" (nunca usam a classe
 // "show") — os outros, mesmo tendo função de fechar registrada acima, são do tipo
 // normal (sempre presentes no HTML, só escondidos/mostrados pela classe "show").
