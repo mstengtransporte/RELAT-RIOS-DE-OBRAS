@@ -5030,9 +5030,13 @@ let nrdoEditadoManualmente=false;
 // parecendo definitivo enquanto a busca de verdade ainda está em andamento.
 async function revalidarNRDOSeNovo(){
   if(nrdoEditadoManualmente) return;
-  const key=chaveRDO(document.getElementById('h-data')?.value||'');
-  const jaSalvo=!!localStorage.getItem(key);
-  if(jaSalvo) return;
+  // CORREÇÃO (2026-09-03): essa função é sempre chamada logo depois de
+  // onMudarClienteSelecionado(), que JÁ salva o rascunho automaticamente antes dela
+  // rodar. A checagem antiga "já foi salvo? então não calcula" (removida agora) SEMPRE
+  // dava verdadeiro por causa disso — o cálculo nunca chegava a rodar de verdade,
+  // travando o número em "001" pra sempre. A proteção real contra sobrescrever um
+  // número já digitado à mão continua garantida pela checagem de nrdoEditadoManualmente
+  // logo acima.
   const obra=document.getElementById('h-obra')?.value||'';
   const nrdoEl=document.getElementById('h-nrdo');
   if(!nrdoEl) return;
