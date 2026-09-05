@@ -466,7 +466,7 @@ body.dark .obra-parada-pill{background:rgba(217,119,6,.2);color:#fbbf24;border-c
   overflow-x:auto;-webkit-overflow-scrolling:touch;
   scrollbar-width:thin;scrollbar-color:var(--accent) var(--border)
 }
-.table-scroll::-webkit-scrollbar{height:10px}
+.table-scroll::-webkit-scrollbar{height:15px}
 .table-scroll::-webkit-scrollbar-track{background:var(--border);border-radius:5px}
 .table-scroll::-webkit-scrollbar-thumb{background:var(--accent);border-radius:5px}
 .table-scroll::-webkit-scrollbar-thumb:hover{background:var(--accent2,var(--accent))}
@@ -491,7 +491,7 @@ tbody td{
 }
 tbody td:last-child{border-right:0}
 tbody td:first-child{text-align:left;padding-left:8px}
-.row-num{color:var(--text3);font-size:10px;font-weight:900;width:20px;display:inline-block;text-align:right;margin-right:3px}
+.row-num{color:var(--text2);font-size:11px;font-weight:900;width:20px;display:inline-block;text-align:right;margin-right:3px}
 
 /* Selects de nome, função e veículo */
 select.cell-name,select.cell-func,select.cell-vehicle{
@@ -605,7 +605,7 @@ tfoot td.col-sem{background:rgba(255,255,255,.12);color:rgba(255,255,255,.9)}
   break-inside:avoid;page-break-inside:avoid
 }
 .ose-card:hover{box-shadow:6px 6px 0 #000;transform:translate(-1px,-1px)}
-.ose-card.s-sem {border-color:#9090a8;background:#ffffff}
+.ose-card.s-sem {border-color:#4a5a7a;background:#dde6f5}
 .ose-card.s-and {border-color:#0e3a9a;background:#1a52c8}
 .ose-card.s-par {border-color:#a04e08;background:#e07010}
 .ose-card.s-blq {border-color:#8a1010;background:#cc2020}
@@ -616,7 +616,7 @@ tfoot td.col-sem{background:rgba(255,255,255,.12);color:rgba(255,255,255,.9)}
   padding:10px 14px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;
   border-bottom:2px solid rgba(0,0,0,.3)
 }
-.ose-card.s-sem .ose-header{background:#f0f3f8;border-bottom:2px solid #b0bdd0}
+.ose-card.s-sem .ose-header{background:#c9d6ee;border-bottom:2px solid #4a5a7a}
 .ose-card.s-and .ose-header{background:#0e3a9a}
 .ose-card.s-par .ose-header{background:#a04e08}
 .ose-card.s-blq .ose-header{background:#8a1010}
@@ -6481,7 +6481,7 @@ function makeOSECard(o){
       <span class="ose-id">OSE 0${o}</span>
       <input class="ose-name-input" type="text" placeholder="Nome / Projeto da OSE ${o}" id="ose-name-${o}" list="ose-nomes-datalist" oninput="updateSummaryOseLabel(${o})" onblur="checarNomeProjetoParecido(${o})" title="Comece a digitar pra ver sugestões de projetos já usados, ou digite um nome novo se for outro projeto">
       <select class="ose-status-sel" id="ose-status-${o}" onchange="updateOSEStatus(${o})">${opts}</select>
-      <button type="button" id="ose-hide-${o}" onclick="esconderUltimaOSE(${o})" title="Esconder esta OSE (não está sendo usada)" style="display:none;background:none;border:1.5px solid rgba(255,255,255,.5);color:inherit;border-radius:4px;width:22px;height:22px;font-size:12px;cursor:pointer;flex-shrink:0;line-height:1">✕</button>
+      <button type="button" id="ose-hide-${o}" onclick="esconderUltimaOSE(${o})" title="Esconder esta OSE (não está sendo usada)" style="display:none;background:rgba(0,0,0,.35);border:2px solid #fff;color:#fff;border-radius:4px;width:24px;height:24px;font-size:14px;font-weight:900;cursor:pointer;flex-shrink:0;line-height:1">✕</button>
     </div>
     <div class="ose-body">
       <div>
