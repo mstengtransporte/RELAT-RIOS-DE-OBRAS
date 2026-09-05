@@ -462,7 +462,14 @@ body.dark .obra-parada-pill{background:rgba(217,119,6,.2);color:#fbbf24;border-c
   background:var(--surface);border:2.5px solid #000;
   margin-bottom:12px;box-shadow:4px 4px 0 #000;overflow:hidden
 }
-.table-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.table-scroll{
+  overflow-x:auto;-webkit-overflow-scrolling:touch;
+  scrollbar-width:thin;scrollbar-color:var(--accent) var(--border)
+}
+.table-scroll::-webkit-scrollbar{height:10px}
+.table-scroll::-webkit-scrollbar-track{background:var(--border);border-radius:5px}
+.table-scroll::-webkit-scrollbar-thumb{background:var(--accent);border-radius:5px}
+.table-scroll::-webkit-scrollbar-thumb:hover{background:var(--accent2,var(--accent))}
 table{width:100%;border-collapse:collapse;font-size:13px;min-width:720px;border:2px solid #000}
 thead tr{background:var(--hbg-solid);color:#fff}
 thead th{
@@ -561,11 +568,11 @@ tfoot td.col-sem{background:rgba(255,255,255,.12);color:rgba(255,255,255,.9)}
 
 .btn-add-row{
   width:100%;padding:9px;
-  background:var(--surface2);border:none;border-top:2px dashed var(--border);
-  color:var(--text3);font-size:12px;cursor:pointer;font-weight:900;letter-spacing:.5px;
+  background:var(--accent-light);border:none;border-top:2px dashed var(--accent);
+  color:var(--accent);font-size:12px;cursor:pointer;font-weight:900;letter-spacing:.5px;
   min-height:38px;text-transform:uppercase;transition:transform .16s cubic-bezier(.34,1.56,.64,1),background-color .12s,color .12s,box-shadow .16s
 }
-.btn-add-row:hover{background:var(--accent-light);color:var(--accent);transform:scale(1.015);box-shadow:0 0 10px rgba(37,104,214,.25)}
+.btn-add-row:hover{background:var(--accent);color:#fff;transform:scale(1.015);box-shadow:0 0 10px rgba(37,104,214,.25)}
 .btn-add-row:active{transform:scale(.98)}
 .btn-del-row{
   background:none;border:none;cursor:pointer;color:#cc2020;font-size:15px;
