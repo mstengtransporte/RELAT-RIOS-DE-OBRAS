@@ -9387,14 +9387,14 @@ const IDS_MODAIS_COM_ESC=['list-modal','search-modal','pendentes-modal','grafico
 // função de fechar) sempre existe no HTML, então "existe = está aberto" disparava
 // nele primeiro, sempre, mesmo fechado — o ESC nunca chegava a testar os outros.
 const IDS_MODAIS_CRIA_APAGA=['dash-modal','exec-modal','clientes-modal'];
-document.addEventListener('keydown',e=>{
-  if(e.key!=='Escape') return;
-  // Painéis criados dinamicamente (símbolos especiais, prefixo de linha) ficam por cima
-  // de tudo — fecham primeiro, um de cada vez.
+// Fecha só o painel "mais no topo" (o mais recente aberto) — reaproveitada pelo ESC e
+// pelo botão/gesto "voltar" do celular, pra nunca ter duas lógicas de fechar diferentes
+// brigando entre si. Devolve true se fechou alguma coisa, false se não tinha nada aberto.
+function fecharModalMaisRecenteAberto(){
   const simbolos=document.getElementById('simbolos-panel');
-  if(simbolos){ simbolos.remove(); return; }
+  if(simbolos){ simbolos.remove(); return true; }
   const prefixo=document.getElementById('prefix-modal');
-  if(prefixo){ prefixo.remove(); return; }
+  if(prefixo){ prefixo.remove(); return true; }
   for(const id of IDS_MODAIS_COM_ESC){
     const el=document.getElementById(id);
     if(!el) continue;
@@ -9403,9 +9403,71 @@ document.addEventListener('keydown',e=>{
     if(abertoPorClasse||abertoPorExistir){
       const fechar=FECHAR_MODAL_POR_ID[id];
       if(fechar) fechar(); else el.classList.remove('show');
-      return;
+      return true;
     }
   }
+  return false;
+}
+// Mesma checagem, só que sem fechar nada — usada pra saber se "ainda tem algo aberto"
+// depois de fechar um painel (caso raro de painel aberto em cima de outro).
+function algumModalEstaAberto(){
+  if(document.getElementById('simbolos-panel')) return true;
+  if(document.getElementById('prefix-modal')) return true;
+  for(const id of IDS_MODAIS_COM_ESC){
+    const el=document.getElementById(id);
+    if(!el) continue;
+    if(el.classList.contains('show')) return true;
+    if(IDS_MODAIS_CRIA_APAGA.includes(id)) return true;
+  }
+  return false;
+}
+document.addEventListener('keydown',e=>{
+  if(e.key!=='Escape') return;
+  fecharModalMaisRecenteAberto();
+});
+
+// ─── BOTÃO/GESTO "VOLTAR" DO CELULAR FECHA O PAINEL, NÃO O APLICATIVO ──────────
+// CORREÇÃO (2026-09-04): antes, apertar "voltar" com qualquer painel aberto saía do
+// aplicativo direto — porque abrir um painel nunca registrava nada no histórico de
+// navegação do celular, então o botão voltar não tinha "nada pra desfazer" e saía
+// direto. Agora, toda vez que ALGUM painel abre (não tinha nenhum aberto antes), um
+// "degrau" é registrado no histórico do navegador. Apertar voltar consome esse degrau
+// primeiro — fecha só o painel mais recente, sem sair do app. Só quando não sobra
+// nenhum painel aberto é que o botão voltar volta a funcionar normal (sair/voltar de
+// verdade). Cobre TODOS os painéis de uma vez, porque reaproveita a mesma lista já
+// usada pelo ESC (IDS_MODAIS_COM_ESC) — nenhum painel precisou ser editado individualmente.
+let _tinhaModalAbertoAntes=false;
+let _fechandoPeloBotaoVoltar=false; // evita duplo-consumo do degrau quando o próprio popstate está tratando o fechamento
+new MutationObserver(()=>{
+  const abertoAgora=algumModalEstaAberto();
+  if(abertoAgora && !_tinhaModalAbertoAntes){
+    // Painel acabou de abrir — empilha um degrau no histórico.
+    history.pushState({rdoPainelAberto:true},'');
+  }else if(!abertoAgora && _tinhaModalAbertoAntes && !_fechandoPeloBotaoVoltar){
+    // Painel foi fechado por outro caminho (✕, ESC, clicar fora, etc.) — o degrau que
+    // empilhamos antes ficaria esquecido no histórico se não for consumido aqui. Sem
+    // isso, depois de várias aberturas/fechamentos assim, o botão voltar ia precisar
+    // de vários toques até realmente sair, em vez de sair no primeiro toque quando não
+    // sobra nenhum painel aberto.
+    history.back();
+  }
+  _tinhaModalAbertoAntes=abertoAgora;
+}).observe(document.body,{attributes:true,attributeFilter:['class'],subtree:true,childList:true});
+
+window.addEventListener('popstate',()=>{
+  _fechandoPeloBotaoVoltar=true;
+  const fechou=fecharModalMaisRecenteAberto();
+  if(fechou && algumModalEstaAberto()){
+    // Tinha painel aberto em cima de outro (caso raro) — mantém o "degrau" ativo pro
+    // próximo toque em voltar continuar fechando um de cada vez, em vez de sair do app.
+    history.pushState({rdoPainelAberto:true},'');
+    _tinhaModalAbertoAntes=true;
+  }else{
+    _tinhaModalAbertoAntes=false;
+  }
+  // Se "fechou" for false (não tinha nenhum painel aberto), não faz nada — deixa o
+  // navegador seguir o comportamento normal dele (sair da página/aplicativo).
+  setTimeout(()=>{ _fechandoPeloBotaoVoltar=false; },0);
 });
 
 // ── CLICAR FORA DA CAIXA TAMBÉM FECHA ─────────────────────────────────────────
