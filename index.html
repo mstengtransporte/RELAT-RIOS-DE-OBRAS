@@ -1671,7 +1671,7 @@ body.dark #workers-body tr:hover{background-color:rgba(58,110,232,.08)}
 #multipdf-modal.show .multipdf-box, #novo-rdo-modal.show .multipdf-box,
 #absenteismo-periodo-modal.show .multipdf-box, #backup-modal.show .multipdf-box,
 #extra-escopo-modal.show .multipdf-box, #andamento-modal.show .multipdf-box, #horas-extras-modal.show .multipdf-box,
-#duplicidade-obra-modal.show .multipdf-box, #search-modal.show .search-box{
+#duplicidade-obra-modal.show .multipdf-box, #search-modal.show .search-box, #folha-ponto-modal.show .multipdf-box{
   animation:polimento-entrada-modal .18s var(--ease);
 }
 @keyframes polimento-entrada-modal{
@@ -1782,6 +1782,7 @@ body.dark #workers-body tr:hover{background-color:rgba(58,110,232,.08)}
     <button class="btn admin-only-btn" style="background:#1a52c8;color:#fff" onclick="abrirAndamento()" title="Controle consolidado de horas por projeto (Em Andamento)">🔵 <span>Andamento</span></button>
     <button class="btn admin-only-btn" style="background:#d97706;color:#fff" onclick="abrirHorasExtras()" title="Controle de horas extras (acima de 9h/dia, domingos e feriados), com justificativas">⏱️ <span>Horas Extras</span></button>
     <button class="btn admin-only-btn" id="btn-absenteismo" style="background:#b91c1c;color:#fff" onclick="abrirModalAbsenteismo()" title="Gera relatório de FALTA/SAIU MAIS CEDO/TRANSFERIDO, com opção de período">🚨 <span>Absenteísmo</span></button>
+    <button class="btn admin-only-btn" id="btn-folha-ponto" style="background:linear-gradient(180deg,#e2e8f0 0%,#94a3b8 55%,#64748b 100%);color:#1e293b;text-shadow:0 1px 0 rgba(255,255,255,.4)" onclick="abrirFolhaPonto()" title="Folha de ponto de conferência — cruza os RDOs de todos os encarregados, por funcionário e por dia (uso interno, não substitui o relógio de ponto oficial)">🗓️ <span>Folha de Ponto</span></button>
     <button class="btn" style="background:#dc2626;color:#fff" onclick="fazerLogout()" title="Sair da conta">🚪 <span>Sair</span></button>
   </div>
   <div id="aviso-rdo-pendente" onclick="abrirListaPendentes()" style="cursor:pointer"></div>
@@ -2091,6 +2092,34 @@ body.dark #workers-body tr:hover{background-color:rgba(58,110,232,.08)}
     <div class="multipdf-footer">
       <button class="multipdf-cancel" onclick="document.getElementById('absenteismo-periodo-modal').classList.remove('show')">Cancelar</button>
       <button class="multipdf-gerar" onclick="exportarRelatorioAbsenteismo()" style="background:#b91c1c">📥 Gerar Excel</button>
+    </div>
+  </div>
+</div>
+
+<!-- FOLHA DE PONTO — ferramenta de conferência, Admin-only, só leitura. Nunca escreve
+     nada no banco, nunca recalcula hora extra (usa o que o RDO já calculou). -->
+<div id="folha-ponto-modal">
+  <div class="multipdf-box">
+    <div class="multipdf-header" style="background:linear-gradient(135deg,#94a3b8,#475569)">
+      <span>🗓️ Folha de Ponto — Conferência</span>
+      <button onclick="document.getElementById('folha-ponto-modal').classList.remove('show')" style="background:none;border:none;color:#fff;font-size:20px;cursor:pointer">✕</button>
+    </div>
+    <div class="multipdf-body">
+      <div style="font-size:11.5px;color:var(--text3);margin-bottom:12px;line-height:1.5;background:var(--surface2);padding:8px;border-radius:6px">
+        ℹ️ Ferramenta de conferência interna — cruza os RDOs já enviados por todos os encarregados, por funcionário e por dia. <b>Não substitui o relógio de ponto oficial</b> (que já é controlado à parte).
+      </div>
+      <div>
+        <label>Período</label>
+        <div style="display:flex;gap:8px;align-items:center">
+          <input type="date" id="folha-ponto-de" style="flex:1">
+          <span style="font-size:11px;color:var(--text2)">até</span>
+          <input type="date" id="folha-ponto-ate" style="flex:1">
+        </div>
+      </div>
+    </div>
+    <div class="multipdf-footer">
+      <button class="multipdf-cancel" onclick="document.getElementById('folha-ponto-modal').classList.remove('show')">Cancelar</button>
+      <button class="multipdf-gerar" style="background:linear-gradient(180deg,#94a3b8 0%,#475569 100%)" onclick="exportarFolhaPontoExcel()">📥 Gerar Excel</button>
     </div>
   </div>
 </div>
@@ -9380,7 +9409,7 @@ const FECHAR_MODAL_POR_ID={
 const IDS_MODAIS_COM_ESC=['list-modal','search-modal','pendentes-modal','grafico-modal','frases-modal',
   'multipdf-modal','extra-escopo-modal','andamento-modal','horas-extras-modal','projetos-modal','check-modal',
   'novo-rdo-modal','backup-modal','dash-modal','absenteismo-periodo-modal','exec-modal','clientes-modal',
-  'duplicidade-obra-modal','modal-pendencias-rdo'];
+  'duplicidade-obra-modal','modal-pendencias-rdo','folha-ponto-modal'];
 // Só estes 3 são do tipo "criado ao abrir, apagado ao fechar" (nunca usam a classe
 // "show") — os outros, mesmo tendo função de fechar registrada acima, são do tipo
 // normal (sempre presentes no HTML, só escondidos/mostrados pela classe "show").
@@ -9940,6 +9969,18 @@ function atualizarTotalMultiPDF(){
 // ============================================================
 // SELEÇÃO DE PERÍODO DO RELATÓRIO DE ABSENTEÍSMO
 // ============================================================
+// Abre a Folha de Ponto (conferência) — Admin-only. Já preenche o período com os
+// últimos 2 meses; a pessoa pode mudar manualmente no filtro se precisar de outro.
+function abrirFolhaPonto(){
+  if(!exigirAdmin()) return;
+  const hoje=new Date();
+  const doisMesesAtras=new Date(hoje.getFullYear(),hoje.getMonth()-2,hoje.getDate()+1);
+  const fmt=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  document.getElementById('folha-ponto-de').value=fmt(doisMesesAtras);
+  document.getElementById('folha-ponto-ate').value=fmt(hoje);
+  document.getElementById('folha-ponto-modal').classList.add('show');
+}
+
 function abrirModalAbsenteismo(){
   const hoje=new Date();
   const hojeISO=hoje.toISOString().slice(0,10);
@@ -12167,6 +12208,448 @@ async function buscarHorasExtrasParaBackup(){
     console.error('buscarHorasExtrasParaBackup:',e);
     return null; // se falhar, o relatório segue sem essas 2 colunas, em vez de travar tudo
   }
+}
+
+// ════════════════════════════════════════════════════════════
+// FOLHA DE PONTO — ferramenta de CONFERÊNCIA (não é documento oficial/trabalhista).
+// Admin-only. Só LEITURA — nunca grava nada no banco, nunca recalcula hora extra
+// (usa exatamente o que o RDO já calculou e já gravou). Isolada: não compartilha
+// lógica com nenhum outro painel/relatório do sistema.
+// ════════════════════════════════════════════════════════════
+
+// Busca tudo que a Folha de Ponto precisa: cadastro oficial de funcionários (Escala,
+// garante que até quem não tem nenhum RDO no período apareça, em branco) + todos os
+// RDOs do período + todos os lançamentos de hora de cada funcionário nesses RDOs
+// (já vem com o status do dia e a hora extra já prontos, calculados pelo RDO).
+async function coletarDadosFolhaPonto(dataDe,dataAte){
+  const supabaseClient=getSupabaseClient();
+  if(!supabaseClient) throw new Error('Sistema não conectado ao banco.');
+
+  const{data:funcionarios,error:erroFunc}=await supabaseClient.from('funcionarios').select('nome,funcao').order('nome').limit(5000);
+  if(erroFunc) throw erroFunc;
+
+  const{data:rdos,error:erroRdos}=await supabaseClient.from('rdos')
+    .select('id,data,obra,encarregado,feriado_nome')
+    .gte('data',dataDe).lte('data',dataAte).limit(5000);
+  if(erroRdos) throw erroRdos;
+  const idsRdo=rdos.map(r=>r.id);
+  const rdosPorId={}; rdos.forEach(r=>rdosPorId[r.id]=r);
+
+  let workers=[];
+  if(idsRdo.length){
+    const{data,error}=await supabaseClient.from('rdo_workers')
+      .select('rdo_id,nome,funcao,horas_normais,horas_extra_70,horas_extra_100,status_dia')
+      .in('rdo_id',idsRdo).limit(50000);
+    if(error) throw error;
+    workers=data||[];
+  }
+  return{funcionarios:funcionarios||[],rdosPorId,workers};
+}
+
+function ehSabadoOuDomingo(dataISO){
+  const dt=new Date(dataISO+'T12:00:00');
+  const dia=dt.getDay();
+  return dia===0||dia===6;
+}
+
+// Organiza os dados brutos numa matriz funcionário → data → lista de lançamentos
+// daquele dia (normalmente 1; pode ter mais de 1 se trabalhou em 2 obras no mesmo
+// dia, ou se houver informação contraditória entre RDOs diferentes).
+function processarDadosFolhaPonto(bruto){
+  const matriz={}; // chaveNormalizada -> {nomeExibicao,funcao,porData:{data:[lancamentos]}}
+
+  bruto.funcionarios.forEach(f=>{
+    const chave=normalizarParaComparar(f.nome);
+    if(!chave) return;
+    matriz[chave]={nomeExibicao:f.nome,funcao:f.funcao||'',porData:{}};
+  });
+
+  bruto.workers.forEach(w=>{
+    if(!w.nome) return;
+    const chave=normalizarParaComparar(w.nome);
+    const rdo=bruto.rdosPorId[w.rdo_id];
+    if(!rdo) return;
+    if(!matriz[chave]){
+      // Nome não está (mais) na Escala — digitado fora da lista, ou já saiu da
+      // empresa. Ainda entra na planilha, com a grafia como foi digitada no RDO.
+      matriz[chave]={nomeExibicao:w.nome,funcao:w.funcao||'',porData:{}};
+    }
+    const linha=matriz[chave];
+    if(!linha.porData[rdo.data]) linha.porData[rdo.data]=[];
+    linha.porData[rdo.data].push({
+      obra:rdo.obra||'',
+      status:w.status_dia||null, // null = trabalhou normal (sem ausência)
+      horasNormais:Number(w.horas_normais)||0,
+      horasExtra70:Number(w.horas_extra_70)||0,
+      horasExtra100:Number(w.horas_extra_100)||0,
+      ehFeriado:!!(rdo.feriado_nome&&rdo.feriado_nome.trim()) // feriado pode cair em dia de semana também, não só fim de semana
+    });
+  });
+  return matriz;
+}
+
+// Decide o que mostrar numa célula (funcionário × dia), a partir da lista de
+// lançamentos daquele dia. Regra de conflito: FALTA declarada + hora real lançada
+// em outro RDO do mesmo dia = contradição de verdade (as duas não podem ser
+// verdade ao mesmo tempo). TRANSFERIDO + hora real em outro RDO NÃO é conflito —
+// é confirmação (mostra origem → destino), porque transferido já pressupõe que a
+// pessoa foi trabalhar em outro lugar.
+function resolverCelulaFolhaPonto(lancamentos){
+  if(!lancamentos||!lancamentos.length) return{tipo:'sem_registro'};
+
+  const comHoras=lancamentos.filter(l=>!l.status&&(l.horasNormais+l.horasExtra70+l.horasExtra100)>0);
+  const faltas=lancamentos.filter(l=>l.status==='falta');
+  const transferidos=lancamentos.filter(l=>l.status==='transferido');
+  const saiuCedo=lancamentos.filter(l=>l.status==='saiu_cedo');
+
+  if(faltas.length&&(comHoras.length||saiuCedo.length||transferidos.length)){
+    return{tipo:'conflito',faltas,outros:[...comHoras,...saiuCedo,...transferidos]};
+  }
+  if(transferidos.length){
+    // IMPORTANTE: diferente de FALTA, o campo de hora de "TRANSFERIDO" NÃO é
+    // travado pelo sistema — é possível o encarregado ter lançado horas parciais
+    // reais na própria OSE de origem (ex: trabalhou 2h antes de ser transferido).
+    // Essas horas precisam ser somadas, nunca ignoradas — mantidas separadas em
+    // normais/70%/100% pra não perder a informação de hora extra nos totais.
+    const horasOrigem={
+      normais:transferidos.reduce((s,t)=>s+t.horasNormais,0),
+      extra70:transferidos.reduce((s,t)=>s+t.horasExtra70,0),
+      extra100:transferidos.reduce((s,t)=>s+t.horasExtra100,0)
+    };
+    const totalOrigem=horasOrigem.normais+horasOrigem.extra70+horasOrigem.extra100;
+    // "Saiu mais cedo" em outro RDO do mesmo dia também confirma que a pessoa
+    // trabalhou em algum lugar (só que menos horas) — precisa contar junto com
+    // "comHoras", senão essa informação desaparecia silenciosamente da célula.
+    const confirmacoes=[...comHoras,...saiuCedo];
+    if(confirmacoes.length||totalOrigem>0){
+      return{tipo:'transferido_confirmado',origem:transferidos[0].obra,horasOrigem,destinos:confirmacoes};
+    }
+    return{tipo:'transferido_sem_confirmar',origem:transferidos[0].obra};
+  }
+  if(faltas.length) return{tipo:'falta'};
+  if(saiuCedo.length){
+    const totalHoras=saiuCedo.reduce((s,l)=>s+l.horasNormais+l.horasExtra70+l.horasExtra100,0);
+    const obrasAgrupadasSC={};
+    saiuCedo.forEach(l=>{
+      const chaveObra=l.obra||'(sem obra)';
+      obrasAgrupadasSC[chaveObra]=(obrasAgrupadasSC[chaveObra]||0)+l.horasNormais+l.horasExtra70+l.horasExtra100;
+    });
+    const obras=Object.keys(obrasAgrupadasSC).map(obra=>({obra,horas:obrasAgrupadasSC[obra]}));
+    return{tipo:'saiu_cedo',horas:totalHoras,obras};
+  }
+  const horasNormais=comHoras.reduce((s,l)=>s+l.horasNormais,0);
+  const extra70=comHoras.reduce((s,l)=>s+l.horasExtra70,0);
+  const extra100=comHoras.reduce((s,l)=>s+l.horasExtra100,0);
+  const obrasAgrupadas={};
+  comHoras.forEach(l=>{
+    const chaveObra=l.obra||'(sem obra)';
+    obrasAgrupadas[chaveObra]=(obrasAgrupadas[chaveObra]||0)+l.horasNormais+l.horasExtra70+l.horasExtra100;
+  });
+  const obras=Object.keys(obrasAgrupadas).map(obra=>({obra,horas:obrasAgrupadas[obra]}));
+  const ehFeriado=comHoras.some(l=>l.ehFeriado);
+  return{tipo:'trabalhou',horasNormais,extra70,extra100,obras,ehFeriado};
+}
+
+// Horário simbólico — NUNCA é horário de relógio de ponto real, é só organização
+// visual da planilha. Jornada padrão: 07:00 entrada, 11:00–12:00 almoço, 17:00
+// saída = 9h líquidas. Quando não bate as 9h, calcula a saída de trás pra frente:
+// entrada + horas trabalhadas + 1h de almoço.
+function calcularHorarioSimbolico(horasTrabalhadas){
+  const minutosEntrada=7*60;
+  const h=Math.max(0,Math.min(horasTrabalhadas,9));
+  const minutosSaida=minutosEntrada+Math.round(h*60)+60;
+  const hh=Math.floor(minutosSaida/60),mm=minutosSaida%60;
+  return `07:00–${String(hh).padStart(2,'0')}:${String(mm).padStart(2,'0')}`;
+}
+
+const DIAS_SEMANA_ABREV=['DOM','SEG','TER','QUA','QUI','SEX','SÁB'];
+const NOMES_MESES_FOLHA_PONTO=['','Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+
+function diasDoMesFolhaPonto(ano,mes){ // mes 1-12
+  const dias=[];
+  const ultimoDia=new Date(ano,mes,0).getDate();
+  for(let d=1;d<=ultimoDia;d++) dias.push(`${ano}-${String(mes).padStart(2,'0')}-${String(d).padStart(2,'0')}`);
+  return dias;
+}
+
+// Gera e baixa o Excel da Folha de Ponto — Admin-only (checado antes de chamar).
+// Só LEITURA: busca, organiza e apresenta; nunca escreve nada no banco, nunca
+// recalcula hora extra (usa exatamente o que o RDO já calculou e gravou).
+async function exportarFolhaPontoExcel(){
+  if(typeof ExcelJS==='undefined'){ showToast('Biblioteca de Excel ainda carregando — espera 2 segundos e tenta de novo.','#d97706'); return; }
+  const dataDe=document.getElementById('folha-ponto-de')?.value;
+  const dataAte=document.getElementById('folha-ponto-ate')?.value;
+  if(!dataDe||!dataAte){ showToast('Escolha o período (De / Até).','#d97706'); return; }
+  if(dataDe>dataAte){ showToast('A Data "De" não pode ser depois da Data "Até".','#dc2626'); return; }
+  showToast('🔎 Buscando dados da Folha de Ponto...','#6b7280');
+
+  let bruto;
+  try{
+    bruto=await coletarDadosFolhaPonto(dataDe,dataAte);
+  }catch(e){
+    console.error('coletarDadosFolhaPonto error:',e);
+    showToast('Erro ao buscar dados: '+(e.message||e),'#dc2626');
+    return;
+  }
+  const matriz=processarDadosFolhaPonto(bruto);
+  const nomesOrdenados=Object.keys(matriz).sort((a,b)=>matriz[a].nomeExibicao.localeCompare(matriz[b].nomeExibicao,'pt-BR'));
+
+  const mesesSet=new Set();
+  { let cursor=new Date(dataDe+'T12:00:00'); const fim=new Date(dataAte+'T12:00:00');
+    while(cursor<=fim){ mesesSet.add(`${cursor.getFullYear()}-${String(cursor.getMonth()+1).padStart(2,'0')}`); cursor.setMonth(cursor.getMonth()+1,1); }
+  }
+  const meses=[...mesesSet].sort();
+  const todasDatasPeriodo=[];
+  { let cursor=new Date(dataDe+'T12:00:00'); const fim=new Date(dataAte+'T12:00:00');
+    while(cursor<=fim){ todasDatasPeriodo.push(`${cursor.getFullYear()}-${String(cursor.getMonth()+1).padStart(2,'0')}-${String(cursor.getDate()).padStart(2,'0')}`); cursor.setDate(cursor.getDate()+1); }
+  }
+
+  const AZUL_MARINHO='FF0D1B3E',BRANCO='FFFFFFFF',CINZA_CLARO='FFF1F5F9',CINZA_BORDA='FFCBD5E1',CINZA_TEXTO='FF1E293B';
+  const COR_TRABALHOU='FFDCEEFB',TEXTO_TRABALHOU='FF1E40AF';
+  const COR_SAIU_CEDO='FFFED7AA',TEXTO_SAIU_CEDO='FF9A3412';
+  const COR_FALTA='FFFECACA',TEXTO_FALTA='FF991B1B';
+  const COR_TRANSFERIDO='FFE9D5FF',TEXTO_TRANSFERIDO='FF6B21A8';
+  const COR_SEM_REGISTRO='FFF3F4F6',TEXTO_SEM_REGISTRO='FF9CA3AF';
+  const COR_CONFLITO='FFFEF3C7',TEXTO_CONFLITO='FF92400E';
+
+  const wb=new ExcelJS.Workbook();
+
+  // ── Aba "Resumo Geral" (primeira do arquivo) ──
+  const wsResumo=wb.addWorksheet('Resumo Geral');
+  wsResumo.mergeCells(1,1,1,6);
+  const tituloResumo=wsResumo.getCell(1,1);
+  tituloResumo.value='FOLHA DE PONTO — RESUMO GERAL — USO INTERNO, FERRAMENTA DE CONFERÊNCIA (NÃO SUBSTITUI O RELÓGIO DE PONTO OFICIAL)';
+  tituloResumo.font={name:'Calibri',size:11,bold:true,color:{argb:BRANCO}};
+  tituloResumo.fill={type:'pattern',pattern:'solid',fgColor:{argb:AZUL_MARINHO}};
+  tituloResumo.alignment={horizontal:'center',vertical:'middle',wrapText:true};
+  wsResumo.getRow(1).height=30;
+
+  const colunasResumo=['FUNCIONÁRIO','FUNÇÃO','TOTAL FALTAS','TOTAL SEM REGISTRO','TOTAL CONFLITOS','TOTAL HORAS NO PERÍODO'];
+  const headerResumo=wsResumo.getRow(3);
+  colunasResumo.forEach((t,i)=>{
+    const c=headerResumo.getCell(i+1);
+    c.value=t; c.font={name:'Calibri',size:10.5,bold:true,color:{argb:BRANCO}};
+    c.fill={type:'pattern',pattern:'solid',fgColor:{argb:AZUL_MARINHO}};
+    c.alignment={horizontal:'center',vertical:'middle',wrapText:true};
+    c.border={top:{style:'thin',color:{argb:CINZA_BORDA}},bottom:{style:'thin',color:{argb:CINZA_BORDA}},left:{style:'thin',color:{argb:CINZA_BORDA}},right:{style:'thin',color:{argb:CINZA_BORDA}}};
+  });
+  headerResumo.height=24;
+  wsResumo.columns=[{width:28},{width:20},{width:14},{width:18},{width:14},{width:18}];
+
+  let rNum=4;
+  nomesOrdenados.forEach(chave=>{
+    const linha=matriz[chave];
+    let totalFaltas=0,totalSemRegistro=0,totalConflitos=0,totalHoras=0;
+    todasDatasPeriodo.forEach(dt=>{
+      const cel=resolverCelulaFolhaPonto(linha.porData[dt]);
+      if(cel.tipo==='falta') totalFaltas++;
+      else if(cel.tipo==='conflito') totalConflitos++;
+      else if(cel.tipo==='sem_registro') totalSemRegistro++;
+      else if(cel.tipo==='trabalhou') totalHoras+=cel.horasNormais+cel.extra70+cel.extra100;
+      else if(cel.tipo==='saiu_cedo') totalHoras+=cel.horas;
+      else if(cel.tipo==='transferido_confirmado') totalHoras+=cel.horasOrigem.normais+cel.horasOrigem.extra70+cel.horasOrigem.extra100+cel.destinos.reduce((s,d)=>s+d.horasNormais+d.horasExtra70+d.horasExtra100,0);
+    });
+    const row=wsResumo.getRow(rNum);
+    const vals=[linha.nomeExibicao,linha.funcao,totalFaltas,totalSemRegistro,totalConflitos,Number(totalHoras.toFixed(1))];
+    vals.forEach((v,i)=>{
+      const c=row.getCell(i+1);
+      c.value=v;
+      c.font={name:'Calibri',size:10,color:{argb:CINZA_TEXTO}};
+      c.alignment={horizontal:(i===0||i===1)?'left':'center',vertical:'middle'};
+      c.border={top:{style:'thin',color:{argb:CINZA_BORDA}},bottom:{style:'thin',color:{argb:CINZA_BORDA}},left:{style:'thin',color:{argb:CINZA_BORDA}},right:{style:'thin',color:{argb:CINZA_BORDA}}};
+      c.fill={type:'pattern',pattern:'solid',fgColor:{argb:rNum%2===0?CINZA_CLARO:BRANCO}};
+    });
+    if(totalConflitos>0) row.getCell(5).font={name:'Calibri',size:10,bold:true,color:{argb:TEXTO_CONFLITO}};
+    if(totalFaltas>0) row.getCell(3).font={name:'Calibri',size:10,bold:true,color:{argb:TEXTO_FALTA}};
+    rNum++;
+  });
+  wsResumo.views=[{state:'frozen',ySplit:3,xSplit:0}];
+
+  // ── Uma aba por mês presente no período ──
+  for(const chaveMs of meses){
+    const[ano,mesNum]=chaveMs.split('-').map(Number);
+    const diasMes=diasDoMesFolhaPonto(ano,mesNum).filter(d=>d>=dataDe&&d<=dataAte);
+    const nomeAba=`${NOMES_MESES_FOLHA_PONTO[mesNum]} ${ano}`.slice(0,31);
+    const ws=wb.addWorksheet(nomeAba);
+
+    const colFuncionario=1,colFuncao=2,colPrimeiroDia=3;
+    const colExtra70=colPrimeiroDia+diasMes.length;
+    const colExtra100=colExtra70+1;
+    const colResumoInicio=colExtra100+1;
+    const ultimaColuna=colResumoInicio+3;
+
+    ws.mergeCells(1,1,1,ultimaColuna);
+    const titulo=ws.getCell(1,1);
+    titulo.value=`FOLHA DE PONTO — ${nomeAba.toUpperCase()} — USO INTERNO, FERRAMENTA DE CONFERÊNCIA (NÃO SUBSTITUI O RELÓGIO DE PONTO OFICIAL)`;
+    titulo.font={name:'Calibri',size:10,bold:true,color:{argb:BRANCO}};
+    titulo.fill={type:'pattern',pattern:'solid',fgColor:{argb:AZUL_MARINHO}};
+    titulo.alignment={horizontal:'center',vertical:'middle',wrapText:true};
+    ws.getRow(1).height=22;
+
+    const headerRow1=ws.getRow(3),headerRow2=ws.getRow(4);
+    ws.mergeCells(3,colFuncionario,4,colFuncionario);
+    ws.mergeCells(3,colFuncao,4,colFuncao);
+    const bordaHeader={top:{style:'thin',color:{argb:CINZA_BORDA}},bottom:{style:'thin',color:{argb:CINZA_BORDA}},left:{style:'thin',color:{argb:CINZA_BORDA}},right:{style:'thin',color:{argb:CINZA_BORDA}}};
+    [[colFuncionario,'FUNCIONÁRIO'],[colFuncao,'FUNÇÃO']].forEach(([col,txt])=>{
+      const c=headerRow1.getCell(col);
+      c.value=txt; c.font={name:'Calibri',size:10,bold:true,color:{argb:BRANCO}};
+      c.fill={type:'pattern',pattern:'solid',fgColor:{argb:AZUL_MARINHO}};
+      c.alignment={horizontal:'center',vertical:'middle'};
+      c.border=bordaHeader;
+    });
+    diasMes.forEach((iso,idx)=>{
+      const col=colPrimeiroDia+idx;
+      const dt=new Date(iso+'T12:00:00');
+      const c1=headerRow1.getCell(col); c1.value=dt.getDate();
+      const c2=headerRow2.getCell(col); c2.value=DIAS_SEMANA_ABREV[dt.getDay()];
+      const fimDeSemana=dt.getDay()===0||dt.getDay()===6;
+      [c1,c2].forEach(c=>{
+        c.font={name:'Calibri',size:9,bold:true,color:{argb:BRANCO}};
+        c.fill={type:'pattern',pattern:'solid',fgColor:{argb:fimDeSemana?'FF475569':AZUL_MARINHO}};
+        c.alignment={horizontal:'center',vertical:'middle'};
+        c.border=bordaHeader;
+      });
+    });
+    [[colExtra70,'H.E. 70%'],[colExtra100,'H.E. 100%'],
+      [colResumoInicio,'TOTAL HORAS'],[colResumoInicio+1,'FALTAS'],[colResumoInicio+2,'SEM REGISTRO'],[colResumoInicio+3,'CONFLITOS']
+    ].forEach(([col,txt])=>{
+      ws.mergeCells(3,col,4,col);
+      const c=headerRow1.getCell(col);
+      c.value=txt; c.font={name:'Calibri',size:9,bold:true,color:{argb:BRANCO}};
+      c.fill={type:'pattern',pattern:'solid',fgColor:{argb:AZUL_MARINHO}};
+      c.alignment={horizontal:'center',vertical:'middle',wrapText:true};
+      c.border=bordaHeader;
+    });
+    headerRow1.height=18; headerRow2.height=16;
+
+    ws.getColumn(colFuncionario).width=24;
+    ws.getColumn(colFuncao).width=16;
+    for(let i=0;i<diasMes.length;i++) ws.getColumn(colPrimeiroDia+i).width=13;
+    ws.getColumn(colExtra70).width=10; ws.getColumn(colExtra100).width=10;
+    for(let i=0;i<4;i++) ws.getColumn(colResumoInicio+i).width=12;
+
+    let rowNum=5;
+    nomesOrdenados.forEach(chave=>{
+      const linha=matriz[chave];
+      const row=ws.getRow(rowNum);
+      row.getCell(colFuncionario).value=linha.nomeExibicao;
+      row.getCell(colFuncao).value=linha.funcao;
+      [colFuncionario,colFuncao].forEach(col=>{
+        const c=row.getCell(col);
+        c.font={name:'Calibri',size:9.5,color:{argb:CINZA_TEXTO}};
+        c.alignment={horizontal:'left',vertical:'middle'};
+        c.border={top:{style:'thin',color:{argb:CINZA_BORDA}},bottom:{style:'thin',color:{argb:CINZA_BORDA}},left:{style:'thin',color:{argb:CINZA_BORDA}},right:{style:'thin',color:{argb:CINZA_BORDA}}};
+      });
+
+      let total70=0,total100=0,totalHorasLinha=0,totalFaltasLinha=0,totalSemRegLinha=0,totalConflitosLinha=0;
+
+      diasMes.forEach((iso,idx)=>{
+        const col=colPrimeiroDia+idx;
+        const cel=resolverCelulaFolhaPonto(linha.porData[iso]);
+        const c=row.getCell(col);
+        c.alignment={horizontal:'center',vertical:'middle',wrapText:true};
+        c.font={name:'Calibri',size:8,color:{argb:CINZA_TEXTO}};
+        c.border={top:{style:'thin',color:{argb:CINZA_BORDA}},bottom:{style:'thin',color:{argb:CINZA_BORDA}},left:{style:'thin',color:{argb:CINZA_BORDA}},right:{style:'thin',color:{argb:CINZA_BORDA}}};
+
+        if(cel.tipo==='sem_registro'){
+          c.value='sem registro';
+          c.fill={type:'pattern',pattern:'solid',fgColor:{argb:COR_SEM_REGISTRO}};
+          c.font={name:'Calibri',size:7.5,italic:true,color:{argb:TEXTO_SEM_REGISTRO}};
+          totalSemRegLinha++;
+        }else if(cel.tipo==='falta'){
+          c.value='FALTA';
+          c.fill={type:'pattern',pattern:'solid',fgColor:{argb:COR_FALTA}};
+          c.font={name:'Calibri',size:8.5,bold:true,color:{argb:TEXTO_FALTA}};
+          totalFaltasLinha++;
+        }else if(cel.tipo==='conflito'){
+          const dFalta=cel.faltas.map(f=>f.obra).join(', ');
+          const dOutro=cel.outros.map(o=>o.obra).join(', ');
+          c.value=`⚠️ CONFLITO\nFalta: ${dFalta}\nOutro: ${dOutro}`;
+          c.fill={type:'pattern',pattern:'solid',fgColor:{argb:COR_CONFLITO}};
+          c.font={name:'Calibri',size:7.5,bold:true,color:{argb:TEXTO_CONFLITO}};
+          c.border={top:{style:'thick',color:{argb:TEXTO_CONFLITO}},bottom:{style:'thick',color:{argb:TEXTO_CONFLITO}},left:{style:'thick',color:{argb:TEXTO_CONFLITO}},right:{style:'thick',color:{argb:TEXTO_CONFLITO}}};
+          totalConflitosLinha++;
+        }else if(cel.tipo==='transferido_confirmado'){
+          const totalOrigem=cel.horasOrigem.normais+cel.horasOrigem.extra70+cel.horasOrigem.extra100;
+          const horasDestino=cel.destinos.reduce((s,d)=>s+d.horasNormais+d.horasExtra70+d.horasExtra100,0);
+          const totalDia=totalOrigem+horasDestino;
+          let linhaDetalhe;
+          if(cel.destinos.length){
+            const destinos=cel.destinos.map(d=>d.obra).join(', ');
+            linhaDetalhe=totalOrigem>0?`${cel.origem} (${totalOrigem.toFixed(1)}h) → ${destinos}`:`${cel.origem} → ${destinos}`;
+          }else{
+            // Só tem hora parcial na origem, nenhum RDO confirmando o destino ainda.
+            linhaDetalhe=`${cel.origem} (${totalOrigem.toFixed(1)}h) → (destino não confirmado)`;
+          }
+          c.value=`TRANSFERIDO\n${linhaDetalhe}\n${calcularHorarioSimbolico(totalDia)}`;
+          c.fill={type:'pattern',pattern:'solid',fgColor:{argb:COR_TRANSFERIDO}};
+          c.font={name:'Calibri',size:7.5,bold:true,color:{argb:TEXTO_TRANSFERIDO}};
+          c.border={top:{style:'dashed',color:{argb:TEXTO_TRANSFERIDO}},bottom:{style:'dashed',color:{argb:TEXTO_TRANSFERIDO}},left:{style:'dashed',color:{argb:TEXTO_TRANSFERIDO}},right:{style:'dashed',color:{argb:TEXTO_TRANSFERIDO}}};
+          totalHorasLinha+=totalDia;
+          total70+=cel.horasOrigem.extra70; total100+=cel.horasOrigem.extra100;
+          cel.destinos.forEach(d=>{total70+=d.horasExtra70;total100+=d.horasExtra100;});
+        }else if(cel.tipo==='transferido_sem_confirmar'){
+          c.value=`TRANSFERIDO\n${cel.origem} → ? (não confirmado)`;
+          c.fill={type:'pattern',pattern:'solid',fgColor:{argb:COR_TRANSFERIDO}};
+          c.font={name:'Calibri',size:7.5,bold:true,color:{argb:TEXTO_TRANSFERIDO}};
+          c.border={top:{style:'dashed',color:{argb:TEXTO_TRANSFERIDO}},bottom:{style:'dashed',color:{argb:TEXTO_TRANSFERIDO}},left:{style:'dashed',color:{argb:TEXTO_TRANSFERIDO}},right:{style:'dashed',color:{argb:TEXTO_TRANSFERIDO}}};
+        }else if(cel.tipo==='saiu_cedo'){
+          const obrasTxtSC=cel.obras.length>1?cel.obras.map(o=>`${o.obra} (${o.horas.toFixed(1)}h)`).join(' + '):(cel.obras[0]?.obra||'');
+          c.value=`${calcularHorarioSimbolico(cel.horas)}\nSAIU MAIS CEDO\n${obrasTxtSC}`;
+          c.fill={type:'pattern',pattern:'solid',fgColor:{argb:COR_SAIU_CEDO}};
+          c.font={name:'Calibri',size:7.5,bold:true,color:{argb:TEXTO_SAIU_CEDO}};
+          totalHorasLinha+=cel.horas;
+        }else if(cel.tipo==='trabalhou'){
+          const totalDia=cel.horasNormais+cel.extra70+cel.extra100;
+          const obrasTxt=cel.obras.length>1?cel.obras.map(o=>`${o.obra} (${o.horas.toFixed(1)}h)`).join(' + '):(cel.obras[0]?.obra||'');
+          const ehFDS=ehSabadoOuDomingo(iso);
+          if(ehFDS||cel.ehFeriado){
+            const rotulo=cel.ehFeriado&&!ehFDS?'FERIADO':`H.E. ${cel.extra100>0?'100%':'70%'}`;
+            c.value=`${rotulo}\n${totalDia.toFixed(1)}h\n${obrasTxt}`;
+          }else{
+            c.value=`✓ ${calcularHorarioSimbolico(totalDia)}\n${obrasTxt}`;
+          }
+          c.fill={type:'pattern',pattern:'solid',fgColor:{argb:COR_TRABALHOU}};
+          c.font={name:'Calibri',size:7.5,bold:true,color:{argb:TEXTO_TRABALHOU}};
+          totalHorasLinha+=totalDia;
+          total70+=cel.extra70; total100+=cel.extra100;
+        }
+      });
+
+      const cE70=row.getCell(colExtra70); cE70.value=Number(total70.toFixed(1));
+      const cE100=row.getCell(colExtra100); cE100.value=Number(total100.toFixed(1));
+      const cTot=row.getCell(colResumoInicio); cTot.value=Number(totalHorasLinha.toFixed(1));
+      const cFal=row.getCell(colResumoInicio+1); cFal.value=totalFaltasLinha;
+      const cSemR=row.getCell(colResumoInicio+2); cSemR.value=totalSemRegLinha;
+      const cConf=row.getCell(colResumoInicio+3); cConf.value=totalConflitosLinha;
+      [cE70,cE100,cTot,cFal,cSemR,cConf].forEach(c=>{
+        c.font={name:'Calibri',size:9,bold:true,color:{argb:CINZA_TEXTO}};
+        c.alignment={horizontal:'center',vertical:'middle'};
+        c.border={top:{style:'thin',color:{argb:CINZA_BORDA}},bottom:{style:'thin',color:{argb:CINZA_BORDA}},left:{style:'thin',color:{argb:CINZA_BORDA}},right:{style:'thin',color:{argb:CINZA_BORDA}}};
+        c.fill={type:'pattern',pattern:'solid',fgColor:{argb:CINZA_CLARO}};
+      });
+      if(totalFaltasLinha>0) cFal.font={name:'Calibri',size:9,bold:true,color:{argb:TEXTO_FALTA}};
+      if(totalConflitosLinha>0) cConf.font={name:'Calibri',size:9,bold:true,color:{argb:TEXTO_CONFLITO}};
+
+      row.height=32;
+      rowNum++;
+    });
+
+    ws.views=[{state:'frozen',ySplit:4,xSplit:2}];
+  }
+
+  const buffer=await wb.xlsx.writeBuffer();
+  const blob=new Blob([buffer],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+  const agora=new Date();
+  const carimbo=`${agora.getFullYear()}-${String(agora.getMonth()+1).padStart(2,'0')}-${String(agora.getDate()).padStart(2,'0')}`;
+  const nomeArquivo=`Folha_de_Ponto_${meses.map(m=>NOMES_MESES_FOLHA_PONTO[Number(m.split('-')[1])]).join('_')}_${meses[0]?.split('-')[0]||agora.getFullYear()}_${carimbo}.xlsx`;
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url; a.download=nomeArquivo;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast(`📥 Folha de Ponto gerada — ${nomesOrdenados.length} funcionário(s), ${meses.length} mês(es).`,'#374151');
+  document.getElementById('folha-ponto-modal')?.classList.remove('show');
 }
 
 async function exportarBackupCompletoExcel(btn){
