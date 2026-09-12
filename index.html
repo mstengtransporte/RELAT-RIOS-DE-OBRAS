@@ -893,6 +893,8 @@ input.login-input,
 #novo-rdo-modal{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:9997;display:none;align-items:center;justify-content:center;padding:14px;backdrop-filter:blur(6px)}
 #novo-rdo-modal.show{display:flex}
 #duplicidade-obra-modal{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:9998;display:none;align-items:center;justify-content:center;padding:14px;backdrop-filter:blur(6px)}
+#folha-ponto-modal{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:9998;display:none;align-items:center;justify-content:center;padding:14px;backdrop-filter:blur(6px)}
+#folha-ponto-modal.show{display:flex}
 #duplicidade-obra-modal.show{display:flex}
 #extra-escopo-modal{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:9997;display:none;align-items:center;justify-content:center;padding:14px;backdrop-filter:blur(6px)}
 #extra-escopo-modal.show{display:flex}
@@ -9970,13 +9972,15 @@ function atualizarTotalMultiPDF(){
 // SELEÇÃO DE PERÍODO DO RELATÓRIO DE ABSENTEÍSMO
 // ============================================================
 // Abre a Folha de Ponto (conferência) — Admin-only. Já preenche o período com os
-// últimos 2 meses; a pessoa pode mudar manualmente no filtro se precisar de outro.
+// 3 últimos meses do calendário (o mês atual só vai até hoje, nunca até o fim do
+// mês, já que dias futuros não têm informação nenhuma pra mostrar) — a pessoa pode
+// mudar manualmente no filtro se precisar de outro período.
 function abrirFolhaPonto(){
   if(!exigirAdmin()) return;
   const hoje=new Date();
-  const doisMesesAtras=new Date(hoje.getFullYear(),hoje.getMonth()-2,hoje.getDate()+1);
+  const inicioTresMeses=new Date(hoje.getFullYear(),hoje.getMonth()-2,1);
   const fmt=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-  document.getElementById('folha-ponto-de').value=fmt(doisMesesAtras);
+  document.getElementById('folha-ponto-de').value=fmt(inicioTresMeses);
   document.getElementById('folha-ponto-ate').value=fmt(hoje);
   document.getElementById('folha-ponto-modal').classList.add('show');
 }
@@ -12293,8 +12297,12 @@ function processarDadosFolhaPonto(bruto){
 // em outro RDO do mesmo dia = contradição de verdade (as duas não podem ser
 // verdade ao mesmo tempo). TRANSFERIDO + hora real em outro RDO NÃO é conflito —
 // é confirmação (mostra origem → destino), porque transferido já pressupõe que a
-// pessoa foi trabalhar em outro lugar.
-function resolverCelulaFolhaPonto(lancamentos){
+// pessoa foi trabalhar em outro lugar. "lancamentosAmanha" é opcional — usado só
+// pra confirmar uma transferência que vira a virada do dia (marcada hoje, só
+// confirmada no RDO de amanhã); IMPORTANTE: nesse caso a hora de amanhã NUNCA é
+// somada aqui, ela já vai ser contada sozinha quando o próprio dia de amanhã for
+// resolvido — evita contar a mesma hora duas vezes no total do mês.
+function resolverCelulaFolhaPonto(lancamentos,lancamentosAmanha){
   if(!lancamentos||!lancamentos.length) return{tipo:'sem_registro'};
 
   const comHoras=lancamentos.filter(l=>!l.status&&(l.horasNormais+l.horasExtra70+l.horasExtra100)>0);
@@ -12323,6 +12331,15 @@ function resolverCelulaFolhaPonto(lancamentos){
     const confirmacoes=[...comHoras,...saiuCedo];
     if(confirmacoes.length||totalOrigem>0){
       return{tipo:'transferido_confirmado',origem:transferidos[0].obra,horasOrigem,destinos:confirmacoes};
+    }
+    // Sem confirmação no mesmo dia — tenta confirmar no dia SEGUINTE (transferência
+    // na virada do dia). Só mostra a informação aqui, NUNCA soma hora nenhuma —
+    // essas horas já serão contadas sozinhas quando o dia de amanhã for resolvido.
+    if(lancamentosAmanha&&lancamentosAmanha.length){
+      const comHorasAmanha=lancamentosAmanha.filter(l=>!l.status&&(l.horasNormais+l.horasExtra70+l.horasExtra100)>0);
+      if(comHorasAmanha.length){
+        return{tipo:'transferido_confirmado_amanha',origem:transferidos[0].obra,destinosAmanha:comHorasAmanha};
+      }
     }
     return{tipo:'transferido_sem_confirmar',origem:transferidos[0].obra};
   }
@@ -12440,11 +12457,11 @@ async function exportarFolhaPontoExcel(){
   nomesOrdenados.forEach(chave=>{
     const linha=matriz[chave];
     let totalFaltas=0,totalSemRegistro=0,totalConflitos=0,totalHoras=0;
-    todasDatasPeriodo.forEach(dt=>{
-      const cel=resolverCelulaFolhaPonto(linha.porData[dt]);
+    todasDatasPeriodo.forEach((dt,idxDt)=>{
+      const cel=resolverCelulaFolhaPonto(linha.porData[dt],linha.porData[todasDatasPeriodo[idxDt+1]]);
       if(cel.tipo==='falta') totalFaltas++;
       else if(cel.tipo==='conflito') totalConflitos++;
-      else if(cel.tipo==='sem_registro') totalSemRegistro++;
+      else if(cel.tipo==='sem_registro'||cel.tipo==='transferido_confirmado_amanha') totalSemRegistro++;
       else if(cel.tipo==='trabalhou') totalHoras+=cel.horasNormais+cel.extra70+cel.extra100;
       else if(cel.tipo==='saiu_cedo') totalHoras+=cel.horas;
       else if(cel.tipo==='transferido_confirmado') totalHoras+=cel.horasOrigem.normais+cel.horasOrigem.extra70+cel.horasOrigem.extra100+cel.destinos.reduce((s,d)=>s+d.horasNormais+d.horasExtra70+d.horasExtra100,0);
@@ -12522,8 +12539,8 @@ async function exportarFolhaPontoExcel(){
     });
     headerRow1.height=18; headerRow2.height=16;
 
-    ws.getColumn(colFuncionario).width=24;
-    ws.getColumn(colFuncao).width=16;
+    ws.getColumn(colFuncionario).width=28;
+    ws.getColumn(colFuncao).width=18;
     for(let i=0;i<diasMes.length;i++) ws.getColumn(colPrimeiroDia+i).width=13;
     ws.getColumn(colExtra70).width=10; ws.getColumn(colExtra100).width=10;
     for(let i=0;i<4;i++) ws.getColumn(colResumoInicio+i).width=12;
@@ -12537,25 +12554,37 @@ async function exportarFolhaPontoExcel(){
       [colFuncionario,colFuncao].forEach(col=>{
         const c=row.getCell(col);
         c.font={name:'Calibri',size:9.5,color:{argb:CINZA_TEXTO}};
-        c.alignment={horizontal:'left',vertical:'middle'};
+        c.alignment={horizontal:'left',vertical:'middle',wrapText:true};
         c.border={top:{style:'thin',color:{argb:CINZA_BORDA}},bottom:{style:'thin',color:{argb:CINZA_BORDA}},left:{style:'thin',color:{argb:CINZA_BORDA}},right:{style:'thin',color:{argb:CINZA_BORDA}}};
       });
 
       let total70=0,total100=0,totalHorasLinha=0,totalFaltasLinha=0,totalSemRegLinha=0,totalConflitosLinha=0;
+      // Rastreia a última obra "real" conhecida (dia trabalhado normal, sem status
+      // especial) e quantos dias seguidos ficaram "sem registro" desde então — usado
+      // só pra anotar, de forma discreta, quando a obra muda sem ninguém ter marcado
+      // "TRANSFERIDO" explicando. Nunca mexe em hora nenhuma, é só uma nota visual.
+      let ultimaObraConhecida=null,diasBuracoConsecutivos=0;
 
       diasMes.forEach((iso,idx)=>{
         const col=colPrimeiroDia+idx;
-        const cel=resolverCelulaFolhaPonto(linha.porData[iso]);
+        const cel=resolverCelulaFolhaPonto(linha.porData[iso],linha.porData[diasMes[idx+1]]);
         const c=row.getCell(col);
         c.alignment={horizontal:'center',vertical:'middle',wrapText:true};
         c.font={name:'Calibri',size:8,color:{argb:CINZA_TEXTO}};
-        c.border={top:{style:'thin',color:{argb:CINZA_BORDA}},bottom:{style:'thin',color:{argb:CINZA_BORDA}},left:{style:'thin',color:{argb:CINZA_BORDA}},right:{style:'thin',color:{argb:CINZA_BORDA}}};
+        // Sábado/domingo ganham uma borda mais forte na coluna inteira, pra separar
+        // visualmente dos dias de semana normal mesmo quando a célula está "sem
+        // registro" (que é o caso mais comum em fim de semana).
+        const ehFimDeSemanaCol=ehSabadoOuDomingo(iso);
+        c.border=ehFimDeSemanaCol
+          ?{top:{style:'medium',color:{argb:'FF64748B'}},bottom:{style:'medium',color:{argb:'FF64748B'}},left:{style:'medium',color:{argb:'FF64748B'}},right:{style:'medium',color:{argb:'FF64748B'}}}
+          :{top:{style:'thin',color:{argb:CINZA_BORDA}},bottom:{style:'thin',color:{argb:CINZA_BORDA}},left:{style:'thin',color:{argb:CINZA_BORDA}},right:{style:'thin',color:{argb:CINZA_BORDA}}};
 
         if(cel.tipo==='sem_registro'){
           c.value='sem registro';
           c.fill={type:'pattern',pattern:'solid',fgColor:{argb:COR_SEM_REGISTRO}};
           c.font={name:'Calibri',size:7.5,italic:true,color:{argb:TEXTO_SEM_REGISTRO}};
           totalSemRegLinha++;
+          diasBuracoConsecutivos++;
         }else if(cel.tipo==='falta'){
           c.value='FALTA';
           c.fill={type:'pattern',pattern:'solid',fgColor:{argb:COR_FALTA}};
@@ -12588,6 +12617,14 @@ async function exportarFolhaPontoExcel(){
           totalHorasLinha+=totalDia;
           total70+=cel.horasOrigem.extra70; total100+=cel.horasOrigem.extra100;
           cel.destinos.forEach(d=>{total70+=d.horasExtra70;total100+=d.horasExtra100;});
+        }else if(cel.tipo==='transferido_confirmado_amanha'){
+          // Confirmado só no RDO de amanhã — mostra a informação aqui, mas NUNCA soma
+          // hora nenhuma (essas horas já serão contadas sozinhas no dia de amanhã).
+          const destinosAmanha=cel.destinosAmanha.map(d=>d.obra).join(', ');
+          c.value=`TRANSFERIDO\n${cel.origem} → ${destinosAmanha}\n(confirmado amanhã)`;
+          c.fill={type:'pattern',pattern:'solid',fgColor:{argb:COR_TRANSFERIDO}};
+          c.font={name:'Calibri',size:7.5,bold:true,color:{argb:TEXTO_TRANSFERIDO}};
+          c.border={top:{style:'dashed',color:{argb:TEXTO_TRANSFERIDO}},bottom:{style:'dashed',color:{argb:TEXTO_TRANSFERIDO}},left:{style:'dashed',color:{argb:TEXTO_TRANSFERIDO}},right:{style:'dashed',color:{argb:TEXTO_TRANSFERIDO}}};
         }else if(cel.tipo==='transferido_sem_confirmar'){
           c.value=`TRANSFERIDO\n${cel.origem} → ? (não confirmado)`;
           c.fill={type:'pattern',pattern:'solid',fgColor:{argb:COR_TRANSFERIDO}};
@@ -12603,16 +12640,27 @@ async function exportarFolhaPontoExcel(){
           const totalDia=cel.horasNormais+cel.extra70+cel.extra100;
           const obrasTxt=cel.obras.length>1?cel.obras.map(o=>`${o.obra} (${o.horas.toFixed(1)}h)`).join(' + '):(cel.obras[0]?.obra||'');
           const ehFDS=ehSabadoOuDomingo(iso);
+          let notaTroca='';
+          // Detecção automática de troca de obra — só quando não tinha "TRANSFERIDO"
+          // explicando (esse caso já nem chega aqui, cai nos tipos de cima). Nunca
+          // mexe em hora nenhuma, é só uma nota visual a mais na própria célula.
+          const obraPrincipalHoje=cel.obras[0]?.obra||null;
+          if(ultimaObraConhecida&&obraPrincipalHoje&&ultimaObraConhecida!==obraPrincipalHoje){
+            notaTroca=diasBuracoConsecutivos>0
+              ?`\n⚠ veio de ${ultimaObraConhecida} (${diasBuracoConsecutivos}d sem registro)`
+              :`\n(veio de ${ultimaObraConhecida})`;
+          }
           if(ehFDS||cel.ehFeriado){
             const rotulo=cel.ehFeriado&&!ehFDS?'FERIADO':`H.E. ${cel.extra100>0?'100%':'70%'}`;
-            c.value=`${rotulo}\n${totalDia.toFixed(1)}h\n${obrasTxt}`;
+            c.value=`${rotulo}\n${totalDia.toFixed(1)}h\n${obrasTxt}${notaTroca}`;
           }else{
-            c.value=`✓ ${calcularHorarioSimbolico(totalDia)}\n${obrasTxt}`;
+            c.value=`✓ ${calcularHorarioSimbolico(totalDia)}\n${obrasTxt}${notaTroca}`;
           }
           c.fill={type:'pattern',pattern:'solid',fgColor:{argb:COR_TRABALHOU}};
           c.font={name:'Calibri',size:7.5,bold:true,color:{argb:TEXTO_TRABALHOU}};
           totalHorasLinha+=totalDia;
           total70+=cel.extra70; total100+=cel.extra100;
+          if(obraPrincipalHoje){ ultimaObraConhecida=obraPrincipalHoje; diasBuracoConsecutivos=0; }
         }
       });
 
