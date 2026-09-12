@@ -12354,6 +12354,14 @@ function resolverCelulaFolhaPonto(lancamentos,lancamentosAmanha){
     const obras=Object.keys(obrasAgrupadasSC).map(obra=>({obra,horas:obrasAgrupadasSC[obra]}));
     return{tipo:'saiu_cedo',horas:totalHoras,obras};
   }
+  // CORREÇÃO (após achado real): se não sobrou nenhum lançamento com hora de
+  // verdade (comHoras vazio), NUNCA pode virar "trabalhou" — isso escondia linhas
+  // com nome preenchido mas hora zerada atrás da cor azul de "tudo normal",
+  // mostrando um horário sem sentido (07:00–08:00, o cálculo de 0 hora). Vira
+  // alerta vermelho explícito, igual qualquer outro dia incompleto sem explicação.
+  if(!comHoras.length){
+    return{tipo:'incompleto_sem_explicacao',horas:0,obras:[]};
+  }
   const horasNormais=comHoras.reduce((s,l)=>s+l.horasNormais,0);
   const extra70=comHoras.reduce((s,l)=>s+l.horasExtra70,0);
   const extra100=comHoras.reduce((s,l)=>s+l.horasExtra100,0);
@@ -12461,7 +12469,7 @@ async function exportarFolhaPontoExcel(){
       const cel=resolverCelulaFolhaPonto(linha.porData[dt],linha.porData[todasDatasPeriodo[idxDt+1]]);
       if(cel.tipo==='falta') totalFaltas++;
       else if(cel.tipo==='conflito') totalConflitos++;
-      else if(cel.tipo==='sem_registro'||cel.tipo==='transferido_confirmado_amanha') totalSemRegistro++;
+      else if(cel.tipo==='sem_registro'||cel.tipo==='transferido_confirmado_amanha'||cel.tipo==='incompleto_sem_explicacao') totalSemRegistro++;
       else if(cel.tipo==='trabalhou') totalHoras+=cel.horasNormais+cel.extra70+cel.extra100;
       else if(cel.tipo==='saiu_cedo') totalHoras+=cel.horas;
       else if(cel.tipo==='transferido_confirmado') totalHoras+=cel.horasOrigem.normais+cel.horasOrigem.extra70+cel.horasOrigem.extra100+cel.destinos.reduce((s,d)=>s+d.horasNormais+d.horasExtra70+d.horasExtra100,0);
@@ -12503,9 +12511,20 @@ async function exportarFolhaPontoExcel(){
     titulo.alignment={horizontal:'center',vertical:'middle',wrapText:true};
     ws.getRow(1).height=22;
 
-    const headerRow1=ws.getRow(3),headerRow2=ws.getRow(4);
-    ws.mergeCells(3,colFuncionario,4,colFuncionario);
-    ws.mergeCells(3,colFuncao,4,colFuncao);
+    // Legenda — explica cada cor/símbolo pra qualquer pessoa entender a planilha
+    // de cara, sem precisar perguntar nem consultar outro documento.
+    ws.mergeCells(2,1,2,ultimaColuna);
+    const legenda=ws.getCell(2,1);
+    legenda.value='🔵 Trabalhou (dia completo)    🟠 Saiu Mais Cedo    🔴 Falta / Incompleto (sem explicação)    🟣 Transferido    ⚪ Sem Registro    ⚠️ Conflito entre RDOs — precisa investigar';
+    legenda.font={name:'Calibri',size:9,italic:true,color:{argb:CINZA_TEXTO}};
+    legenda.fill={type:'pattern',pattern:'solid',fgColor:{argb:CINZA_CLARO}};
+    legenda.alignment={horizontal:'center',vertical:'middle'};
+    legenda.border={bottom:{style:'medium',color:{argb:AZUL_MARINHO}}};
+    ws.getRow(2).height=17;
+
+    const headerRow1=ws.getRow(4),headerRow2=ws.getRow(5);
+    ws.mergeCells(4,colFuncionario,5,colFuncionario);
+    ws.mergeCells(4,colFuncao,5,colFuncao);
     const bordaHeader={top:{style:'thin',color:{argb:CINZA_BORDA}},bottom:{style:'thin',color:{argb:CINZA_BORDA}},left:{style:'thin',color:{argb:CINZA_BORDA}},right:{style:'thin',color:{argb:CINZA_BORDA}}};
     [[colFuncionario,'FUNCIONÁRIO'],[colFuncao,'FUNÇÃO']].forEach(([col,txt])=>{
       const c=headerRow1.getCell(col);
@@ -12530,7 +12549,7 @@ async function exportarFolhaPontoExcel(){
     [[colExtra70,'H.E. 70%'],[colExtra100,'H.E. 100%'],
       [colResumoInicio,'TOTAL HORAS'],[colResumoInicio+1,'FALTAS'],[colResumoInicio+2,'SEM REGISTRO'],[colResumoInicio+3,'CONFLITOS']
     ].forEach(([col,txt])=>{
-      ws.mergeCells(3,col,4,col);
+      ws.mergeCells(4,col,5,col);
       const c=headerRow1.getCell(col);
       c.value=txt; c.font={name:'Calibri',size:9,bold:true,color:{argb:BRANCO}};
       c.fill={type:'pattern',pattern:'solid',fgColor:{argb:AZUL_MARINHO}};
@@ -12545,17 +12564,19 @@ async function exportarFolhaPontoExcel(){
     ws.getColumn(colExtra70).width=10; ws.getColumn(colExtra100).width=10;
     for(let i=0;i<4;i++) ws.getColumn(colResumoInicio+i).width=12;
 
-    let rowNum=5;
-    nomesOrdenados.forEach(chave=>{
+    let rowNum=6;
+    nomesOrdenados.forEach((chave,indiceLinha)=>{
       const linha=matriz[chave];
       const row=ws.getRow(rowNum);
       row.getCell(colFuncionario).value=linha.nomeExibicao;
       row.getCell(colFuncao).value=linha.funcao;
+      const corZebrada=indiceLinha%2===0?'FFFFFFFF':'FFF6F8FB';
       [colFuncionario,colFuncao].forEach(col=>{
         const c=row.getCell(col);
         c.font={name:'Calibri',size:9.5,color:{argb:CINZA_TEXTO}};
         c.alignment={horizontal:'left',vertical:'middle',wrapText:true};
         c.border={top:{style:'thin',color:{argb:CINZA_BORDA}},bottom:{style:'thin',color:{argb:CINZA_BORDA}},left:{style:'thin',color:{argb:CINZA_BORDA}},right:{style:'thin',color:{argb:CINZA_BORDA}}};
+        c.fill={type:'pattern',pattern:'solid',fgColor:{argb:corZebrada}};
       });
 
       let total70=0,total100=0,totalHorasLinha=0,totalFaltasLinha=0,totalSemRegLinha=0,totalConflitosLinha=0;
@@ -12636,6 +12657,15 @@ async function exportarFolhaPontoExcel(){
           c.fill={type:'pattern',pattern:'solid',fgColor:{argb:COR_SAIU_CEDO}};
           c.font={name:'Calibri',size:7.5,bold:true,color:{argb:TEXTO_SAIU_CEDO}};
           totalHorasLinha+=cel.horas;
+        }else if(cel.tipo==='incompleto_sem_explicacao'){
+          // Linha com nome preenchido mas SEM nenhuma hora real e SEM nenhum status
+          // (falta/saiu cedo/transferido) explicando — achado real: isso existia
+          // escondido atrás da cor de "trabalhou normal", mostrando um horário sem
+          // sentido (07:00–08:00). Agora fica em vermelho, chamando atenção de verdade.
+          c.value=`⚠ 0,0h\nSEM EXPLICAÇÃO`;
+          c.fill={type:'pattern',pattern:'solid',fgColor:{argb:COR_FALTA}};
+          c.font={name:'Calibri',size:8,bold:true,color:{argb:TEXTO_FALTA}};
+          c.border={top:{style:'thick',color:{argb:TEXTO_FALTA}},bottom:{style:'thick',color:{argb:TEXTO_FALTA}},left:{style:'thick',color:{argb:TEXTO_FALTA}},right:{style:'thick',color:{argb:TEXTO_FALTA}}};
         }else if(cel.tipo==='trabalhou'){
           const totalDia=cel.horasNormais+cel.extra70+cel.extra100;
           const obrasTxt=cel.obras.length>1?cel.obras.map(o=>`${o.obra} (${o.horas.toFixed(1)}h)`).join(' + '):(cel.obras[0]?.obra||'');
@@ -12650,14 +12680,26 @@ async function exportarFolhaPontoExcel(){
               ?`\n⚠ veio de ${ultimaObraConhecida} (${diasBuracoConsecutivos}d sem registro)`
               :`\n(veio de ${ultimaObraConhecida})`;
           }
+          // NOVO: dia de semana normal (nunca fim de semana/feriado, que não seguem
+          // a expectativa de 9h) com MENOS de 9h e SEM nenhum status explicando —
+          // vira vermelho, pra chamar atenção de verdade, em vez de se camuflar na
+          // mesma cor azul de um dia completo.
+          const diaIncompleto=!ehFDS&&!cel.ehFeriado&&totalDia<9;
           if(ehFDS||cel.ehFeriado){
             const rotulo=cel.ehFeriado&&!ehFDS?'FERIADO':`H.E. ${cel.extra100>0?'100%':'70%'}`;
             c.value=`${rotulo}\n${totalDia.toFixed(1)}h\n${obrasTxt}${notaTroca}`;
+          }else if(diaIncompleto){
+            c.value=`⚠ ${totalDia.toFixed(1)}h (INCOMPLETO)\n${obrasTxt}${notaTroca}`;
           }else{
             c.value=`✓ ${calcularHorarioSimbolico(totalDia)}\n${obrasTxt}${notaTroca}`;
           }
-          c.fill={type:'pattern',pattern:'solid',fgColor:{argb:COR_TRABALHOU}};
-          c.font={name:'Calibri',size:7.5,bold:true,color:{argb:TEXTO_TRABALHOU}};
+          if(diaIncompleto){
+            c.fill={type:'pattern',pattern:'solid',fgColor:{argb:COR_FALTA}};
+            c.font={name:'Calibri',size:7.5,bold:true,color:{argb:TEXTO_FALTA}};
+          }else{
+            c.fill={type:'pattern',pattern:'solid',fgColor:{argb:COR_TRABALHOU}};
+            c.font={name:'Calibri',size:7.5,bold:true,color:{argb:TEXTO_TRABALHOU}};
+          }
           totalHorasLinha+=totalDia;
           total70+=cel.extra70; total100+=cel.extra100;
           if(obraPrincipalHoje){ ultimaObraConhecida=obraPrincipalHoje; diasBuracoConsecutivos=0; }
@@ -12683,7 +12725,7 @@ async function exportarFolhaPontoExcel(){
       rowNum++;
     });
 
-    ws.views=[{state:'frozen',ySplit:4,xSplit:2}];
+    ws.views=[{state:'frozen',ySplit:5,xSplit:2}];
   }
 
   const buffer=await wb.xlsx.writeBuffer();
