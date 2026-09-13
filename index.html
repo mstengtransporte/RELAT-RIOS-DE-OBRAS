@@ -12449,6 +12449,14 @@ async function exportarFolhaPontoExcel(){
   tituloResumo.alignment={horizontal:'center',vertical:'middle',wrapText:true};
   wsResumo.getRow(1).height=30;
 
+  wsResumo.mergeCells(2,1,2,6);
+  const legendaResumo=wsResumo.getCell(2,1);
+  legendaResumo.value='Faltas = ausência declarada  •  Sem Registro = nenhum RDO lançou a pessoa naquele dia  •  Conflitos = informação contraditória entre RDOs diferentes, precisa investigar';
+  legendaResumo.font={name:'Times New Roman',size:8.5,italic:true,color:{argb:CINZA_TEXTO}};
+  legendaResumo.fill={type:'pattern',pattern:'solid',fgColor:{argb:CINZA_CLARO}};
+  legendaResumo.alignment={horizontal:'center',vertical:'middle',wrapText:true};
+  wsResumo.getRow(2).height=17;
+
   const colunasResumo=['FUNCIONÁRIO','FUNÇÃO','TOTAL FALTAS','TOTAL SEM REGISTRO','TOTAL CONFLITOS','TOTAL HORAS NO PERÍODO'];
   const headerResumo=wsResumo.getRow(3);
   colunasResumo.forEach((t,i)=>{
@@ -12479,7 +12487,7 @@ async function exportarFolhaPontoExcel(){
     vals.forEach((v,i)=>{
       const c=row.getCell(i+1);
       c.value=v;
-      c.font={name:'Times New Roman',size:10,color:{argb:CINZA_TEXTO}};
+      c.font={name:'Times New Roman',size:10,bold:(i===0||i===1),color:{argb:CINZA_TEXTO}};
       c.alignment={horizontal:(i===0||i===1)?'left':'center',vertical:'middle'};
       c.border={top:{style:'thin',color:{argb:CINZA_BORDA}},bottom:{style:'thin',color:{argb:CINZA_BORDA}},left:{style:'thin',color:{argb:CINZA_BORDA}},right:{style:'thin',color:{argb:CINZA_BORDA}}};
       c.fill={type:'pattern',pattern:'solid',fgColor:{argb:rNum%2===0?CINZA_CLARO:BRANCO}};
@@ -12511,16 +12519,34 @@ async function exportarFolhaPontoExcel(){
     titulo.alignment={horizontal:'center',vertical:'middle',wrapText:true};
     ws.getRow(1).height=22;
 
-    // Legenda — explica cada cor/símbolo pra qualquer pessoa entender a planilha
-    // de cara, sem precisar perguntar nem consultar outro documento.
-    ws.mergeCells(2,1,2,ultimaColuna);
-    const legenda=ws.getCell(2,1);
-    legenda.value='🔵 Trabalhou (dia completo)    🟠 Saiu Mais Cedo    🔴 Falta / Incompleto (sem explicação)    🟣 Transferido    ⚪ Sem Registro    ⚠️ Conflito entre RDOs — precisa investigar';
-    legenda.font={name:'Times New Roman',size:9,italic:true,color:{argb:CINZA_TEXTO}};
-    legenda.fill={type:'pattern',pattern:'solid',fgColor:{argb:CINZA_CLARO}};
-    legenda.alignment={horizontal:'center',vertical:'middle'};
-    legenda.border={bottom:{style:'medium',color:{argb:AZUL_MARINHO}}};
+    // Legenda — explica cada cor/status com um quadradinho da cor de verdade (a mesma
+    // usada nas células), em vez de emoji — funciona igual em qualquer programa que
+    // abrir o arquivo, sem depender de fonte nenhuma reconhecer símbolo colorido.
     ws.getRow(2).height=17;
+    const legendaItens=[
+      {cor:COR_TRABALHOU,texto:'Trabalhou'},
+      {cor:COR_SAIU_CEDO,texto:'Saiu Mais Cedo'},
+      {cor:COR_FALTA,texto:'Falta / Incompleto'},
+      {cor:COR_TRANSFERIDO,texto:'Transferido'},
+      {cor:COR_SEM_REGISTRO,texto:'Sem Registro'},
+      {cor:COR_CONFLITO,texto:'Conflito — investigar'}
+    ];
+    let colLegenda=1;
+    legendaItens.forEach(item=>{
+      const swatch=ws.getCell(2,colLegenda);
+      swatch.fill={type:'pattern',pattern:'solid',fgColor:{argb:item.cor}};
+      swatch.border={top:{style:'thin',color:{argb:CINZA_BORDA}},bottom:{style:'thin',color:{argb:CINZA_BORDA}},left:{style:'thin',color:{argb:CINZA_BORDA}},right:{style:'thin',color:{argb:CINZA_BORDA}}};
+      colLegenda++;
+      const largura=Math.max(2,Math.ceil(item.texto.length/9));
+      const colFimTexto=colLegenda+largura-1;
+      if(colFimTexto>colLegenda) ws.mergeCells(2,colLegenda,2,colFimTexto);
+      const label=ws.getCell(2,colLegenda);
+      label.value=item.texto;
+      label.font={name:'Times New Roman',size:8.5,italic:true,color:{argb:CINZA_TEXTO}};
+      label.fill={type:'pattern',pattern:'solid',fgColor:{argb:CINZA_CLARO}};
+      label.alignment={horizontal:'left',vertical:'middle'};
+      colLegenda=colFimTexto+1;
+    });
 
     const headerRow1=ws.getRow(4),headerRow2=ws.getRow(5);
     ws.mergeCells(4,colFuncionario,5,colFuncionario);
@@ -12573,7 +12599,7 @@ async function exportarFolhaPontoExcel(){
       const corZebrada=indiceLinha%2===0?'FFFFFFFF':'FFF6F8FB';
       [colFuncionario,colFuncao].forEach(col=>{
         const c=row.getCell(col);
-        c.font={name:'Times New Roman',size:9.5,color:{argb:CINZA_TEXTO}};
+        c.font={name:'Times New Roman',size:9.5,bold:true,color:{argb:CINZA_TEXTO}};
         c.alignment={horizontal:'left',vertical:'middle',wrapText:true};
         c.border={top:{style:'thin',color:{argb:CINZA_BORDA}},bottom:{style:'thin',color:{argb:CINZA_BORDA}},left:{style:'thin',color:{argb:CINZA_BORDA}},right:{style:'thin',color:{argb:CINZA_BORDA}}};
         c.fill={type:'pattern',pattern:'solid',fgColor:{argb:corZebrada}};
@@ -12614,7 +12640,7 @@ async function exportarFolhaPontoExcel(){
         }else if(cel.tipo==='conflito'){
           const dFalta=cel.faltas.map(f=>f.obra).join(', ');
           const dOutro=cel.outros.map(o=>o.obra).join(', ');
-          c.value=`⚠️ CONFLITO\nFalta: ${dFalta}\nOutro: ${dOutro}`;
+          c.value=`CONFLITO\nFalta: ${dFalta}\nOutro: ${dOutro}`;
           c.fill={type:'pattern',pattern:'solid',fgColor:{argb:COR_CONFLITO}};
           c.font={name:'Times New Roman',size:7.5,bold:true,color:{argb:TEXTO_CONFLITO}};
           c.border={top:{style:'thick',color:{argb:TEXTO_CONFLITO}},bottom:{style:'thick',color:{argb:TEXTO_CONFLITO}},left:{style:'thick',color:{argb:TEXTO_CONFLITO}},right:{style:'thick',color:{argb:TEXTO_CONFLITO}}};
@@ -12634,7 +12660,7 @@ async function exportarFolhaPontoExcel(){
           c.value=`TRANSFERIDO\n${linhaDetalhe}\n${calcularHorarioSimbolico(totalDia)}`;
           c.fill={type:'pattern',pattern:'solid',fgColor:{argb:COR_TRANSFERIDO}};
           c.font={name:'Times New Roman',size:7.5,bold:true,color:{argb:TEXTO_TRANSFERIDO}};
-          c.border={top:{style:'dashed',color:{argb:TEXTO_TRANSFERIDO}},bottom:{style:'dashed',color:{argb:TEXTO_TRANSFERIDO}},left:{style:'dashed',color:{argb:TEXTO_TRANSFERIDO}},right:{style:'dashed',color:{argb:TEXTO_TRANSFERIDO}}};
+          c.border={top:{style:'mediumDashed',color:{argb:TEXTO_TRANSFERIDO}},bottom:{style:'mediumDashed',color:{argb:TEXTO_TRANSFERIDO}},left:{style:'mediumDashed',color:{argb:TEXTO_TRANSFERIDO}},right:{style:'mediumDashed',color:{argb:TEXTO_TRANSFERIDO}}};
           totalHorasLinha+=totalDia;
           total70+=cel.horasOrigem.extra70; total100+=cel.horasOrigem.extra100;
           cel.destinos.forEach(d=>{total70+=d.horasExtra70;total100+=d.horasExtra100;});
@@ -12645,12 +12671,12 @@ async function exportarFolhaPontoExcel(){
           c.value=`TRANSFERIDO\n${cel.origem} → ${destinosAmanha}\n(confirmado amanhã)`;
           c.fill={type:'pattern',pattern:'solid',fgColor:{argb:COR_TRANSFERIDO}};
           c.font={name:'Times New Roman',size:7.5,bold:true,color:{argb:TEXTO_TRANSFERIDO}};
-          c.border={top:{style:'dashed',color:{argb:TEXTO_TRANSFERIDO}},bottom:{style:'dashed',color:{argb:TEXTO_TRANSFERIDO}},left:{style:'dashed',color:{argb:TEXTO_TRANSFERIDO}},right:{style:'dashed',color:{argb:TEXTO_TRANSFERIDO}}};
+          c.border={top:{style:'mediumDashed',color:{argb:TEXTO_TRANSFERIDO}},bottom:{style:'mediumDashed',color:{argb:TEXTO_TRANSFERIDO}},left:{style:'mediumDashed',color:{argb:TEXTO_TRANSFERIDO}},right:{style:'mediumDashed',color:{argb:TEXTO_TRANSFERIDO}}};
         }else if(cel.tipo==='transferido_sem_confirmar'){
           c.value=`TRANSFERIDO\n${cel.origem} → ? (não confirmado)`;
           c.fill={type:'pattern',pattern:'solid',fgColor:{argb:COR_TRANSFERIDO}};
           c.font={name:'Times New Roman',size:7.5,bold:true,color:{argb:TEXTO_TRANSFERIDO}};
-          c.border={top:{style:'dashed',color:{argb:TEXTO_TRANSFERIDO}},bottom:{style:'dashed',color:{argb:TEXTO_TRANSFERIDO}},left:{style:'dashed',color:{argb:TEXTO_TRANSFERIDO}},right:{style:'dashed',color:{argb:TEXTO_TRANSFERIDO}}};
+          c.border={top:{style:'mediumDashed',color:{argb:TEXTO_TRANSFERIDO}},bottom:{style:'mediumDashed',color:{argb:TEXTO_TRANSFERIDO}},left:{style:'mediumDashed',color:{argb:TEXTO_TRANSFERIDO}},right:{style:'mediumDashed',color:{argb:TEXTO_TRANSFERIDO}}};
         }else if(cel.tipo==='saiu_cedo'){
           const obrasTxtSC=cel.obras.length>1?cel.obras.map(o=>`${o.obra} (${o.horas.toFixed(1)}h)`).join(' + '):(cel.obras[0]?.obra||'');
           c.value=`${calcularHorarioSimbolico(cel.horas)}\nSAIU MAIS CEDO\n${obrasTxtSC}`;
