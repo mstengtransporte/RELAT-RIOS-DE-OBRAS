@@ -12444,7 +12444,7 @@ async function exportarFolhaPontoExcel(){
   wsResumo.mergeCells(1,1,1,6);
   const tituloResumo=wsResumo.getCell(1,1);
   tituloResumo.value='FOLHA DE PONTO — RESUMO GERAL — USO INTERNO, FERRAMENTA DE CONFERÊNCIA (NÃO SUBSTITUI O RELÓGIO DE PONTO OFICIAL)';
-  tituloResumo.font={name:'Calibri',size:11,bold:true,color:{argb:BRANCO}};
+  tituloResumo.font={name:'Times New Roman',size:11,bold:true,color:{argb:BRANCO}};
   tituloResumo.fill={type:'pattern',pattern:'solid',fgColor:{argb:AZUL_MARINHO}};
   tituloResumo.alignment={horizontal:'center',vertical:'middle',wrapText:true};
   wsResumo.getRow(1).height=30;
@@ -12453,7 +12453,7 @@ async function exportarFolhaPontoExcel(){
   const headerResumo=wsResumo.getRow(3);
   colunasResumo.forEach((t,i)=>{
     const c=headerResumo.getCell(i+1);
-    c.value=t; c.font={name:'Calibri',size:10.5,bold:true,color:{argb:BRANCO}};
+    c.value=t; c.font={name:'Times New Roman',size:10.5,bold:true,color:{argb:BRANCO}};
     c.fill={type:'pattern',pattern:'solid',fgColor:{argb:AZUL_MARINHO}};
     c.alignment={horizontal:'center',vertical:'middle',wrapText:true};
     c.border={top:{style:'thin',color:{argb:CINZA_BORDA}},bottom:{style:'thin',color:{argb:CINZA_BORDA}},left:{style:'thin',color:{argb:CINZA_BORDA}},right:{style:'thin',color:{argb:CINZA_BORDA}}};
@@ -12479,13 +12479,13 @@ async function exportarFolhaPontoExcel(){
     vals.forEach((v,i)=>{
       const c=row.getCell(i+1);
       c.value=v;
-      c.font={name:'Calibri',size:10,color:{argb:CINZA_TEXTO}};
+      c.font={name:'Times New Roman',size:10,color:{argb:CINZA_TEXTO}};
       c.alignment={horizontal:(i===0||i===1)?'left':'center',vertical:'middle'};
       c.border={top:{style:'thin',color:{argb:CINZA_BORDA}},bottom:{style:'thin',color:{argb:CINZA_BORDA}},left:{style:'thin',color:{argb:CINZA_BORDA}},right:{style:'thin',color:{argb:CINZA_BORDA}}};
       c.fill={type:'pattern',pattern:'solid',fgColor:{argb:rNum%2===0?CINZA_CLARO:BRANCO}};
     });
-    if(totalConflitos>0) row.getCell(5).font={name:'Calibri',size:10,bold:true,color:{argb:TEXTO_CONFLITO}};
-    if(totalFaltas>0) row.getCell(3).font={name:'Calibri',size:10,bold:true,color:{argb:TEXTO_FALTA}};
+    if(totalConflitos>0) row.getCell(5).font={name:'Times New Roman',size:10,bold:true,color:{argb:TEXTO_CONFLITO}};
+    if(totalFaltas>0) row.getCell(3).font={name:'Times New Roman',size:10,bold:true,color:{argb:TEXTO_FALTA}};
     rNum++;
   });
   wsResumo.views=[{state:'frozen',ySplit:3,xSplit:0}];
@@ -12506,7 +12506,7 @@ async function exportarFolhaPontoExcel(){
     ws.mergeCells(1,1,1,ultimaColuna);
     const titulo=ws.getCell(1,1);
     titulo.value=`FOLHA DE PONTO — ${nomeAba.toUpperCase()} — USO INTERNO, FERRAMENTA DE CONFERÊNCIA (NÃO SUBSTITUI O RELÓGIO DE PONTO OFICIAL)`;
-    titulo.font={name:'Calibri',size:10,bold:true,color:{argb:BRANCO}};
+    titulo.font={name:'Times New Roman',size:10,bold:true,color:{argb:BRANCO}};
     titulo.fill={type:'pattern',pattern:'solid',fgColor:{argb:AZUL_MARINHO}};
     titulo.alignment={horizontal:'center',vertical:'middle',wrapText:true};
     ws.getRow(1).height=22;
@@ -12516,7 +12516,7 @@ async function exportarFolhaPontoExcel(){
     ws.mergeCells(2,1,2,ultimaColuna);
     const legenda=ws.getCell(2,1);
     legenda.value='🔵 Trabalhou (dia completo)    🟠 Saiu Mais Cedo    🔴 Falta / Incompleto (sem explicação)    🟣 Transferido    ⚪ Sem Registro    ⚠️ Conflito entre RDOs — precisa investigar';
-    legenda.font={name:'Calibri',size:9,italic:true,color:{argb:CINZA_TEXTO}};
+    legenda.font={name:'Times New Roman',size:9,italic:true,color:{argb:CINZA_TEXTO}};
     legenda.fill={type:'pattern',pattern:'solid',fgColor:{argb:CINZA_CLARO}};
     legenda.alignment={horizontal:'center',vertical:'middle'};
     legenda.border={bottom:{style:'medium',color:{argb:AZUL_MARINHO}}};
@@ -12528,7 +12528,7 @@ async function exportarFolhaPontoExcel(){
     const bordaHeader={top:{style:'thin',color:{argb:CINZA_BORDA}},bottom:{style:'thin',color:{argb:CINZA_BORDA}},left:{style:'thin',color:{argb:CINZA_BORDA}},right:{style:'thin',color:{argb:CINZA_BORDA}}};
     [[colFuncionario,'FUNCIONÁRIO'],[colFuncao,'FUNÇÃO']].forEach(([col,txt])=>{
       const c=headerRow1.getCell(col);
-      c.value=txt; c.font={name:'Calibri',size:10,bold:true,color:{argb:BRANCO}};
+      c.value=txt; c.font={name:'Times New Roman',size:10,bold:true,color:{argb:BRANCO}};
       c.fill={type:'pattern',pattern:'solid',fgColor:{argb:AZUL_MARINHO}};
       c.alignment={horizontal:'center',vertical:'middle'};
       c.border=bordaHeader;
@@ -12540,7 +12540,7 @@ async function exportarFolhaPontoExcel(){
       const c2=headerRow2.getCell(col); c2.value=DIAS_SEMANA_ABREV[dt.getDay()];
       const fimDeSemana=dt.getDay()===0||dt.getDay()===6;
       [c1,c2].forEach(c=>{
-        c.font={name:'Calibri',size:9,bold:true,color:{argb:BRANCO}};
+        c.font={name:'Times New Roman',size:9,bold:true,color:{argb:BRANCO}};
         c.fill={type:'pattern',pattern:'solid',fgColor:{argb:fimDeSemana?'FF475569':AZUL_MARINHO}};
         c.alignment={horizontal:'center',vertical:'middle'};
         c.border=bordaHeader;
@@ -12551,7 +12551,7 @@ async function exportarFolhaPontoExcel(){
     ].forEach(([col,txt])=>{
       ws.mergeCells(4,col,5,col);
       const c=headerRow1.getCell(col);
-      c.value=txt; c.font={name:'Calibri',size:9,bold:true,color:{argb:BRANCO}};
+      c.value=txt; c.font={name:'Times New Roman',size:9,bold:true,color:{argb:BRANCO}};
       c.fill={type:'pattern',pattern:'solid',fgColor:{argb:AZUL_MARINHO}};
       c.alignment={horizontal:'center',vertical:'middle',wrapText:true};
       c.border=bordaHeader;
@@ -12573,7 +12573,7 @@ async function exportarFolhaPontoExcel(){
       const corZebrada=indiceLinha%2===0?'FFFFFFFF':'FFF6F8FB';
       [colFuncionario,colFuncao].forEach(col=>{
         const c=row.getCell(col);
-        c.font={name:'Calibri',size:9.5,color:{argb:CINZA_TEXTO}};
+        c.font={name:'Times New Roman',size:9.5,color:{argb:CINZA_TEXTO}};
         c.alignment={horizontal:'left',vertical:'middle',wrapText:true};
         c.border={top:{style:'thin',color:{argb:CINZA_BORDA}},bottom:{style:'thin',color:{argb:CINZA_BORDA}},left:{style:'thin',color:{argb:CINZA_BORDA}},right:{style:'thin',color:{argb:CINZA_BORDA}}};
         c.fill={type:'pattern',pattern:'solid',fgColor:{argb:corZebrada}};
@@ -12591,7 +12591,7 @@ async function exportarFolhaPontoExcel(){
         const cel=resolverCelulaFolhaPonto(linha.porData[iso],linha.porData[diasMes[idx+1]]);
         const c=row.getCell(col);
         c.alignment={horizontal:'center',vertical:'middle',wrapText:true};
-        c.font={name:'Calibri',size:8,color:{argb:CINZA_TEXTO}};
+        c.font={name:'Times New Roman',size:8,color:{argb:CINZA_TEXTO}};
         // Sábado/domingo ganham uma borda mais forte na coluna inteira, pra separar
         // visualmente dos dias de semana normal mesmo quando a célula está "sem
         // registro" (que é o caso mais comum em fim de semana).
@@ -12603,20 +12603,20 @@ async function exportarFolhaPontoExcel(){
         if(cel.tipo==='sem_registro'){
           c.value='sem registro';
           c.fill={type:'pattern',pattern:'solid',fgColor:{argb:COR_SEM_REGISTRO}};
-          c.font={name:'Calibri',size:7.5,italic:true,color:{argb:TEXTO_SEM_REGISTRO}};
+          c.font={name:'Times New Roman',size:7.5,italic:true,color:{argb:TEXTO_SEM_REGISTRO}};
           totalSemRegLinha++;
           diasBuracoConsecutivos++;
         }else if(cel.tipo==='falta'){
           c.value='FALTA';
           c.fill={type:'pattern',pattern:'solid',fgColor:{argb:COR_FALTA}};
-          c.font={name:'Calibri',size:8.5,bold:true,color:{argb:TEXTO_FALTA}};
+          c.font={name:'Times New Roman',size:8.5,bold:true,color:{argb:TEXTO_FALTA}};
           totalFaltasLinha++;
         }else if(cel.tipo==='conflito'){
           const dFalta=cel.faltas.map(f=>f.obra).join(', ');
           const dOutro=cel.outros.map(o=>o.obra).join(', ');
           c.value=`⚠️ CONFLITO\nFalta: ${dFalta}\nOutro: ${dOutro}`;
           c.fill={type:'pattern',pattern:'solid',fgColor:{argb:COR_CONFLITO}};
-          c.font={name:'Calibri',size:7.5,bold:true,color:{argb:TEXTO_CONFLITO}};
+          c.font={name:'Times New Roman',size:7.5,bold:true,color:{argb:TEXTO_CONFLITO}};
           c.border={top:{style:'thick',color:{argb:TEXTO_CONFLITO}},bottom:{style:'thick',color:{argb:TEXTO_CONFLITO}},left:{style:'thick',color:{argb:TEXTO_CONFLITO}},right:{style:'thick',color:{argb:TEXTO_CONFLITO}}};
           totalConflitosLinha++;
         }else if(cel.tipo==='transferido_confirmado'){
@@ -12633,7 +12633,7 @@ async function exportarFolhaPontoExcel(){
           }
           c.value=`TRANSFERIDO\n${linhaDetalhe}\n${calcularHorarioSimbolico(totalDia)}`;
           c.fill={type:'pattern',pattern:'solid',fgColor:{argb:COR_TRANSFERIDO}};
-          c.font={name:'Calibri',size:7.5,bold:true,color:{argb:TEXTO_TRANSFERIDO}};
+          c.font={name:'Times New Roman',size:7.5,bold:true,color:{argb:TEXTO_TRANSFERIDO}};
           c.border={top:{style:'dashed',color:{argb:TEXTO_TRANSFERIDO}},bottom:{style:'dashed',color:{argb:TEXTO_TRANSFERIDO}},left:{style:'dashed',color:{argb:TEXTO_TRANSFERIDO}},right:{style:'dashed',color:{argb:TEXTO_TRANSFERIDO}}};
           totalHorasLinha+=totalDia;
           total70+=cel.horasOrigem.extra70; total100+=cel.horasOrigem.extra100;
@@ -12644,18 +12644,18 @@ async function exportarFolhaPontoExcel(){
           const destinosAmanha=cel.destinosAmanha.map(d=>d.obra).join(', ');
           c.value=`TRANSFERIDO\n${cel.origem} → ${destinosAmanha}\n(confirmado amanhã)`;
           c.fill={type:'pattern',pattern:'solid',fgColor:{argb:COR_TRANSFERIDO}};
-          c.font={name:'Calibri',size:7.5,bold:true,color:{argb:TEXTO_TRANSFERIDO}};
+          c.font={name:'Times New Roman',size:7.5,bold:true,color:{argb:TEXTO_TRANSFERIDO}};
           c.border={top:{style:'dashed',color:{argb:TEXTO_TRANSFERIDO}},bottom:{style:'dashed',color:{argb:TEXTO_TRANSFERIDO}},left:{style:'dashed',color:{argb:TEXTO_TRANSFERIDO}},right:{style:'dashed',color:{argb:TEXTO_TRANSFERIDO}}};
         }else if(cel.tipo==='transferido_sem_confirmar'){
           c.value=`TRANSFERIDO\n${cel.origem} → ? (não confirmado)`;
           c.fill={type:'pattern',pattern:'solid',fgColor:{argb:COR_TRANSFERIDO}};
-          c.font={name:'Calibri',size:7.5,bold:true,color:{argb:TEXTO_TRANSFERIDO}};
+          c.font={name:'Times New Roman',size:7.5,bold:true,color:{argb:TEXTO_TRANSFERIDO}};
           c.border={top:{style:'dashed',color:{argb:TEXTO_TRANSFERIDO}},bottom:{style:'dashed',color:{argb:TEXTO_TRANSFERIDO}},left:{style:'dashed',color:{argb:TEXTO_TRANSFERIDO}},right:{style:'dashed',color:{argb:TEXTO_TRANSFERIDO}}};
         }else if(cel.tipo==='saiu_cedo'){
           const obrasTxtSC=cel.obras.length>1?cel.obras.map(o=>`${o.obra} (${o.horas.toFixed(1)}h)`).join(' + '):(cel.obras[0]?.obra||'');
           c.value=`${calcularHorarioSimbolico(cel.horas)}\nSAIU MAIS CEDO\n${obrasTxtSC}`;
           c.fill={type:'pattern',pattern:'solid',fgColor:{argb:COR_SAIU_CEDO}};
-          c.font={name:'Calibri',size:7.5,bold:true,color:{argb:TEXTO_SAIU_CEDO}};
+          c.font={name:'Times New Roman',size:7.5,bold:true,color:{argb:TEXTO_SAIU_CEDO}};
           totalHorasLinha+=cel.horas;
         }else if(cel.tipo==='incompleto_sem_explicacao'){
           // Linha com nome preenchido mas SEM nenhuma hora real e SEM nenhum status
@@ -12664,7 +12664,7 @@ async function exportarFolhaPontoExcel(){
           // sentido (07:00–08:00). Agora fica em vermelho, chamando atenção de verdade.
           c.value=`⚠ 0,0h\nSEM EXPLICAÇÃO`;
           c.fill={type:'pattern',pattern:'solid',fgColor:{argb:COR_FALTA}};
-          c.font={name:'Calibri',size:8,bold:true,color:{argb:TEXTO_FALTA}};
+          c.font={name:'Times New Roman',size:8,bold:true,color:{argb:TEXTO_FALTA}};
           c.border={top:{style:'thick',color:{argb:TEXTO_FALTA}},bottom:{style:'thick',color:{argb:TEXTO_FALTA}},left:{style:'thick',color:{argb:TEXTO_FALTA}},right:{style:'thick',color:{argb:TEXTO_FALTA}}};
         }else if(cel.tipo==='trabalhou'){
           const totalDia=cel.horasNormais+cel.extra70+cel.extra100;
@@ -12695,10 +12695,10 @@ async function exportarFolhaPontoExcel(){
           }
           if(diaIncompleto){
             c.fill={type:'pattern',pattern:'solid',fgColor:{argb:COR_FALTA}};
-            c.font={name:'Calibri',size:7.5,bold:true,color:{argb:TEXTO_FALTA}};
+            c.font={name:'Times New Roman',size:7.5,bold:true,color:{argb:TEXTO_FALTA}};
           }else{
             c.fill={type:'pattern',pattern:'solid',fgColor:{argb:COR_TRABALHOU}};
-            c.font={name:'Calibri',size:7.5,bold:true,color:{argb:TEXTO_TRABALHOU}};
+            c.font={name:'Times New Roman',size:7.5,bold:true,color:{argb:TEXTO_TRABALHOU}};
           }
           totalHorasLinha+=totalDia;
           total70+=cel.extra70; total100+=cel.extra100;
@@ -12713,13 +12713,13 @@ async function exportarFolhaPontoExcel(){
       const cSemR=row.getCell(colResumoInicio+2); cSemR.value=totalSemRegLinha;
       const cConf=row.getCell(colResumoInicio+3); cConf.value=totalConflitosLinha;
       [cE70,cE100,cTot,cFal,cSemR,cConf].forEach(c=>{
-        c.font={name:'Calibri',size:9,bold:true,color:{argb:CINZA_TEXTO}};
+        c.font={name:'Times New Roman',size:9,bold:true,color:{argb:CINZA_TEXTO}};
         c.alignment={horizontal:'center',vertical:'middle'};
         c.border={top:{style:'thin',color:{argb:CINZA_BORDA}},bottom:{style:'thin',color:{argb:CINZA_BORDA}},left:{style:'thin',color:{argb:CINZA_BORDA}},right:{style:'thin',color:{argb:CINZA_BORDA}}};
         c.fill={type:'pattern',pattern:'solid',fgColor:{argb:CINZA_CLARO}};
       });
-      if(totalFaltasLinha>0) cFal.font={name:'Calibri',size:9,bold:true,color:{argb:TEXTO_FALTA}};
-      if(totalConflitosLinha>0) cConf.font={name:'Calibri',size:9,bold:true,color:{argb:TEXTO_CONFLITO}};
+      if(totalFaltasLinha>0) cFal.font={name:'Times New Roman',size:9,bold:true,color:{argb:TEXTO_FALTA}};
+      if(totalConflitosLinha>0) cConf.font={name:'Times New Roman',size:9,bold:true,color:{argb:TEXTO_CONFLITO}};
 
       row.height=32;
       rowNum++;
