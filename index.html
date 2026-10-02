@@ -1114,6 +1114,30 @@ body.dark .aviso-data-divergente .fechar-aviso-divergente{color:#fbbf24;}
   .rdo-header-grid{grid-template-columns:repeat(3,1fr)}
 }
 
+/* Tabela de horas — só em telas de computador (celular/tablet continuam com a
+   rolagem horizontal de sempre, protegidos, sem nenhuma mudança). Em vez de uma
+   largura fixa (que serviria bem só pra UM tamanho de tela), cada coluna tem um
+   mínimo (nunca fica ilegível) e um máximo (nunca desperdiça espaço à toa) — o
+   navegador ajusta sozinho, pra qualquer notebook/monitor, sem eu precisar saber
+   a resolução de ninguém. Com isso, a soma das colunas cai de ~956px pra uns
+   ~740px no pior caso, cabendo folgado mesmo com os 172px do menu lateral
+   descontados, em qualquer tela de computador comum, eliminando a rolagem. */
+@media(min-width:1025px){
+  thead th.th-ose{min-width:clamp(60px,5vw,80px)!important}
+  thead th.th-funcionario{min-width:clamp(100px,9vw,140px)!important}
+  thead th.th-funcao{min-width:clamp(75px,7vw,100px)!important}
+  thead th.th-veiculo{min-width:clamp(75px,7vw,100px)!important}
+  select.cell-name{min-width:clamp(100px,9vw,130px)}
+  select.cell-func{min-width:clamp(75px,7vw,100px)}
+  select.cell-vehicle{min-width:clamp(75px,7vw,100px)}
+  /* Nome de veículo/função pode ser comprido (ex: "DBM8D03 (VW - 31.320 -
+     MUNCK_14)") — com a coluna mais estreita, corta educadamente com "...",
+     em vez de cortar de repente sem aviso nenhum. */
+  select.cell-name,select.cell-func,select.cell-vehicle{
+    text-overflow:ellipsis;white-space:nowrap;overflow:hidden;
+  }
+}
+
 /* Extra Escopo e Em Andamento: min-width de 850px só a partir daqui pra cima —
    em telas menores que isso (a maioria dos encarregados usa o app no celular)
    o modal fica em width:90vw (responsivo), senão 850px fixos estourariam a
@@ -1888,9 +1912,9 @@ body.dark #workers-body tr:hover{background-color:rgba(58,110,232,.08)}
         <thead>
           <tr>
             <th style="width:34px">#</th>
-            <th style="min-width:140px;text-align:left">Funcionário</th>
-            <th style="min-width:100px;text-align:left">Função</th>
-            <th style="min-width:100px;text-align:left">Veículo</th>
+            <th class="th-funcionario" style="min-width:140px;text-align:left">Funcionário</th>
+            <th class="th-funcao" style="min-width:100px;text-align:left">Função</th>
+            <th class="th-veiculo" style="min-width:100px;text-align:left">Veículo</th>
             <th class="th-ose" id="th-o1">OSE 01<br><small>Hrs</small></th>
             <th class="th-ose" id="th-o2">OSE 02<br><small>Hrs</small></th>
             <th class="th-ose" id="th-o3">OSE 03<br><small>Hrs</small></th>
