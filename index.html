@@ -1124,6 +1124,10 @@ body.dark .aviso-data-divergente .fechar-aviso-divergente{color:#fbbf24;}
    descontados, em qualquer tela de computador comum, eliminando a rolagem. */
 @media(min-width:1025px){
   thead th.th-ose{min-width:clamp(60px,5vw,80px)!important}
+  /* A causa raiz de verdade: o campo de hora tinha largura FIXA (74px), que
+     sozinha já obrigava a coluna inteira a não encolher, não importa o que se
+     fizesse no cabeçalho. Essa é quem realmente decide o tamanho da coluna. */
+  textarea.hrs{width:clamp(56px,4.5vw,74px)!important}
   thead th.th-funcionario{min-width:clamp(100px,9vw,140px)!important}
   thead th.th-funcao{min-width:clamp(75px,7vw,100px)!important}
   thead th.th-veiculo{min-width:clamp(75px,7vw,100px)!important}
