@@ -168,7 +168,7 @@ textarea.hrs.falta,textarea.hrs.cedo,textarea.hrs.integracao,textarea.hrs.aguard
   box-shadow:2px 2px 0 rgba(0,0,0,.85)
 }
 .btn:disabled{opacity:.35;cursor:not-allowed}
-.btn:hover{filter:brightness(1.15);transform:translate(-2px,-2px) scale(1.02);box-shadow:4px 4px 0 rgba(0,0,0,.85),0 0 12px rgba(37,104,214,.35)}
+.btn:hover{filter:brightness(1.15);transform:scale(1.02);box-shadow:4px 4px 0 rgba(0,0,0,.85),0 0 12px rgba(37,104,214,.35)}
 #login-overlay button{transition:transform .1s ease,filter .1s ease,opacity .1s ease}
 /* Papel de parede de verdade: cobre 100% da tela, sem sobrar faixa vazia
    em lugar nenhum — nem no celular, nem no computador. A caixa de login
@@ -603,7 +603,7 @@ tfoot td.col-sem{background:rgba(255,255,255,.12);color:rgba(255,255,255,.9)}
   transition:box-shadow .12s,transform .12s;
   break-inside:avoid;page-break-inside:avoid
 }
-.ose-card:hover{box-shadow:6px 6px 0 #000;transform:translate(-1px,-1px)}
+.ose-card:hover{box-shadow:6px 6px 0 #000}
 .ose-card.s-sem {border-color:#0a1e42;background:#ffffff}
 .ose-card.s-and {border-color:#0e3a9a;background:#1a52c8}
 .ose-card.s-par {border-color:#a04e08;background:#e07010}
@@ -4854,6 +4854,7 @@ document.addEventListener('DOMContentLoaded',()=>{
 // digitar um nome novo continua funcionando normal, pra quando for outro projeto de verdade.
 let projetosCanonicoLookup={}; // chave normalizada agressiva -> {nome:'grafia mais usada', ocorrencias:N}
 async function atualizarDatalistNomesProjetos(){
+  const supabaseClient=getSupabaseClient();
   const dl=document.getElementById('ose-nomes-datalist');
   const contagem={}; // nome exato -> quantas vezes apareceu (local + nuvem juntos)
   for(let i=0;i<localStorage.length;i++){
