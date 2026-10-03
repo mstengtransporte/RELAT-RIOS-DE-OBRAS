@@ -1731,7 +1731,7 @@ body.dark #workers-body tr:hover{background-color:rgba(58,110,232,.08)}
      fontes) — os dois sistemas usam a mesma "moldura" de login, só
      o papel de parede muda entre eles. -->
 <div id="login-overlay" style="position:fixed;inset:0;z-index:99999;background:#0b1220 url('login-fundo-rdo.jpg') center center / cover no-repeat;color-scheme:dark">
-  <div style="position:absolute;bottom:6px;right:8px;font-size:9px;color:rgba(255,255,255,.35);font-family:monospace;pointer-events:none">v2026.10.03-largura-desktop-12-colunas</div>
+  <div style="position:absolute;bottom:6px;right:8px;font-size:9px;color:rgba(255,255,255,.35);font-family:monospace;pointer-events:none">v2026.10.03-esc-nao-seleciona-lista</div>
   <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:calc(100% - 32px);max-width:380px;background:rgb(10,17,32);border:1px solid rgba(255,255,255,.14);border-radius:18px;padding:32px 28px;box-shadow:0 20px 60px rgba(0,0,0,.6);text-transform:none;font-weight:400">
     <h1 style="font-size:20px;margin:0 0 4px;color:#fff;text-align:center;font-weight:700">RDO <span style="color:#3ea6ff">Master Energy</span></h1>
     <p style="margin:0 0 24px;text-align:center;color:#9ca3af;font-size:13px;letter-spacing:.5px;font-weight:600">DIÁRIO DE OBRA PRO</p>
@@ -4859,27 +4859,48 @@ document.addEventListener('DOMContentLoaded',()=>{
   aplicarEmailLembrado();
   verificarSessaoEIniciar();
 
-  // RE-seleção do mesmo funcionário: o evento nativo "change" do <select> só dispara
-  // quando o valor escolhido MUDA de verdade — escolher de novo o mesmo nome que já
-  // estava ali (ex: reabriu a lista e confirmou o mesmo) não dispara nada sozinho. Este
-  // listener delegado (funciona pra qualquer linha, inclusive as criadas depois) guarda
-  // o valor no foco e compara no blur — se for o mesmo nome de antes, dispara a mesma
-  // consulta de novo (veículo + função), do mesmo jeito que uma troca de verdade faria.
-  const workersBody=document.getElementById('workers-body');
-  if(workersBody){
-    workersBody.addEventListener('focusin',e=>{
-      if(e.target.matches('select.cell-name')) e.target.dataset.antesDoFoco=e.target.value;
-    });
-    workersBody.addEventListener('focusout',e=>{
+  // ESC / clique fora / Tab NUNCA escolhem um item das listas Nome, Função e Veículo
+  // (CORREÇÃO 2026-10-03). Dois problemas juntos causavam a "escolha sem querer":
+  //  (1) o navegador (Chrome/Edge) grava a opção DESTACADA da lista aberta quando se aperta
+  //      ESC — passar o mouse, setas ou digitar letras só deveria destacar. Com a lista
+  //      aberta a página não recebe o ESC a tempo, então o "change" chega ANTES do aviso
+  //      de ESC. Solução: o "change" de uma ação real do usuário fica retido ~160ms; se
+  //      nesse intervalo chegar um ESC, o campo volta ao valor anterior e NADA é
+  //      disparado (nem busca na Escala, nem função/veículo automáticos). Enter, clique
+  //      do mouse ou Tab confirmam normalmente, só um instante depois.
+  //  (2) a antiga "re-seleção" (disparar a busca na Escala ao SAIR do campo com o mesmo
+  //      nome) foi removida: sair do campo não é escolher.
+  // Mudanças feitas por código (isTrusted=false) passam direto, sem retenção.
+  (function(){
+    const SEL='select.cell-name,select.cell-func,select.cell-vehicle';
+    let ultimoEsc=0;
+    const ehAlvo=el=>el&&el.matches&&el.matches(SEL);
+    const marcarBase=e=>{ const el=e.target; if(ehAlvo(el)&&!el._pend) el.dataset.valorConfirmado=el.value; };
+    document.addEventListener('focusin',marcarBase,true);
+    document.addEventListener('mousedown',marcarBase,true);
+    const aoEsc=e=>{
+      if(e.key!=='Escape') return;
+      ultimoEsc=Date.now();
+      document.querySelectorAll(SEL).forEach(el=>{ if(el._pend) el._pend.cancelado=true; });
+    };
+    document.addEventListener('keydown',aoEsc,true);
+    document.addEventListener('keyup',aoEsc,true);
+    document.addEventListener('change',e=>{
       const sel=e.target;
-      if(!sel.matches||!sel.matches('select.cell-name')) return;
-      const antes=sel.dataset.antesDoFoco;
-      if(sel.value && sel.value===antes && sel.value!=='__custom__'){
-        const i=sel.id.replace('name-','');
-        dispararConsultaEscalaEFuncao(sel.value,i);
-      }
-    });
-  }
+      if(!e.isTrusted||!ehAlvo(sel)) return;
+      e.stopImmediatePropagation();
+      const anterior=(sel._pend?sel._pend.anterior:sel.dataset.valorConfirmado);
+      sel._pend={anterior:(anterior===undefined?'':anterior),cancelado:(Date.now()-ultimoEsc<200)};
+      clearTimeout(sel._pendT);
+      sel._pendT=setTimeout(()=>{
+        const p=sel._pend; sel._pend=null;
+        if(!p) return;
+        if(p.cancelado){ sel.value=p.anterior; return; }
+        sel.dataset.valorConfirmado=sel.value;
+        sel.dispatchEvent(new Event('change',{bubbles:true}));
+      },160);
+    },true);
+  })();
 });
 
 // ── Gera próximo número de RDO automaticamente ──
@@ -13844,7 +13865,7 @@ window.addEventListener('beforeinstallprompt',(e)=>{
   };
 });
 </script>
-<div class="no-print" style="position:fixed;bottom:2px;right:4px;font-size:8px;color:rgba(120,120,120,.4);font-family:monospace;pointer-events:none;z-index:5">v2026.10.03-largura-desktop-12-colunas</div>
+<div class="no-print" style="position:fixed;bottom:2px;right:4px;font-size:8px;color:rgba(120,120,120,.4);font-family:monospace;pointer-events:none;z-index:5">v2026.10.03-esc-nao-seleciona-lista</div>
 
 <!-- MODAL DE ALERTA DE PENDÊNCIAS — substitui o toast/alert escuro de antes. Aparece
      sempre que a validação unificada (validarFormularioRDO) bloqueia uma tentativa de
