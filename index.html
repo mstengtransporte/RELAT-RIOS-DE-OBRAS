@@ -502,6 +502,8 @@ select.cell-name,select.cell-func,select.cell-vehicle{
   background-repeat:no-repeat;background-position:right 3px center;
   padding-right:16px
 }
+td.td-nome{min-width:140px}
+td.td-func,td.td-veiculo{min-width:110px}
 select.cell-name{min-width:130px}
 select.cell-func{min-width:100px;color:var(--text)}
 select.cell-vehicle{min-width:100px;color:var(--text)}
@@ -1131,6 +1133,11 @@ body.dark .aviso-data-divergente .fechar-aviso-divergente{color:#fbbf24;}
   thead th.th-funcionario{min-width:clamp(100px,9vw,140px)!important}
   thead th.th-funcao{min-width:clamp(75px,7vw,100px)!important}
   thead th.th-veiculo{min-width:clamp(75px,7vw,100px)!important}
+  /* Seletor pequeno (normal/outro) embaixo do campo de hora: o texto da maior opção
+     ("✏️ OUTRO...") forçava a coluna a ~83px mesmo com o campo de hora já estreito. */
+  select.hrs-status{width:clamp(56px,4.5vw,74px)!important;max-width:clamp(56px,4.5vw,74px)!important;text-overflow:ellipsis}
+  td.td-nome{min-width:clamp(100px,9vw,140px)}
+  td.td-func,td.td-veiculo{min-width:clamp(75px,7vw,110px)}
   select.cell-name{min-width:clamp(100px,9vw,130px)}
   select.cell-func{min-width:clamp(75px,7vw,100px)}
   select.cell-vehicle{min-width:clamp(75px,7vw,100px)}
@@ -1724,7 +1731,7 @@ body.dark #workers-body tr:hover{background-color:rgba(58,110,232,.08)}
      fontes) — os dois sistemas usam a mesma "moldura" de login, só
      o papel de parede muda entre eles. -->
 <div id="login-overlay" style="position:fixed;inset:0;z-index:99999;background:#0b1220 url('login-fundo-rdo.jpg') center center / cover no-repeat;color-scheme:dark">
-  <div style="position:absolute;bottom:6px;right:8px;font-size:9px;color:rgba(255,255,255,.35);font-family:monospace;pointer-events:none">v2026.09.29-folha-ponto-e-largura-desktop</div>
+  <div style="position:absolute;bottom:6px;right:8px;font-size:9px;color:rgba(255,255,255,.35);font-family:monospace;pointer-events:none">v2026.10.03-largura-desktop-12-colunas</div>
   <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:calc(100% - 32px);max-width:380px;background:rgb(10,17,32);border:1px solid rgba(255,255,255,.14);border-radius:18px;padding:32px 28px;box-shadow:0 20px 60px rgba(0,0,0,.6);text-transform:none;font-weight:400">
     <h1 style="font-size:20px;margin:0 0 4px;color:#fff;text-align:center;font-weight:700">RDO <span style="color:#3ea6ff">Master Energy</span></h1>
     <p style="margin:0 0 24px;text-align:center;color:#9ca3af;font-size:13px;letter-spacing:.5px;font-weight:600">DIÁRIO DE OBRA PRO</p>
@@ -6382,17 +6389,17 @@ function addWorkerRow(doRecalc=true){
   for(let o=1;o<=NUM_OSE;o++) hc+=makeHrsCell(i,o);
   tr.innerHTML=`
     <td><span class="row-num">${i}</span></td>
-    <td style="min-width:140px">
+    <td class="td-nome">
       <select class="cell-name" id="name-${i}" onchange="onNameChange(this,${i})">
         ${buildNameOptions()}
       </select>
     </td>
-    <td style="min-width:110px">
+    <td class="td-func">
       <select class="cell-func" id="func-${i}" onchange="onFuncChange(this,${i})">
         ${buildFuncOptions()}
       </select>
     </td>
-    <td style="min-width:110px">
+    <td class="td-veiculo">
       <select class="cell-vehicle" id="vehicle-${i}" onchange="onVehicleChange(this,${i})">
         ${buildVehicleOptions()}
       </select>
@@ -7183,9 +7190,9 @@ function restoreRow(w,i){
   let hc='';
   for(let o=1;o<=NUM_OSE;o++) hc+=makeHrsCell(i,o);
   tr.innerHTML=`<td><span class="row-num">${i}</span></td>
-    <td style="min-width:140px"><select class="cell-name" id="name-${i}" onchange="onNameChange(this,${i})">${buildNameOptions(w.name||'')}</select></td>
-    <td style="min-width:110px"><select class="cell-func" id="func-${i}" onchange="onFuncChange(this,${i})">${buildFuncOptions(w.func||'')}</select></td>
-    <td style="min-width:110px"><select class="cell-vehicle" id="vehicle-${i}" onchange="onVehicleChange(this,${i})">${buildVehicleOptions(w.vehicle||'')}</select></td>
+    <td class="td-nome"><select class="cell-name" id="name-${i}" onchange="onNameChange(this,${i})">${buildNameOptions(w.name||'')}</select></td>
+    <td class="td-func"><select class="cell-func" id="func-${i}" onchange="onFuncChange(this,${i})">${buildFuncOptions(w.func||'')}</select></td>
+    <td class="td-veiculo"><select class="cell-vehicle" id="vehicle-${i}" onchange="onVehicleChange(this,${i})">${buildVehicleOptions(w.vehicle||'')}</select></td>
     ${hc}<td class="total-hrs s-sem" id="rowtotal-${i}">0</td>
     <td><button class="btn-del-row" onclick="deleteRow(${i})" title="Excluir">✕</button></td>`;
   tbody.appendChild(tr);
@@ -13837,7 +13844,7 @@ window.addEventListener('beforeinstallprompt',(e)=>{
   };
 });
 </script>
-<div class="no-print" style="position:fixed;bottom:2px;right:4px;font-size:8px;color:rgba(120,120,120,.4);font-family:monospace;pointer-events:none;z-index:5">v2026.09.29-folha-ponto-e-largura-desktop</div>
+<div class="no-print" style="position:fixed;bottom:2px;right:4px;font-size:8px;color:rgba(120,120,120,.4);font-family:monospace;pointer-events:none;z-index:5">v2026.10.03-largura-desktop-12-colunas</div>
 
 <!-- MODAL DE ALERTA DE PENDÊNCIAS — substitui o toast/alert escuro de antes. Aparece
      sempre que a validação unificada (validarFormularioRDO) bloqueia uma tentativa de
