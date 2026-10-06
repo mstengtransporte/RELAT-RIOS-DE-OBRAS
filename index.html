@@ -1731,7 +1731,7 @@ body.dark #workers-body tr:hover{background-color:rgba(58,110,232,.08)}
      fontes) — os dois sistemas usam a mesma "moldura" de login, só
      o papel de parede muda entre eles. -->
 <div id="login-overlay" style="position:fixed;inset:0;z-index:99999;background:#0b1220 url('login-fundo-rdo.jpg') center center / cover no-repeat;color-scheme:dark">
-  <div style="position:absolute;bottom:6px;right:8px;font-size:9px;color:rgba(255,255,255,.35);font-family:monospace;pointer-events:none">v2026.10.03-sem-reenviar-desfazer</div>
+  <div style="position:absolute;bottom:6px;right:8px;font-size:9px;color:rgba(255,255,255,.35);font-family:monospace;pointer-events:none">v2026.10.05-paineis-backup-sem-deletar-desfazer</div>
   <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:calc(100% - 32px);max-width:380px;background:rgb(10,17,32);border:1px solid rgba(255,255,255,.14);border-radius:18px;padding:32px 28px;box-shadow:0 20px 60px rgba(0,0,0,.6);text-transform:none;font-weight:400">
     <h1 style="font-size:20px;margin:0 0 4px;color:#fff;text-align:center;font-weight:700">RDO <span style="color:#3ea6ff">Master Energy</span></h1>
     <p style="margin:0 0 24px;text-align:center;color:#9ca3af;font-size:13px;letter-spacing:.5px;font-weight:600">DIÁRIO DE OBRA PRO</p>
@@ -2262,8 +2262,7 @@ body.dark #workers-body tr:hover{background-color:rgba(58,110,232,.08)}
     </div>
     <div class="multipdf-footer" style="flex-wrap:wrap">
       <button class="multipdf-cancel" onclick="document.getElementById('extra-escopo-modal').classList.remove('show')">Fechar</button>
-      <button class="multipdf-cancel" style="background:#fee2e2;color:#dc2626" onclick="deletarExtraEscopoTodos()">🗑️ Deletar Todos</button>
-      <button class="multipdf-cancel" id="btn-desfazer-ee" style="background:#fef3c7;color:#7c5a00" onclick="desfazerAcaoPainel()" title="Nada para desfazer neste painel no momento">↩️ Desfazer</button>
+      <!-- Botões "Deletar Todos"/"Desfazer" REMOVIDOS (2026-10-05): a exclusão só valia neste aparelho e voltava na próxima sincronização. Funções continuam no código. -->
       <button class="multipdf-gerar" style="background:#0a6080" onclick="compartilharExtraEscopoTodos()">📤 PDF de Todos</button>
       <button class="multipdf-gerar" style="background:#158038" onclick="exportarExtraEscopoExcel()">📥 Exportar Excel</button>
     </div>
@@ -2296,8 +2295,7 @@ body.dark #workers-body tr:hover{background-color:rgba(58,110,232,.08)}
     </div>
     <div class="multipdf-footer" style="flex-wrap:wrap">
       <button class="multipdf-cancel" onclick="document.getElementById('andamento-modal').classList.remove('show')">Fechar</button>
-      <button class="multipdf-cancel" style="background:#fee2e2;color:#dc2626" onclick="deletarAndamentoTodos()">🗑️ Deletar Todos</button>
-      <button class="multipdf-cancel" id="btn-desfazer-an" style="background:#fef3c7;color:#7c5a00" onclick="desfazerAcaoPainel()" title="Nada para desfazer neste painel no momento">↩️ Desfazer</button>
+      <!-- Botões "Deletar Todos"/"Desfazer" REMOVIDOS (2026-10-05): a exclusão só valia neste aparelho e voltava na próxima sincronização. Funções continuam no código. -->
       <button class="multipdf-gerar" style="background:#0a6080" onclick="compartilharAndamentoTodos()">📤 PDF de Todos</button>
       <button class="multipdf-gerar" style="background:#1a52c8" onclick="exportarAndamentoExcel()">📥 Exportar Excel</button>
     </div>
@@ -2401,10 +2399,7 @@ body.dark #workers-body tr:hover{background-color:rgba(58,110,232,.08)}
         ☁️ Use isso ao abrir o app num aparelho novo, ou se quiser garantir que este aparelho tem todos os RDOs que já foram salvos na nuvem por qualquer aparelho.
       </div>
       <button type="button" onclick="restaurarDoSupabase()" style="background:#7c3aed;color:#fff;border:2px solid #5b21b6;padding:14px 12px;font-size:13px;font-weight:900;cursor:pointer;text-transform:uppercase;min-height:48px">☁️ BUSCAR E RESTAURAR DA NUVEM</button>
-      <div style="font-size:10.5px;color:var(--text3);line-height:1.5;background:#fef3c7;padding:8px 10px;border-left:3px solid #d97706">
-        ⚠️ Se algum RDO seu tiver ficado só neste aparelho sem chegar no admin (por queda de internet, por exemplo), use o botão abaixo pra conferir e reenviar. Ele nunca apaga nem duplica nada — só reenvia o que realmente ainda não chegou.
-      </div>
-      <button type="button" onclick="verificarEReenviarPendentes()" style="background:#d97706;color:#fff;border:2px solid #92400e;padding:14px 12px;font-size:13px;font-weight:900;cursor:pointer;text-transform:uppercase;min-height:48px">🔄 CONFERIR E REENVIAR PENDENTES</button>
+      <!-- Botão "Conferir e reenviar pendentes" REMOVIDO da caixa de Backup (2026-10-05); a função verificarEReenviarPendentes() continua no código ("Sincronizar Dados" do menu usa ela). -->
       <button type="button" class="admin-only-btn" onclick="exportarBackupCompletoExcel(this)" style="background:#0d5228;color:#fff;border:2px solid #063d1c;padding:14px 12px;font-size:13px;font-weight:900;cursor:pointer;text-transform:uppercase;min-height:48px">📊 RELATÓRIO CONSOLIDADO EM EXCEL (TODOS OS RDOs)</button>
       <div style="border-top:2px dashed var(--border);margin:4px 0"></div>
       <div id="usuario-logado-info" style="font-size:11.5px;color:var(--text3);text-align:center"></div>
@@ -10952,7 +10947,7 @@ function renderizarExtraEscopo(){
         const totalDia=g.trabalhadores.reduce((s,t)=>s+t.horas,0);
         const trabList=g.trabalhadores.map(t=>{
           const nomeTrabSeguro=t.nome.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
-          return `<span style="display:inline-flex;align-items:center;gap:4px">${t.nome} (${t.funcao}) — <b>${fmt(t.horas)}h</b> <button onclick="deletarTrabalhadorExtraEscopo('${g.chave}','${nomeTrabSeguro}')" title="Remover só este funcionário" style="background:#fee2e2;color:#dc2626;border:1px solid #dc2626;border-radius:3px;font-size:8px;padding:0 3px;cursor:pointer">✕</button></span>`;
+          return `<span style="display:inline-flex;align-items:center;gap:4px">${t.nome} (${t.funcao}) — <b>${fmt(t.horas)}h</b></span>`;
         }).join(', ');
         return `<div class="ee-dia">
           <div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start">
@@ -10965,7 +10960,6 @@ function renderizarExtraEscopo(){
               <div style="font-weight:900;color:#158038;margin-bottom:3px">${fmt(totalDia)}h</div>
               <button onclick="compartilharExtraEscopoIndividual('${g.chave}')" title="PDF só deste dia" style="background:#0a6080;color:#fff;border:none;padding:2px 5px;font-size:10px;cursor:pointer;margin-bottom:2px">📤</button>
               <button onclick="exportarExtraEscopoExcelIndividual('${g.chave}')" title="Excel só deste dia" style="background:#158038;color:#fff;border:none;padding:2px 5px;font-size:10px;cursor:pointer;margin-bottom:2px">📥</button>
-              <button onclick="deletarExtraEscopoIndividual('${g.chave}')" title="Remover só este dia" style="background:#fee2e2;color:#dc2626;border:1px solid #dc2626;padding:2px 5px;font-size:10px;cursor:pointer">🗑️</button>
             </div>
           </div>
         </div>`;
@@ -11662,7 +11656,7 @@ function renderizarAndamento(){
         const totalDia=g.trabalhadores.reduce((s,t)=>s+t.horas,0);
         const trabList=g.trabalhadores.map(t=>{
           const nomeTrabSeguro=t.nome.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
-          return `<span style="display:inline-flex;align-items:center;gap:4px">${t.nome} (${t.funcao}) — <b>${fmt(t.horas)}h</b> <button onclick="deletarAndamentoTrabalhador('${g.chave}','${nomeTrabSeguro}')" title="Remover só este funcionário" style="background:#fee2e2;color:#dc2626;border:1px solid #dc2626;border-radius:3px;font-size:8px;padding:0 3px;cursor:pointer">✕</button></span>`;
+          return `<span style="display:inline-flex;align-items:center;gap:4px">${t.nome} (${t.funcao}) — <b>${fmt(t.horas)}h</b></span>`;
         }).join(', ');
         return `<div class="an-dia">
           <div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start">
@@ -11675,7 +11669,6 @@ function renderizarAndamento(){
               <div style="font-weight:900;color:#1a52c8;margin-bottom:3px">${fmt(totalDia)}h</div>
               <button onclick="compartilharAndamentoDia('${g.chave}')" title="PDF só deste dia" style="background:#0a6080;color:#fff;border:none;padding:2px 5px;font-size:10px;cursor:pointer;margin-bottom:2px">📤</button>
               <button onclick="exportarAndamentoExcelIndividual('${g.chave}')" title="Excel só deste dia" style="background:#1a52c8;color:#fff;border:none;padding:2px 5px;font-size:10px;cursor:pointer;margin-bottom:2px">📥</button>
-              <button onclick="deletarAndamentoDia('${g.chave}')" title="Remover só este dia" style="background:#fee2e2;color:#dc2626;border:1px solid #dc2626;padding:2px 5px;font-size:10px;cursor:pointer">🗑️</button>
             </div>
           </div>
         </div>`;
@@ -13864,7 +13857,7 @@ window.addEventListener('beforeinstallprompt',(e)=>{
   };
 });
 </script>
-<div class="no-print" style="position:fixed;bottom:2px;right:4px;font-size:8px;color:rgba(120,120,120,.4);font-family:monospace;pointer-events:none;z-index:5">v2026.10.03-sem-reenviar-desfazer</div>
+<div class="no-print" style="position:fixed;bottom:2px;right:4px;font-size:8px;color:rgba(120,120,120,.4);font-family:monospace;pointer-events:none;z-index:5">v2026.10.05-paineis-backup-sem-deletar-desfazer</div>
 
 <!-- MODAL DE ALERTA DE PENDÊNCIAS — substitui o toast/alert escuro de antes. Aparece
      sempre que a validação unificada (validarFormularioRDO) bloqueia uma tentativa de
