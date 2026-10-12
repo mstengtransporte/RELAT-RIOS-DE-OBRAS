@@ -1731,7 +1731,7 @@ body.dark #workers-body tr:hover{background-color:rgba(58,110,232,.08)}
      fontes) — os dois sistemas usam a mesma "moldura" de login, só
      o papel de parede muda entre eles. -->
 <div id="login-overlay" style="position:fixed;inset:0;z-index:99999;background:#0b1220 url('login-fundo-rdo.jpg') center center / cover no-repeat;color-scheme:dark">
-  <div style="position:absolute;bottom:6px;right:8px;font-size:9px;color:rgba(255,255,255,.35);font-family:monospace;pointer-events:none">v2026.10.12-protecao-rdo-1a</div>
+  <div style="position:absolute;bottom:6px;right:8px;font-size:9px;color:rgba(255,255,255,.35);font-family:monospace;pointer-events:none">v2026.10.12-rdo-mesma-identidade</div>
   <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:calc(100% - 32px);max-width:380px;background:rgb(10,17,32);border:1px solid rgba(255,255,255,.14);border-radius:18px;padding:32px 28px;box-shadow:0 20px 60px rgba(0,0,0,.6);text-transform:none;font-weight:400">
     <h1 style="font-size:20px;margin:0 0 4px;color:#fff;text-align:center;font-weight:700">RDO <span style="color:#3ea6ff">Master Energy</span></h1>
     <p style="margin:0 0 24px;text-align:center;color:#9ca3af;font-size:13px;letter-spacing:.5px;font-weight:600">DIÁRIO DE OBRA PRO</p>
@@ -2872,6 +2872,15 @@ function setDiscSelecionada(valor){
 // serviço), mas avisa que precisa avisar o admin pra cadastrar oficialmente.
 function onMudarClienteSelecionado(){
   const sel=document.getElementById('h-obra');
+  // OBRA TRAVADA DEPOIS DO ENVIO (2026-10): o número do RDO pertence à sequência da obra em
+  // que ele nasceu. Trocar a obra de um RDO já enviado deixaria uma obra com um número
+  // "intruso" e a outra com um buraco na sequência — por isso a obra volta ao valor original.
+  // Outra obra = outro RDO (botão "Novo RDO").
+  if(chaveServidorAtual&&obraTravadaAtual!==null&&sel.value!==obraTravadaAtual){
+    sel.value=obraTravadaAtual;
+    alert('🔒 OBRA TRAVADA\n\nEste RDO já foi enviado, e o número dele pertence à sequência da obra "'+obraTravadaAtual+'". Não dá pra trocar a obra de um RDO enviado.\n\nSe este trabalho é de OUTRA obra, crie um NOVO RDO (botão "Novo RDO") — ele entra na sequência certa dessa obra.\n\nA data, as horas, os funcionários e as OSEs deste RDO podem ser editados normalmente e reenviados.');
+    return;
+  }
   if(sel.value==='__outro__'){
     const nome=prompt('Nome do cliente novo (digite exatamente como deve aparecer nos relatórios):');
     if(nome&&nome.trim()){
@@ -3610,13 +3619,15 @@ async function alternarClienteAtivo(id,novoStatus,nome){
 // dois inserem de novo) e duplicar as horas de um funcionário no banco. Com a fila abaixo,
 // cada RDO só processa um salvamento de cada vez, na ordem, nunca dois ao mesmo tempo.
 const _filaSyncPorRdo={};
-async function syncSalvarSupabase(d){
+async function syncSalvarSupabase(d,chaveExplicita){
   const h=d.header||{};
   // Rascunho sem Obra escolhida ainda não vai pra nuvem — evita "RDO fantasma" sem nome
   // aparecendo pro admin só porque alguém abriu a tela e ainda não preencheu nada.
   // Continua salvando local normalmente (autoSilentSave cuida disso à parte).
   if(!h.obra||!h.obra.trim()) return{sucesso:false,semObra:true};
-  const rdoKey=chaveRDO(h.data);
+  // Chave explícita = a do próprio RDO que está sendo enviado (obrigatória no reenvio de
+  // pendentes, que manda RDOs que NÃO estão na tela — antes a chave saía do RDO da tela).
+  const rdoKey=chaveExplicita||chaveRDO(h.data);
   const anterior=_filaSyncPorRdo[rdoKey]||Promise.resolve();
   const atual=anterior.then(()=>_syncSalvarSupabaseReal(d,rdoKey)).catch(e=>{
     console.error('syncSalvarSupabase (fila):',e);
@@ -3933,6 +3944,25 @@ let rowCounter = 0;
 // apagava o primeiro sem avisar. Agora cada RDO carrega também um ID interno próprio,
 // gerado automaticamente e invisível pro usuário; a data pode se repetir à vontade.
 let rdoAtualId='';
+// ── IDENTIDADE FIXA DO RDO DEPOIS DO 1º ENVIO (2026-10) ──────────────────────────────────
+// Antes, a chave que identifica o RDO no banco (rdo_key) levava a DATA junto — trocar a data
+// de um RDO já enviado gerava uma chave nova e, com ela, OUTRO RDO (duplicado, com número
+// novo). Agora, assim que o RDO é enviado pela primeira vez, a chave dele fica FIXA: editar,
+// trocar a data e reenviar sempre atualiza o MESMO RDO (mesmo número, mesma sequência da
+// obra, sem somar nada — o banco troca as horas/OSEs pelas novas, não acumula). A Obra
+// também fica travada: o número do RDO pertence à sequência de uma obra, então outra obra
+// = outro RDO. Fixar a chave local junto também mantém o prazo de edição (23:59 do dia do 1º
+// envio) valendo — ele é guardado por chave e não pode reiniciar a cada troca de data.
+let chaveServidorAtual='';   // vazia = RDO ainda não enviado (rascunho livre)
+let obraTravadaAtual=null;   // obra do RDO enviado (só vale com chaveServidorAtual preenchida)
+function travarIdentidadeRDOEnviado(key){
+  chaveServidorAtual=key||'';
+  obraTravadaAtual=(document.getElementById('h-obra')?.value)||null;
+}
+function soltarIdentidadeRDO(){
+  chaveServidorAtual='';
+  obraTravadaAtual=null;
+}
 // CRÍTICO: "new Date().toISOString()" sempre devolve a data em UTC, não no fuso local.
 // No horário de Brasília (UTC-3), a partir de ~21h a data em UTC já é a de AMANHÃ — usar
 // toISOString() pra saber "que dia é hoje" fazia o app achar que o dia tinha virado sem
@@ -4011,6 +4041,7 @@ function ehMeuRascunho(h){
 }
 
 function chaveRDO(data){
+  if(chaveServidorAtual) return chaveServidorAtual; // RDO já enviado: a chave nunca muda, nem trocando a data
   const d=data||'draft';
   return rdoAtualId ? `rdo-${d}__${rdoAtualId}` : `rdo-${d}`;
 }
@@ -4575,7 +4606,7 @@ async function verificarEReenviarPendentes(){
     for(const key of pendentes){
       try{
         const d=JSON.parse(localStorage.getItem(key));
-        const resultado=await syncSalvarSupabase(d);
+        const resultado=await syncSalvarSupabase(d,key);
         if(resultado&&resultado.sucesso){ marcarComoEnviado(key); sucesso++; }
         else falha++;
       }catch(e){ falha++; }
@@ -5083,14 +5114,23 @@ async function gerarProximoNRDOAsync(obra){
       // IDÊNTICO ponta a ponta, não "contém". Qualquer diferença mínima (espaço a
       // mais, acento) fazia a busca não achar nada, sugerindo sempre "001" mesmo já
       // existindo dezenas de RDOs daquela obra na nuvem.
-      const{data,error}=await supabaseClient.from('rdos').select('nrdo').ilike('obra',`%${obraTrim}%`);
-      if(!error&&data){
-        data.forEach(row=>{
+      // O filtro "contém" (%) só traz candidatos; quem decide é a comparação EXATA da obra
+      // (sem acento/maiúscula/espaço) — cada obra tem a sua própria sequência de números,
+      // então uma obra cujo nome contém outro nome nunca pode contaminar a prévia. Lê em
+      // páginas de 1000 pra nunca cortar silenciosamente quando houver muitos RDOs.
+      const obraChaveNuvem=normalizarObra(obraTrim);
+      const TAM_PAG=1000;
+      for(let pag=0;pag<20;pag++){
+        const{data,error}=await supabaseClient.from('rdos').select('obra,nrdo')
+          .ilike('obra',`%${obraTrim}%`).order('id',{ascending:true})
+          .range(pag*TAM_PAG,pag*TAM_PAG+TAM_PAG-1);
+        if(error){ console.error('gerarProximoNRDOAsync (nuvem):',error); break; }
+        (data||[]).forEach(row=>{
+          if(normalizarObra(row.obra)!==obraChaveNuvem) return;
           const m=(row.nrdo||'').match(/(\d+)/);
           if(m){ const v=parseInt(m[1],10); if(v>maior) maior=v; }
         });
-      }else if(error){
-        console.error('gerarProximoNRDOAsync (nuvem):',error);
+        if(!data||data.length<TAM_PAG) break;
       }
     }catch(e){ console.error('gerarProximoNRDOAsync (nuvem):',e); }
   }
@@ -5129,7 +5169,7 @@ async function revalidarNRDOSeNovo(){
   // nuvem, o número que o banco gravou é definitivo — o próprio banco ignora o número que a
   // tela manda e mantém o gravado. Mudar a Obra na tela NÃO pode mais trocar o campo por uma
   // "prévia" nova, o que mostrava (e podia levar pro Excel/PDF) um número que não é o real.
-  if(estaEnviado(chaveRDO(document.getElementById('h-data')?.value||''))) return;
+  if(chaveServidorAtual||estaEnviado(chaveRDO(document.getElementById('h-data')?.value||''))) return;
   // CORREÇÃO (2026-09-03): essa função é sempre chamada logo depois de
   // onMudarClienteSelecionado(), que JÁ salva o rascunho automaticamente antes dela
   // rodar. A checagem antiga "já foi salvo? então não calcula" (removida agora) SEMPRE
@@ -7110,7 +7150,7 @@ async function salvarRDO(){
     const MAX_TENTATIVAS=5;
     while(tentativas<MAX_TENTATIVAS){
       tentativas++;
-      resultado=await syncSalvarSupabase(d);
+      resultado=await syncSalvarSupabase(d,key);
       if(resultado&&resultado.sucesso) break;
       const erroTexto=(resultado?.erro||'').toLowerCase();
       const foiColisaoDeNumero=erroTexto.includes('duplicate')||erroTexto.includes('unique')||erroTexto.includes('idx_rdos_obra_nrdo');
@@ -7134,7 +7174,7 @@ async function salvarRDO(){
       if(justificativas){
         window._justificativasHoraExtra=Object.assign(window._justificativasHoraExtra||{},justificativas);
         showToast('🔁 Reenviando com a justificativa informada...','#7c3aed');
-        resultado=await syncSalvarSupabase(d);
+        resultado=await syncSalvarSupabase(d,key);
       }else{
         resultado={sucesso:false,erro:'Envio cancelado — corrija as horas do(s) funcionário(s) listado(s) e tente enviar de novo.'};
       }
@@ -7145,6 +7185,7 @@ async function salvarRDO(){
       // de verdade — antes disso o app avisava sucesso sem checar, e o RDO podia nunca ter
       // chegado no admin sem ninguém perceber.
       marcarComoEnviado(key);
+      travarIdentidadeRDOEnviado(key); // a partir daqui este RDO é fixo: trocar a data/editar reenvia o MESMO RDO
       // APLICA O NÚMERO FINAL DECIDIDO PELO BANCO: a função salvar_rdo_completo_v2 (com
       // trava por obra) pode ter atribuído um número diferente do que estava na tela —
       // isso é ESPERADO e correto quando outro encarregado salvou um RDO da mesma obra
@@ -7291,6 +7332,7 @@ function iniciarRDOEmBrancoNoBoot(){
     // elemento novo nenhum — só troca o critério de qual rascunho escolher.
     candidatosHoje.sort((a,b)=>(b.dados._ultimaEdicaoLocal||0)-(a.dados._ultimaEdicaoLocal||0));
     rdoAtualId=candidatosHoje[0].id;
+    soltarIdentidadeRDO(); // rascunho de hoje (ainda não enviado)
     localStorage.setItem('rdo-last-key',candidatosHoje[0].key);
     restaurarEstadoCompleto(candidatosHoje[0].dados);
     // CORREÇÃO (2026-08-31): rascunho de hoje ainda não enviado pode ter ficado com um
@@ -7316,6 +7358,7 @@ function iniciarRDOEmBrancoNoBoot(){
   document.getElementById('h-nrdo').value=gerarProximoNRDO(document.getElementById('h-obra')?.value||'');
   nrdoEditadoManualmente=false;
   rdoAtualId=gerarRdoId();
+  soltarIdentidadeRDO();
 }
 
 function carregarRDO(){
@@ -7341,6 +7384,7 @@ function carregarRDO(){
     document.getElementById('h-nrdo').value=gerarProximoNRDO(document.getElementById('h-obra')?.value||'');
     nrdoEditadoManualmente=false;
     rdoAtualId=gerarRdoId();
+    soltarIdentidadeRDO();
     return;
   }
   const raw=localStorage.getItem(key);if(!raw)return;
@@ -7359,6 +7403,7 @@ function carregarRDO(){
       // essa mesma chave antiga referenciada lá na nuvem (rdo_key); mudando aqui sem
       // mudar lá, quebraria o vínculo e podia gerar duplicata na próxima sincronização.
       rdoAtualId=gerarRdoId();
+      soltarIdentidadeRDO();
       restaurarEstadoCompleto(d);
       autoSilentSave(); // salva já com a gaveta nova (com id)...
       localStorage.removeItem(key); // ...e remove a gaveta antiga (sem id), pra não duplicar
@@ -7366,7 +7411,11 @@ function carregarRDO(){
       rdoAtualId=idExtraido; // pode ficar vazio se for chave antiga já enviada — tudo bem, esse
                               // caso específico (RDO antigo já confirmado na nuvem) não sofre do
                               // problema de duplicar gaveta ao trocar de data, já está "fechado"
+      soltarIdentidadeRDO();
       restaurarEstadoCompleto(d);
+      // RDO já enviado reaberto: a chave dele (que é a mesma do banco) e a obra ficam fixas —
+      // dá pra editar tudo e trocar a data, sempre reenviando o MESMO RDO, sem duplicar.
+      if(estaEnviado(key)) travarIdentidadeRDOEnviado(key);
     }
   }catch(e){console.error('carregarRDO error:',e);}
 }
@@ -7436,9 +7485,12 @@ async function atualizarInfoUltimoRDOObra(){
   elInfo.style.color='var(--text3)';
   elInfo.textContent='🔄 Consultando seu histórico nesta obra...';
   try{
-    const{data,error}=await supabaseClient.from('rdos').select('data')
+    const{data:linhasObra,error}=await supabaseClient.from('rdos').select('data,obra')
       .eq('criado_por',usuarioAtual.id).ilike('obra',`%${obra}%`)
-      .order('data',{ascending:false}).limit(1).maybeSingle();
+      .order('data',{ascending:false}).limit(60);
+    // só conta a MESMA obra (comparação exata) — outra obra cujo nome contém este não vale
+    const obraChaveInfo=normalizarObra(obra);
+    const data=error?null:((linhasObra||[]).find(r=>normalizarObra(r.obra)===obraChaveInfo)||null);
     // Se a pessoa já trocou de obra de novo enquanto essa busca rodava, essa resposta
     // ficou desatualizada — ignora, sem sobrescrever o que já deveria estar na tela agora.
     if((document.getElementById('h-obra')?.value||'').trim()!==obra) return;
@@ -7828,8 +7880,10 @@ async function novoRDOComNomes(){
         if(rdoEstaGenuinamenteVazio(dAntigo)) localStorage.removeItem(chaveAntigaEmAndamento);
       }catch(e){ /* dado corrompido/ilegível — não mexe, mais seguro preservar */ }
     }
+    soltarIdentidadeRDO(); // o RDO da tela já foi gravado acima; a partir daqui é outro RDO, livre
     await aplicarModeloNovoDia(d,proximoNRDO,false,novaData,manterDescricoes); // false = não mantém o status das OSEs
     rdoAtualId=gerarRdoId(); // identidade própria — nunca sobrescreve o RDO de origem, nem outro do mesmo dia
+    soltarIdentidadeRDO();
     localStorage.setItem('rdo-last-key', chaveRDO(novaData));
     showToast(`📄 Novo RDO Nº ${proximoNRDO} criado com os nomes do último diário!`,'#1457c8');
   }catch(e){
@@ -7879,6 +7933,7 @@ function _criarRDOEmBranco(mensagemToast,focarObra){
   fecharNovoRDOModal();
   const novaData=dataParaNovoRDO();
   rdoAtualId=gerarRdoId(); // identidade própria — nunca sobrescreve outro RDO já salvo
+  soltarIdentidadeRDO();
   window._justificativasHoraExtra={}; // nunca deixa justificativa de um RDO vazar pro próximo
   localStorage.removeItem('rdo-last-key');
   ['h-obra','h-disc','h-feriado'].forEach(id=>{const el=document.getElementById(id); if(el) el.value='';});
@@ -13898,7 +13953,7 @@ window.addEventListener('beforeinstallprompt',(e)=>{
   };
 });
 </script>
-<div class="no-print" style="position:fixed;bottom:2px;right:4px;font-size:8px;color:rgba(120,120,120,.4);font-family:monospace;pointer-events:none;z-index:5">v2026.10.12-protecao-rdo-1a</div>
+<div class="no-print" style="position:fixed;bottom:2px;right:4px;font-size:8px;color:rgba(120,120,120,.4);font-family:monospace;pointer-events:none;z-index:5">v2026.10.12-rdo-mesma-identidade</div>
 
 <!-- MODAL DE ALERTA DE PENDÊNCIAS — substitui o toast/alert escuro de antes. Aparece
      sempre que a validação unificada (validarFormularioRDO) bloqueia uma tentativa de
