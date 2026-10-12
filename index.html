@@ -1731,7 +1731,7 @@ body.dark #workers-body tr:hover{background-color:rgba(58,110,232,.08)}
      fontes) — os dois sistemas usam a mesma "moldura" de login, só
      o papel de parede muda entre eles. -->
 <div id="login-overlay" style="position:fixed;inset:0;z-index:99999;background:#0b1220 url('login-fundo-rdo.jpg') center center / cover no-repeat;color-scheme:dark">
-  <div style="position:absolute;bottom:6px;right:8px;font-size:9px;color:rgba(255,255,255,.35);font-family:monospace;pointer-events:none">v2026.10.12-rdo-mesma-identidade</div>
+  <div style="position:absolute;bottom:6px;right:8px;font-size:9px;color:rgba(255,255,255,.35);font-family:monospace;pointer-events:none">v2026.10.12-escala-na-troca-de-data</div>
   <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:calc(100% - 32px);max-width:380px;background:rgb(10,17,32);border:1px solid rgba(255,255,255,.14);border-radius:18px;padding:32px 28px;box-shadow:0 20px 60px rgba(0,0,0,.6);text-transform:none;font-weight:400">
     <h1 style="font-size:20px;margin:0 0 4px;color:#fff;text-align:center;font-weight:700">RDO <span style="color:#3ea6ff">Master Energy</span></h1>
     <p style="margin:0 0 24px;text-align:center;color:#9ca3af;font-size:13px;letter-spacing:.5px;font-weight:600">DIÁRIO DE OBRA PRO</p>
@@ -5843,10 +5843,15 @@ function dispararConsultaEscalaEFuncao(nome,i){
 // vários funcionários de uma vez) e devolve um resultado resumido pra quem chamou.
 // Sempre resolve (nunca rejeita), mesmo em erro — pra usar tranquilo dentro de
 // Promise.all sem uma falha isolada derrubar as outras.
-async function buscarVeiculoAutomaticoSilencioso(nome,i){
+async function buscarVeiculoAutomaticoSilencioso(nome,i,preservarManual=false){
   const vehicleSel=document.getElementById(`vehicle-${i}`);
-  limparStatusAusenciaAutoNaLinha(i);
-  aplicarStatusAbsenteismoNaLinha(i,'');
+  // MODO "preservarManual" (2026-10) — usado SÓ na troca de DATA do RDO. Na escolha de um
+  // nome (modo normal) a linha é zerada antes da busca, como sempre foi. Na troca de data a
+  // linha já tem o que o encarregado preencheu (veículo e status marcados à mão): ela só é
+  // zerada DEPOIS que a Escala do dia novo responde com algo pra aquela pessoa. Se a Escala
+  // não tem a pessoa nesse dia (ou a consulta falha), a linha fica EXATAMENTE como estava.
+  const zerarLinha=()=>{ limparStatusAusenciaAutoNaLinha(i); aplicarStatusAbsenteismoNaLinha(i,''); };
+  if(!preservarManual||!nome||nome==='__custom__') zerarLinha();
   if(!nome||nome==='__custom__'){
     if(vehicleSel){ vehicleSel.innerHTML=buildVehicleOptions(''); vehicleSel.value=''; }
     return{ok:false};
@@ -5860,6 +5865,7 @@ async function buscarVeiculoAutomaticoSilencioso(nome,i){
     if(error){ console.error('buscar_veiculo_funcionario error:',error); return{ok:false,erro:true,motivo:error.message||String(error)}; }
     const linha=resultado&&resultado[0];
     if(linha&&linha.encontrado&&linha.status_ausencia){
+      if(preservarManual) zerarLinha();
       const rotulo=rotuloStatusAusencia(linha.status_ausencia);
       if(vehicleSel){
         vehicleSel.innerHTML=buildVehicleOptions('')+`<option value="${rotulo}" selected>⚠️ ${rotulo}</option>`;
@@ -5869,6 +5875,7 @@ async function buscarVeiculoAutomaticoSilencioso(nome,i){
       aplicarStatusAbsenteismoNaLinha(i,rotulo);
       return{ok:true,tipo:'ausencia',rotulo,dataEscala:linha.data_escala};
     }else if(linha&&linha.encontrado&&linha.veiculo){
+      if(preservarManual) zerarLinha();
       if(!vehiclesList.some(x=>normalizarParaComparar(x)===normalizarParaComparar(linha.veiculo))){ vehiclesList.push(linha.veiculo); salvarListas(); }
       if(vehicleSel){
         vehicleSel.innerHTML=buildVehicleOptions(linha.veiculo);
@@ -5876,7 +5883,7 @@ async function buscarVeiculoAutomaticoSilencioso(nome,i){
       }
       return{ok:true,tipo:'veiculo',veiculo:linha.veiculo,dataEscala:linha.data_escala};
     }else{
-      if(vehicleSel){ vehicleSel.innerHTML=buildVehicleOptions(''); vehicleSel.value=''; }
+      if(vehicleSel&&!preservarManual){ vehicleSel.innerHTML=buildVehicleOptions(''); vehicleSel.value=''; }
       return{ok:true,tipo:'sem-escala'};
     }
   }catch(e){
@@ -5989,13 +5996,50 @@ function aplicarStatusAusenciaNaLinha(i,statusEscala){
 // Quando a DATA do RDO muda, o veículo de cada funcionário já escolhido pode
 // ter mudado também (cada dia tem sua própria escala) — refaz a busca
 // automática pra todas as linhas que já têm um funcionário selecionado.
-function revalidarVeiculosDeTodasAsLinhas(){
-  document.querySelectorAll('select.cell-name').forEach(sel=>{
-    const nome=sel.value;
-    if(!nome||nome==='__custom__') return;
-    const i=sel.id.replace('name-','');
-    buscarVeiculoAutomatico(nome,i);
-  });
+async function revalidarVeiculosDeTodasAsLinhas(){
+  // TROCA DE DATA DO RDO (2026-10): o veículo é do DIA — então, se a Escala do dia novo tem a
+  // pessoa, ela manda (veículo ou ausência). Se NÃO tem a pessoa naquele dia, a linha fica
+  // como o encarregado deixou (veículo e status marcados à mão) — antes, o veículo era
+  // apagado. No fim, uma mensagem só resume o que foi atualizado e o que ficou como estava.
+  try{
+    const linhas=[];
+    document.querySelectorAll('select.cell-name').forEach(sel=>{
+      const nome=sel.value;
+      if(!nome||nome==='__custom__') return;
+      linhas.push({nome,i:sel.id.replace('name-','')});
+    });
+    if(!linhas.length) return;
+    const data=document.getElementById('h-data')?.value;
+    if(!data){ showToast('⚠️ Preencha a data do RDO primeiro, pra conseguir buscar o veículo na Escala.','#d97706'); return; }
+    if(!getSupabaseClient()){ showToast('❌ Sistema não conectado ao banco — não deu pra buscar o veículo na Escala.','#dc2626'); return; }
+    const resultados=await Promise.all(linhas.map(l=>
+      buscarVeiculoAutomaticoSilencioso(l.nome,l.i,true)
+        .then(r=>({nome:l.nome,r}))
+        .catch(e=>({nome:l.nome,r:{ok:false,erro:true,motivo:(e&&e.message)||String(e)}}))
+    ));
+    const dataFmt=formatarDataBR(data);
+    const seguro=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    const feitas=resultados.filter(x=>x.r&&x.r.ok&&x.r.tipo==='veiculo');
+    const ausentes=resultados.filter(x=>x.r&&x.r.ok&&x.r.tipo==='ausencia');
+    const semEscala=resultados.filter(x=>x.r&&x.r.ok&&x.r.tipo==='sem-escala');
+    const falhas=resultados.filter(x=>!x.r||x.r.erro);
+    if(falhas.length===resultados.length){
+      showToast(`❌ Não deu pra consultar a Escala de ${dataFmt}: ${falhas[0].r?.motivo||'erro desconhecido'}. As linhas ficaram como estavam.`,'#dc2626');
+      return;
+    }
+    const partes=[];
+    if(feitas.length) partes.push(`${feitas.length} veículo(s) atualizado(s)`);
+    if(ausentes.length) partes.push(`${ausentes.length} com ausência na Escala (${ausentes.map(x=>x.nome+': '+x.r.rotulo).join('; ')})`);
+    if(semEscala.length) partes.push(`${semEscala.length} sem escala nesse dia — mantido(s) como estava(m)`);
+    if(falhas.length) partes.push(`${falhas.length} não consultado(s) — mantido(s) como estava(m)`);
+    showToast(`🔄 Escala de ${dataFmt}: ${partes.join(' · ')}.`,(ausentes.length||semEscala.length||falhas.length)?'#d97706':'#1457c8');
+    if(semEscala.length){
+      mostrarAvisoDataDivergente(`Nenhuma escala encontrada em <strong>${dataFmt}</strong> pra: <strong>${semEscala.map(x=>seguro(x.nome)).join(', ')}</strong>. Mantive o veículo e o status que já estavam nessas linhas — confira se a data do RDO está certa.`);
+    }
+    autoSilentSave(); // grava já os veículos novos (a troca de data tinha salvo antes da consulta terminar)
+  }catch(e){
+    console.error('revalidarVeiculosDeTodasAsLinhas error:',e);
+  }
 }
 
 function salvarListas(){
@@ -13953,7 +13997,7 @@ window.addEventListener('beforeinstallprompt',(e)=>{
   };
 });
 </script>
-<div class="no-print" style="position:fixed;bottom:2px;right:4px;font-size:8px;color:rgba(120,120,120,.4);font-family:monospace;pointer-events:none;z-index:5">v2026.10.12-rdo-mesma-identidade</div>
+<div class="no-print" style="position:fixed;bottom:2px;right:4px;font-size:8px;color:rgba(120,120,120,.4);font-family:monospace;pointer-events:none;z-index:5">v2026.10.12-escala-na-troca-de-data</div>
 
 <!-- MODAL DE ALERTA DE PENDÊNCIAS — substitui o toast/alert escuro de antes. Aparece
      sempre que a validação unificada (validarFormularioRDO) bloqueia uma tentativa de
