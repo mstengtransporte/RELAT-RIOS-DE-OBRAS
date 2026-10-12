@@ -1731,7 +1731,7 @@ body.dark #workers-body tr:hover{background-color:rgba(58,110,232,.08)}
      fontes) — os dois sistemas usam a mesma "moldura" de login, só
      o papel de parede muda entre eles. -->
 <div id="login-overlay" style="position:fixed;inset:0;z-index:99999;background:#0b1220 url('login-fundo-rdo.jpg') center center / cover no-repeat;color-scheme:dark">
-  <div style="position:absolute;bottom:6px;right:8px;font-size:9px;color:rgba(255,255,255,.35);font-family:monospace;pointer-events:none">v2026.10.06-orcado-vs-executado</div>
+  <div style="position:absolute;bottom:6px;right:8px;font-size:9px;color:rgba(255,255,255,.35);font-family:monospace;pointer-events:none">v2026.10.12-protecao-rdo-1a</div>
   <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:calc(100% - 32px);max-width:380px;background:rgb(10,17,32);border:1px solid rgba(255,255,255,.14);border-radius:18px;padding:32px 28px;box-shadow:0 20px 60px rgba(0,0,0,.6);text-transform:none;font-weight:400">
     <h1 style="font-size:20px;margin:0 0 4px;color:#fff;text-align:center;font-weight:700">RDO <span style="color:#3ea6ff">Master Energy</span></h1>
     <p style="margin:0 0 24px;text-align:center;color:#9ca3af;font-size:13px;letter-spacing:.5px;font-weight:600">DIÁRIO DE OBRA PRO</p>
@@ -5125,6 +5125,11 @@ let nrdoEditadoManualmente=false;
 // parecendo definitivo enquanto a busca de verdade ainda está em andamento.
 async function revalidarNRDOSeNovo(){
   if(nrdoEditadoManualmente) return;
+  // TRAVA DO Nº DEPOIS DO ENVIO (2026-10): quando este RDO já foi enviado e confirmado na
+  // nuvem, o número que o banco gravou é definitivo — o próprio banco ignora o número que a
+  // tela manda e mantém o gravado. Mudar a Obra na tela NÃO pode mais trocar o campo por uma
+  // "prévia" nova, o que mostrava (e podia levar pro Excel/PDF) um número que não é o real.
+  if(estaEnviado(chaveRDO(document.getElementById('h-data')?.value||''))) return;
   // CORREÇÃO (2026-09-03): essa função é sempre chamada logo depois de
   // onMudarClienteSelecionado(), que JÁ salva o rascunho automaticamente antes dela
   // rodar. A checagem antiga "já foi salvo? então não calcula" (removida agora) SEMPRE
@@ -5337,11 +5342,18 @@ function statusDiaPorRotulo(rotulo){
 // linha dele, nunca criando uma segunda linha com o nome repetido).
 function nomeJaUsadoEmOutraLinha(nome,linhaAtual){
   if(!nome||nome==='__custom__') return false;
+  const alvo=nome.trim();
   let repetido=false;
-  document.querySelectorAll('.cell-name').forEach(el=>{
-    const idLinha=(el.id||'').replace('name-','');
-    if(idLinha===String(linhaAtual)) return; // não compara com ela mesma
-    if((el.value||'').trim()===nome.trim()) repetido=true;
+  // CORREÇÃO (2026-10): a linha de cada campo é descoberta pelo <tr> que o contém, e não
+  // pelo id do campo. O campo temporário de digitação ("Buscar / digitar nome...") tem a
+  // classe cell-name mas NÃO tem id — antes, ele era tratado como "outra linha" e
+  // comparado com o próprio nome que acabou de ser digitado nele, dando um aviso falso de
+  // "já está em outra linha" toda vez. Agora só conta campo de OUTRA linha de verdade.
+  document.querySelectorAll('#workers-body .cell-name').forEach(el=>{
+    const tr=el.closest('tr');
+    const idLinha=tr?String(tr.dataset.row!==undefined?tr.dataset.row:(tr.id||'').replace('row-','')):(el.id||'').replace('name-','');
+    if(idLinha===String(linhaAtual)) return; // não compara com a própria linha
+    if((el.value||'').trim()===alvo) repetido=true;
   });
   return repetido;
 }
@@ -5362,6 +5374,7 @@ function onNameChange(sel,i){
     td.replaceChild(inp,sel);
     inp.focus();
     function confirmar(){
+      if(!inp.isConnected) return; // já foi confirmado (Enter) — a saída do campo logo depois não repete
       const n=inp.value.trim();
       if(n){
         if(nomeJaUsadoEmOutraLinha(n,i)){
@@ -7074,6 +7087,7 @@ async function salvarRDO(){
 
     localStorage.setItem(key,JSON.stringify(d));
     localStorage.setItem('rdo-last-key',key);
+    mostrarAvisoNaoSalvo(false); // gravou no aparelho com sucesso — apaga o aviso vermelho, se estava visível
 
     if(!getSupabaseClient()||!usuarioAtual){
       showToast('✓ RDO salvo neste aparelho. Sem login/internet no momento — envie assim que possível.','#d97706');
@@ -9063,6 +9077,25 @@ function agendarAutoSave(){
     autoSilentSave();
   },4000); // salva 4s após última edição
 }
+// Aviso vermelho "NÃO SALVO" (2026-10): o salvamento automático é silencioso de propósito,
+// mas quando o aparelho não consegue gravar (armazenamento cheio ou bloqueado) ele falhava
+// sem avisar ninguém — a pessoa seguia preenchendo achando que estava guardado. Agora uma
+// faixa vermelha fica visível enquanto a gravação estiver falhando e some sozinha assim que
+// uma gravação der certo. Nunca apaga nem altera nada; só informa.
+function mostrarAvisoNaoSalvo(mostrar){
+  let el=document.getElementById('aviso-nao-salvo');
+  if(!mostrar){ if(el) el.style.display='none'; return; }
+  if(!el){
+    el=document.createElement('div');
+    el.id='aviso-nao-salvo';
+    el.className='no-print';
+    el.setAttribute('role','alert');
+    el.style.cssText='position:fixed;left:8px;right:8px;bottom:8px;z-index:99980;background:#b91c1c;color:#fff;border:3px solid #000;box-shadow:4px 4px 0 #000;padding:10px 12px;font-size:13px;font-weight:900;line-height:1.35;text-align:center';
+    el.innerHTML='NÃO SALVO NESTE APARELHO — o aparelho não conseguiu guardar o que você preencheu (armazenamento cheio ou bloqueado).<br><span style="font-weight:700;font-size:12px">Envie este RDO agora com "Salvar e Enviar" ou use o botão "Backup" para liberar espaço.</span>';
+    document.body.appendChild(el);
+  }
+  el.style.display='block';
+}
 function autoSilentSave(){
   try{
     const d=getFormData();
@@ -9081,8 +9114,15 @@ function autoSilentSave(){
     // nunca aparece na tela nem em nenhum lugar visível pro usuário.
     d._ultimaEdicaoLocal=Date.now();
     const key=chaveRDO(d.header.data);
-    localStorage.setItem(key,JSON.stringify(d));
-    localStorage.setItem('rdo-last-key',key);
+    try{
+      localStorage.setItem(key,JSON.stringify(d));
+      localStorage.setItem('rdo-last-key',key);
+    }catch(errGravar){
+      console.error('autoSilentSave: o aparelho não conseguiu gravar',errGravar);
+      mostrarAvisoNaoSalvo(true);
+      return;
+    }
+    mostrarAvisoNaoSalvo(false);
     _lastSaveKey=key;
     const dot=document.getElementById('autosave-dot');
     if(dot){dot.classList.add('show');setTimeout(()=>dot.classList.remove('show'),1800);}
@@ -13858,7 +13898,7 @@ window.addEventListener('beforeinstallprompt',(e)=>{
   };
 });
 </script>
-<div class="no-print" style="position:fixed;bottom:2px;right:4px;font-size:8px;color:rgba(120,120,120,.4);font-family:monospace;pointer-events:none;z-index:5">v2026.10.06-orcado-vs-executado</div>
+<div class="no-print" style="position:fixed;bottom:2px;right:4px;font-size:8px;color:rgba(120,120,120,.4);font-family:monospace;pointer-events:none;z-index:5">v2026.10.12-protecao-rdo-1a</div>
 
 <!-- MODAL DE ALERTA DE PENDÊNCIAS — substitui o toast/alert escuro de antes. Aparece
      sempre que a validação unificada (validarFormularioRDO) bloqueia uma tentativa de
