@@ -1731,7 +1731,7 @@ body.dark #workers-body tr:hover{background-color:rgba(58,110,232,.08)}
      fontes) — os dois sistemas usam a mesma "moldura" de login, só
      o papel de parede muda entre eles. -->
 <div id="login-overlay" style="position:fixed;inset:0;z-index:99999;background:#0b1220 url('login-fundo-rdo.jpg') center center / cover no-repeat;color-scheme:dark">
-  <div style="position:absolute;bottom:6px;right:8px;font-size:9px;color:rgba(255,255,255,.35);font-family:monospace;pointer-events:none">v2026.10.12-atualizar-da-escala</div>
+  <div style="position:absolute;bottom:6px;right:8px;font-size:9px;color:rgba(255,255,255,.35);font-family:monospace;pointer-events:none">v2026.10.12-orcado-horas-extras</div>
   <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:calc(100% - 32px);max-width:380px;background:rgb(10,17,32);border:1px solid rgba(255,255,255,.14);border-radius:18px;padding:32px 28px;box-shadow:0 20px 60px rgba(0,0,0,.6);text-transform:none;font-weight:400">
     <h1 style="font-size:20px;margin:0 0 4px;color:#fff;text-align:center;font-weight:700">RDO <span style="color:#3ea6ff">Master Energy</span></h1>
     <p style="margin:0 0 24px;text-align:center;color:#9ca3af;font-size:13px;letter-spacing:.5px;font-weight:600">DIÁRIO DE OBRA PRO</p>
@@ -14081,7 +14081,7 @@ window.addEventListener('beforeinstallprompt',(e)=>{
   };
 });
 </script>
-<div class="no-print" style="position:fixed;bottom:2px;right:4px;font-size:8px;color:rgba(120,120,120,.4);font-family:monospace;pointer-events:none;z-index:5">v2026.10.12-atualizar-da-escala</div>
+<div class="no-print" style="position:fixed;bottom:2px;right:4px;font-size:8px;color:rgba(120,120,120,.4);font-family:monospace;pointer-events:none;z-index:5">v2026.10.12-orcado-horas-extras</div>
 
 <!-- MODAL DE ALERTA DE PENDÊNCIAS — substitui o toast/alert escuro de antes. Aparece
      sempre que a validação unificada (validarFormularioRDO) bloqueia uma tentativa de
@@ -14162,7 +14162,7 @@ window.addEventListener('beforeinstallprompt',(e)=>{
 .oex-pct{color:var(--c);font-weight:900}
 .oex-dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--c);margin-right:6px}
 .oex-tw{overflow-x:auto}
-.oex-tb{width:100%;border-collapse:collapse;font-size:12px;min-width:620px}
+.oex-tb{width:100%;border-collapse:collapse;font-size:12px;min-width:900px}
 .oex-tb th{font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);text-align:right;padding:5px 6px;border-bottom:2px solid #000;font-weight:900}
 .oex-tb th:first-child,.oex-tb td:first-child{text-align:left}
 .oex-tb td{padding:5px 6px;text-align:right;border-bottom:1px solid rgba(128,128,128,.35);font-weight:700;white-space:nowrap}
@@ -14190,6 +14190,25 @@ window.addEventListener('beforeinstallprompt',(e)=>{
 .oex-vac{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
 .oex-vac select{padding:5px;border:2px solid #000;background:var(--surface);color:var(--text);font-size:12px;font-weight:700;max-width:220px}
 .oex-vazio{text-align:center;padding:26px 10px;color:var(--text3);font-weight:800;font-size:13px}
+.oex-tb th.he,.oex-tb td.he{color:#b45309}
+.oex-tb td.nm{color:var(--text2)}
+.oex-tb td.ex{font-weight:900}
+.oex-dlg-wrap{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.6);z-index:10;padding:14px}
+.oex-dlg{background:var(--surface);border:3px solid #b91c1c;max-width:560px;width:100%;max-height:90vh;overflow:auto;padding:16px;display:flex;flex-direction:column;gap:10px;box-shadow:6px 6px 0 rgba(0,0,0,.85)}
+.oex-dlg h4{margin:0;font-size:15px;font-weight:900;word-break:break-word}
+.oex-dlg .col{border:2px solid #000;padding:8px 10px;background:var(--surface2);font-size:12px;font-weight:700}
+.oex-dlg .col.apaga{border-color:#b91c1c}
+.oex-dlg .col.ok{border-color:#158038}
+.oex-dlg ul{margin:4px 0 0 16px;padding:0;line-height:1.5}
+.oex-dlg label{font-size:11px;font-weight:800;margin:0}
+.oex-dlg input[type=text]{padding:8px 10px;border:2px solid #000;background:var(--surface2);color:var(--text);font-size:14px;font-weight:800;width:100%;box-sizing:border-box}
+.oex-lv{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center;padding:7px 10px;border-top:1px solid rgba(128,128,128,.35);font-size:12px;font-weight:700}
+.oex-lv .sub{font-size:11px;color:var(--text3);font-weight:700;margin-top:2px}
+.oex-limpa summary{color:#b45309}
+.oex-limpa p{margin:6px 10px;font-size:11px;font-weight:700;color:var(--text3)}
+.oex-log{margin-top:8px;border:1px solid #000;background:var(--surface2);font-size:11px;font-weight:600;color:var(--text2)}
+.oex-log .l{padding:6px 10px;border-top:1px dashed rgba(128,128,128,.4)}
+.oex-log .l:first-child{border-top:none}
 @media(max-width:700px){
   .oex-r{flex:1 1 100%;text-align:left}
   .oex-det .lin{grid-template-columns:70px 1fr 56px}
@@ -14220,6 +14239,7 @@ window.addEventListener('beforeinstallprompt',(e)=>{
       <button class="multipdf-cancel" data-oex="fechar">Fechar</button>
     </div>
   </div>
+  <div id="oex-dlg" class="oex-dlg-wrap"></div>
 </div>
 
 <script>
@@ -14237,7 +14257,8 @@ window.addEventListener('beforeinstallprompt',(e)=>{
     tabelasOk:true, erroLeitura:'', atualizadoEm:null, semNomeH:0,
     filtroCliente:'', mostrarEnc:false, filtroSit:'',
     abertos:new Set(), detAbertos:new Set(), histAbertos:new Set(), hist:{},
-    form:null, ocupado:false
+    form:null, ocupado:false,
+    fonteNuvem:true, carregando:false, limpaAberta:false, dlg:null, log:null, logAberto:false
   };
   let calc={reg:new Map(),sem:[]};
 
@@ -14277,9 +14298,105 @@ window.addEventListener('beforeinstallprompt',(e)=>{
   }
 
   /* ---------- Leitura dos RDOs (SÓ LEITURA — mesma fonte do painel Horas/Projeto) ---------- */
-  function lerRegistros(){
-    try{ est.registros=coletarDadosProjeto(null,null)||[]; }catch(e){ console.error('oex lerRegistros',e); est.registros=[]; }
-    est.semNomeH=lerHorasSemNome();
+  /* ---------- Leitura do EXECUTADO direto da NUVEM (2026-10) ----------
+     Mesma fonte do painel Horas Extras (tabelas rdos / rdo_oses / rdo_workers) e não mais as
+     cópias deste aparelho: assim as horas normais, a hora extra de 70% e a de 100% saem do MESMO
+     lugar onde o banco as calculou, e um RDO apagado some do painel na hora (sem "fantasma"
+     de aparelho desatualizado). Se a nuvem não responder, cai pras cópias do aparelho — sem a
+     divisão de hora extra — e o painel avisa. */
+  async function lerPaginado(montar){
+    let de=0, out=[];
+    for(;;){
+      const r=await montar(de,de+999);
+      if(r.error) throw r.error;
+      const dados=r.data||[]; out=out.concat(dados);
+      if(dados.length<1000) break; de+=1000;
+    }
+    return out;
+  }
+  /* COMO A HORA EXTRA É DISTRIBUÍDA ENTRE OS PROJETOS: o RDO guarda a hora extra por PESSOA
+     no dia (colunas horas_normais / horas_extra_70 / horas_extra_100 / horas_extra_projeto /
+     horas_extra_extraescopo), nunca por projeto. Então, pra cada funcionário de cada RDO:
+       • Sábado, domingo e feriado: toda hora é extra — a conta é EXATA, cada hora de cada OSE
+         já tem a sua classe (70% ou 100%).
+       • Dia útil: a hora extra da pessoa é dividida entre as OSEs em que ela trabalhou,
+         PROPORCIONAL às horas de cada uma, respeitando a divisão Projeto × Extra Escopo que o
+         encarregado informou (parte "projeto" só entre OSEs normais; parte "extra escopo" só
+         entre OSEs de Extra Escopo).
+     A soma por projeto sempre fecha com a soma por funcionário gravada no banco.
+     RDOs antigos, sem nenhuma dessas colunas, entram no total mas ficam como "sem divisão". */
+  function montarRegistros(rdos,oses,workers,extDesc){
+    const rdoPor=new Map(); (rdos||[]).forEach(r=>rdoPor.set(r.id,r));
+    const osePor=new Map();
+    (oses||[]).forEach(o=>{ if(!osePor.has(o.rdo_id)) osePor.set(o.rdo_id,new Map()); osePor.get(o.rdo_id).set(Number(o.ose_numero),o); });
+    const descPor=new Map(); (extDesc||[]).forEach(o=>descPor.set(o.rdo_id+'|'+Number(o.ose_numero),o.descricao));
+    const acc=new Map(); let semNomeH=0;
+    (workers||[]).forEach(w=>{
+      const r=rdoPor.get(w.rdo_id); if(!r) return;
+      const mapaOse=osePor.get(w.rdo_id)||new Map();
+      const hrs=Array.isArray(w.hrs)?w.hrs:[];
+      const itens=[]; let P=0, X=0;               // P = horas em OSE de projeto · X = horas em OSE de Extra Escopo
+      hrs.forEach((v,idx)=>{
+        const h=parseHrs(v); if(!(h>0)) return;
+        const o=mapaOse.get(idx+1);
+        const ext=!!(o&&o.status==='ext');
+        const nome=o?String(o.nome||'').trim():'';
+        if(!nome) semNomeH+=h;
+        itens.push({n:idx+1,h,ext,conta:!!(o&&o.status&&o.status!=='sem'&&nome),o});
+        if(ext) X+=h; else P+=h;
+      });
+      if(!itens.length) return;
+      const semDivisao=(w.horas_normais==null&&w.horas_extra_70==null&&w.horas_extra_100==null);
+      const H70=Number(w.horas_extra_70)||0, H100=Number(w.horas_extra_100)||0, HE=H70+H100;
+      const Ep=Number(w.horas_extra_projeto)||0, Ee=Number(w.horas_extra_extraescopo)||0;
+      const divisaoOk=HE>0 && Math.abs((Ep+Ee)-HE)<=0.05 && (Ep<=0.005||P>0) && (Ee<=0.005||X>0);
+      itens.forEach(it=>{
+        if(!it.conta) return;                       // OSE sem nome/sem status não é projeto (o painel já avisa)
+        let he=0;
+        if(!semDivisao&&HE>0) he=divisaoOk ? (it.ext?Ee*it.h/X:Ep*it.h/P) : HE*it.h/(P+X);
+        const k=w.rdo_id+'|'+it.n;
+        let a=acc.get(k); if(!a){ a={rdo:r,o:it.o,n:it.n,horas:0,normais:0,he70:0,he100:0,semDiv:0}; acc.set(k,a); }
+        a.horas+=it.h;
+        if(semDivisao){ a.semDiv+=it.h; }
+        else{ a.normais+=it.h-he; if(HE>0){ a.he70+=he*H70/HE; a.he100+=he*H100/HE; } }
+      });
+    });
+    const registros=[];
+    acc.forEach(a=>{
+      const r=a.rdo, o=a.o; let descricao='';
+      if(o.status==='ext'){
+        const tx=String(descPor.get(r.id+'|'+a.n)||'').replace(/<[^>]+>/g,' ').replace(/&nbsp;/g,' ').replace(/\s+/g,' ').trim();
+        descricao=tx?tx.toUpperCase():'— (sem descrição preenchida) —';
+      }
+      registros.push({rdoKey:r.id,nrdo:r.nrdo||'—',disc:(r.disciplina||'(SEM DISCIPLINA)').toUpperCase(),data:r.data,dataFmt:formatarDataBR(r.data),obra:r.obra||'—',
+        encarregado:(r.encarregado||'—').toUpperCase(),projeto:String(o.nome||'').trim().toUpperCase(),status:o.status,
+        horas:a.horas,normais:a.normais,he70:a.he70,he100:a.he100,semDiv:a.semDiv,descricao});
+    });
+    return {registros,semNomeH};
+  }
+  async function lerExecutadoNuvem(){
+    const c=cliente();
+    const pag=(tabela,cols,filtro)=>lerPaginado((a,b)=>{ let q=c.from(tabela).select(cols); if(filtro) q=filtro(q); return q.order('id',{ascending:true}).range(a,b); });
+    const r=await Promise.all([
+      pag('rdos','id,nrdo,data,obra,disciplina,encarregado'),
+      pag('rdo_oses','rdo_id,ose_numero,nome,status'),
+      pag('rdo_workers','rdo_id,hrs,horas_normais,horas_extra_70,horas_extra_100,horas_extra_projeto,horas_extra_extraescopo'),
+      pag('rdo_oses','rdo_id,ose_numero,descricao',q=>q.eq('status','ext'))   // descrição só do Extra Escopo (é o único detalhe mostrado)
+    ]);
+    return montarRegistros(r[0],r[1],r[2],r[3]);
+  }
+  function registrosLocais(){
+    let reg=[]; try{ reg=coletarDadosProjeto(null,null)||[]; }catch(e){ console.error('oex registros locais',e); }
+    return reg.map(r=>Object.assign({},r,{normais:0,he70:0,he100:0,semDiv:r.horas}));
+  }
+  async function lerRegistros(){
+    try{
+      const r=await lerExecutadoNuvem();
+      est.registros=r.registros; est.semNomeH=r.semNomeH; est.fonteNuvem=true;
+    }catch(e){
+      console.error('oex lerRegistros (nuvem)',e);
+      est.registros=registrosLocais(); est.semNomeH=lerHorasSemNome(); est.fonteNuvem=false;
+    }
   }
   // Horas digitadas em linha de OSE SEM nome de projeto (o envio hoje aceita). Só pra avisar o gestor.
   function lerHorasSemNome(){
@@ -14367,31 +14484,33 @@ window.addEventListener('beforeinstallprompt',(e)=>{
         dest=sem.get(chave);
       }
       const dk=kDisc(r.disc);
-      if(!dest.discs.has(dk)) dest.discs.set(dk,{disc:r.disc,exec:0,extra:0,det:[]});
+      if(!dest.discs.has(dk)) dest.discs.set(dk,{disc:r.disc,exec:0,extra:0,norm:0,he70:0,he100:0,sd:0,xn:0,x70:0,x100:0,xsd:0,det:[]});
       const d=dest.discs.get(dk);
-      if(r.status==='ext'){ d.extra+=r.horas; d.det.push(r); }
-      else if(STATUS_EXEC.includes(r.status)){ d.exec+=r.horas; }
+      if(r.status==='ext'){ d.extra+=r.horas; d.xn+=r.normais||0; d.x70+=r.he70||0; d.x100+=r.he100||0; d.xsd+=r.semDiv||0; d.det.push(r); }
+      else if(STATUS_EXEC.includes(r.status)){ d.exec+=r.horas; d.norm+=r.normais||0; d.he70+=r.he70||0; d.he100+=r.he100||0; d.sd+=r.semDiv||0; }
     });
     calc={reg,sem:[...sem.values()]};
   }
+  const Z=()=>({norm:0,he70:0,he100:0,sd:0,xn:0,x70:0,x100:0,xsd:0});
+  const CAMPOS_H=['exec','extra','norm','he70','he100','sd','xn','x70','x100','xsd'];
   function modeloProjeto(p){
     const ex=calc.reg.get(p.id);
     const linhas=new Map();
     est.disciplinas.filter(d=>d.projeto_id===p.id).forEach(o=>{
-      linhas.set(o.disciplina_chave,{id:o.id,disc:o.disciplina,chave:o.disciplina_chave,orc:o.horas_orcadas,exec:0,extra:0,det:[],tem:true});
+      linhas.set(o.disciplina_chave,Object.assign({id:o.id,disc:o.disciplina,chave:o.disciplina_chave,orc:o.horas_orcadas,exec:0,extra:0,det:[],tem:true},Z()));
     });
     if(ex) ex.discs.forEach((v,dk)=>{
       let l=linhas.get(dk);
-      if(!l){ l={id:null,disc:v.disc,chave:dk,orc:0,exec:0,extra:0,det:[],tem:false}; linhas.set(dk,l); }
-      l.exec+=v.exec; l.extra+=v.extra; l.det=l.det.concat(v.det);
+      if(!l){ l=Object.assign({id:null,disc:v.disc,chave:dk,orc:0,exec:0,extra:0,det:[],tem:false},Z()); linhas.set(dk,l); }
+      CAMPOS_H.forEach(c=>{ l[c]+=v[c]||0; }); l.det=l.det.concat(v.det);
     });
     const ordem=listaDisciplinas().map(d=>d.k);
     const arr=[...linhas.values()].sort((a,b)=>{
       const ia=ordem.indexOf(a.chave), ib=ordem.indexOf(b.chave);
       return (ia<0?999:ia)-(ib<0?999:ib);
     });
-    const tot={orc:0,exec:0,extra:0,execSemOrc:0};
-    arr.forEach(l=>{ tot.orc+=l.orc; tot.exec+=l.exec; tot.extra+=l.extra; if(!(l.orc>0)) tot.execSemOrc+=l.exec; });
+    const tot=Object.assign({orc:0,exec:0,extra:0,execSemOrc:0},Z());
+    arr.forEach(l=>{ tot.orc+=l.orc; CAMPOS_H.forEach(c=>{ tot[c]+=l[c]; }); if(!(l.orc>0)) tot.execSemOrc+=l.exec; });
     return {p,linhas:arr,tot,sit:situacao(tot.orc,tot.exec)};
   }
   function modelosFiltrados(){
@@ -14415,7 +14534,7 @@ window.addEventListener('beforeinstallprompt',(e)=>{
     const sel=$('oex-f-cliente'); const cl=listaClientes();
     sel.innerHTML='<option value="">— Todos os clientes —</option>'+cl.map(c=>`<option value="${escA(c.k)}"${c.k===est.filtroCliente?' selected':''}>${esc(c.n)}</option>`).join('');
     $('oex-f-enc').checked=est.mostrarEnc;
-    $('oex-info').textContent=(est.atualizadoEm?'Atualizado às '+hhmm(est.atualizadoEm)+' · ':'')+'acumulado desde o 1º RDO enviado';
+    $('oex-info').textContent=est.carregando?'⏳ Carregando da nuvem…':((est.atualizadoEm?'Atualizado às '+hhmm(est.atualizadoEm)+' · ':'')+'acumulado desde o 1º RDO enviado · '+(est.fonteNuvem?'dados da nuvem':'⚠️ dados deste aparelho'));
   }
   function renderChips(){
     const ms=modelosFiltrados(); const n={verm:0,amar:0,verde:0,sem:0};
@@ -14433,6 +14552,7 @@ window.addEventListener('beforeinstallprompt',(e)=>{
     }else if(est.erroLeitura==='falha'){
       av.push(['erro','Não foi possível ler os orçamentos agora (falha de conexão). Os valores abaixo podem estar desatualizados — clique em Atualizar.']);
     }
+    if(est.atualizadoEm&&!est.fonteNuvem) av.push(['erro','Não foi possível ler os RDOs da nuvem agora: mostrando só as horas <b>deste aparelho</b>, sem a divisão de hora extra (70% / 100%). Clique em Atualizar.']);
     if(est.semNomeH>0) av.push(['','⚠️ '+fmtH(est.semNomeH)+' foram lançadas em linhas de OSE <b>sem nome de projeto</b> — essas horas não entram em nenhum projeto (nem nos outros painéis).']);
     // mesmo nome de projeto usado em mais de um cliente
     const mapa=new Map();
@@ -14441,15 +14561,20 @@ window.addEventListener('beforeinstallprompt',(e)=>{
     if(rep.length) av.push(['info','ℹ️ Mesmo nome de projeto usado em mais de um cliente: '+rep.map(x=>'<b>'+esc(x.nome)+'</b> ('+[...x.cli.values()].map(esc).join(', ')+')').join('; ')+'. Aqui cada cliente tem o seu próprio orçamento.']);
     $('oex-avisos').innerHTML=av.map(a=>`<div class="oex-aviso ${a[0]}">${a[1]}</div>`).join('');
   }
+  const hv=x=>x>0.04?fmtH(x):'—';   // coluna de hora: zero vira traço (menos ruído)
   function htmlCabecalho(m){
     const {p,tot,sit}=m;
     const larg=sit.pct==null?0:Math.min(100,sit.pct);
+    const partes=[];
+    if(tot.orc>0) partes.push('saldo '+fmtSaldo(tot.orc-tot.exec));
+    if(tot.he70+tot.he100>0.04) partes.push('hora extra: 70% '+fmtH(tot.he70)+' · 100% '+fmtH(tot.he100)+(tot.exec>0?' ('+fmtN(Math.round((tot.he70+tot.he100)/tot.exec*1000)/10)+'% do executado)':''));
+    partes.push('extra escopo (à parte): '+fmtSaldo(tot.extra));
     return `<div class="oex-card-h" data-oex="toggle" data-id="${escA(p.id)}">
       <div class="oex-t"><div class="nome"><span class="oex-seta">▶</span>📁 ${esc(p.projeto)}${p.ativo===false?' <small>(encerrado)</small>':''}</div>
         <div class="sub">${esc(p.cliente)} · ${m.linhas.filter(l=>l.tem).length} disciplina(s) orçada(s)${m.linhas.some(l=>!l.tem&&l.exec>0)?' · '+m.linhas.filter(l=>!l.tem&&l.exec>0).length+' sem orçamento':''}</div></div>
       <div class="oex-r ${sit.cls}"><div class="num">${fmtH(tot.exec)} <small>de ${tot.orc>0?fmtH(tot.orc):'—'}</small> · <span class="oex-pct">${sit.pct==null?'sem orçamento':fmtN(sit.pct)+'%'}</span></div>
         <div class="oex-bar"><i style="width:${larg}%"></i></div>
-        <div class="sub2">${tot.orc>0?'saldo '+fmtSaldo(tot.orc-tot.exec)+' · ':''}extra escopo (à parte): ${fmtSaldo(tot.extra)}</div></div>
+        <div class="sub2">${partes.join(' · ')}</div></div>
     </div>`;
   }
   function htmlCorpo(m){
@@ -14458,9 +14583,11 @@ window.addEventListener('beforeinstallprompt',(e)=>{
       const s=situacao(l.orc,l.exec);
       const saldo=l.orc>0?fmtSaldo(l.orc-l.exec):'—';
       const valIn=l.tem?String(l.orc).replace('.',','):'';
+      const dicaExtra=l.extra>0.04?` title="Extra Escopo: normais ${fmtH(l.xn)} · HE 70% ${fmtH(l.x70)} · HE 100% ${fmtH(l.x100)}"`:'';
       return `<tr class="${s.cls}"><td><span class="oex-dot"></span>${esc(l.disc)}</td>
         <td><input type="text" inputmode="decimal" class="oex-in" data-oex-orc data-proj="${escA(p.id)}" data-disc="${escA(l.disc)}" value="${escA(valIn)}" placeholder="definir"></td>
-        <td>${fmtH(l.exec)}</td><td class="cor">${saldo}</td><td class="cor">${s.pct==null?'sem orçamento':fmtN(s.pct)+'%'}</td><td>${fmtSaldo(l.extra)}</td>
+        <td class="nm">${hv(l.norm)}</td><td class="he">${hv(l.he70)}</td><td class="he">${hv(l.he100)}</td>
+        <td class="ex" title="HH normais + HE 70% + HE 100%${l.sd>0.04?' + '+fmtH(l.sd)+' sem divisão':''}">${fmtH(l.exec)}</td><td class="cor">${saldo}</td><td class="cor">${s.pct==null?'sem orçamento':fmtN(s.pct)+'%'}</td><td${dicaExtra}>${fmtSaldo(l.extra)}</td>
         <td>${l.tem?`<button type="button" class="x" title="Remover o orçado desta disciplina" data-oex="del-disc" data-proj="${escA(p.id)}" data-disc="${escA(l.disc)}">✕</button>`:''}</td></tr>`;
     }).join('');
     const livres=listaDisciplinas().filter(d=>!linhas.some(l=>l.chave===d.k));
@@ -14468,24 +14595,27 @@ window.addEventListener('beforeinstallprompt',(e)=>{
       <select data-oex-addsel>${livres.map(d=>`<option value="${escA(d.n)}">${esc(d.n)}</option>`).join('')}</select>
       <input type="text" inputmode="decimal" class="oex-in" data-oex-addh placeholder="horas">
       <button type="button" class="oex-btn" data-oex="add-disc" data-proj="${escA(p.id)}">Adicionar</button></div>`:'';
-    // detalhe do Extra Escopo a cobrar
+    // detalhe do Extra Escopo a cobrar (com a hora extra de cada lançamento, pra cobrar na classe certa)
     const det=[]; linhas.forEach(l=>l.det.forEach(d=>det.push(d))); det.sort((a,b)=>(a.data+a.nrdo).localeCompare(b.data+b.nrdo));
+    const heLanc=d=>(d.he70+d.he100)>0.04?` <small>(HE ${d.he70>0.04?'70% '+fmtH(d.he70):''}${d.he70>0.04&&d.he100>0.04?' · ':''}${d.he100>0.04?'100% '+fmtH(d.he100):''})</small>`:'';
     const extraHtml=det.length?`<details class="oex-det" data-det="${escA(p.id)}"${est.detAbertos.has(p.id)?' open':''}>
-      <summary>🟢 Extra Escopo a cobrar do cliente: ${fmtSaldo(tot.extra)} em ${det.length} lançamento(s) — ver detalhe</summary>
-      ${det.map(d=>`<div class="lin"><span>${esc(d.dataFmt)}</span><span class="hide-m">${esc(d.nrdo)}</span><span class="d">${esc((d.disc||'')+' · '+(d.encarregado||'')+' — '+String(d.descricao||'').slice(0,160))}</span><span class="hide-m">${esc(d.projeto)}</span><span>${fmtH(d.horas)}</span></div>`).join('')}
+      <summary>🟢 Extra Escopo a cobrar do cliente: ${fmtSaldo(tot.extra)} (normais ${fmtH(tot.xn)} · HE 70% ${fmtH(tot.x70)} · HE 100% ${fmtH(tot.x100)}) em ${det.length} lançamento(s) — ver detalhe</summary>
+      ${det.map(d=>`<div class="lin"><span>${esc(d.dataFmt)}</span><span class="hide-m">${esc(d.nrdo)}</span><span class="d">${esc((d.disc||'')+' · '+(d.encarregado||'')+' — '+String(d.descricao||'').slice(0,160))}</span><span class="hide-m">${esc(d.projeto)}</span><span>${fmtH(d.horas)}${heLanc(d)}</span></div>`).join('')}
     </details>`:'';
     const aps=est.apelidos.filter(a=>a.projeto_id===p.id);
     const apHtml=aps.length?`<div class="oex-apel">Também reconhecido como: ${aps.map(a=>`<span class="oex-ap">${esc(a.apelido)}<button type="button" title="Desfazer este vínculo" data-oex="del-apel" data-id="${escA(a.id)}">✕</button></span>`).join('')}</div>`:'';
     const histHtml=est.histAbertos.has(p.id)?`<div class="oex-hist">${(est.hist[p.id]||[]).length?(est.hist[p.id]).map(h=>`<div>${esc(dataHora(h.feito_em))} · <b>${esc(h.feito_por_nome||'—')}</b> — ${esc(textoHist(h))}</div>`).join(''):'<div>Sem alterações registradas (ou carregando…)</div>'}</div>`:'';
     const nota=tot.execSemOrc>0?`<div class="oex-info" style="margin-top:6px">O total inclui ${fmtH(tot.execSemOrc)} de disciplina(s) ainda sem orçamento.</div>`:'';
-    return `<div class="oex-card-b"><div class="oex-tw"><table class="oex-tb ${m.sit.cls}"><thead><tr><th>Disciplina</th><th>Orçado</th><th>Executado</th><th>Saldo</th><th>%</th><th>Extra (à parte)</th><th></th></tr></thead>
-      <tbody>${rows||'<tr><td colspan="7" style="text-align:center">Nenhuma disciplina ainda — use "Orçar outra disciplina".</td></tr>'}</tbody>
-      <tfoot><tr class="${m.sit.cls}"><td>TOTAL</td><td>${tot.orc>0?fmtH(tot.orc):'—'}</td><td>${fmtH(tot.exec)}</td><td class="cor">${tot.orc>0?fmtSaldo(tot.orc-tot.exec):'—'}</td><td class="cor">${m.sit.pct==null?'—':fmtN(m.sit.pct)+'%'}</td><td>${fmtSaldo(tot.extra)}</td><td></td></tr></tfoot></table></div>
-      ${nota}${add}${extraHtml}${apHtml}
+    const notaSd=(tot.sd+tot.xsd)>0.04?`<div class="oex-info" style="margin-top:6px">⚠️ ${fmtH(tot.sd+tot.xsd)} são de RDOs antigos, sem a divisão de hora extra (ou lidos sem conexão): entram no Executado, mas não nas colunas de HH normais / HE 70% / HE 100%.</div>`:'';
+    return `<div class="oex-card-b"><div class="oex-tw"><table class="oex-tb ${m.sit.cls}"><thead><tr><th>Disciplina</th><th>Orçado</th><th>HH normais</th><th class="he">HE 70%</th><th class="he">HE 100%</th><th>Executado</th><th>Saldo</th><th>%</th><th>Extra (à parte)</th><th></th></tr></thead>
+      <tbody>${rows||'<tr><td colspan="10" style="text-align:center">Nenhuma disciplina ainda — use "Orçar outra disciplina".</td></tr>'}</tbody>
+      <tfoot><tr class="${m.sit.cls}"><td>TOTAL</td><td>${tot.orc>0?fmtH(tot.orc):'—'}</td><td class="nm">${hv(tot.norm)}</td><td class="he">${hv(tot.he70)}</td><td class="he">${hv(tot.he100)}</td><td>${fmtH(tot.exec)}</td><td class="cor">${tot.orc>0?fmtSaldo(tot.orc-tot.exec):'—'}</td><td class="cor">${m.sit.pct==null?'—':fmtN(m.sit.pct)+'%'}</td><td>${fmtSaldo(tot.extra)}</td><td></td></tr></tfoot></table></div>
+      ${nota}${notaSd}${add}${extraHtml}${apHtml}
       <div class="oex-acoes" style="margin-top:10px">
         <button type="button" class="oex-btn sec" data-oex="renomear" data-id="${escA(p.id)}">✏️ Renomear</button>
         <button type="button" class="oex-btn sec" data-oex="hist" data-id="${escA(p.id)}">📜 Histórico</button>
         ${p.ativo===false?`<button type="button" class="oex-btn ok" data-oex="reativar" data-id="${escA(p.id)}">♻️ Reativar</button>`:`<button type="button" class="oex-btn perigo" data-oex="encerrar" data-id="${escA(p.id)}">🔒 Encerrar projeto</button>`}
+        <button type="button" class="oex-btn perigo" data-oex="excluir" data-id="${escA(p.id)}">🗑️ Excluir projeto</button>
       </div>${histHtml}</div>`;
   }
   function textoHist(h){
@@ -14509,6 +14639,15 @@ window.addEventListener('beforeinstallprompt',(e)=>{
     let html=ms.map(m=>`<div class="oex-card${est.abertos.has(m.p.id)?' aberto':''}${m.p.ativo===false?' enc':''}" data-id="${escA(m.p.id)}">${htmlCabecalho(m)}${est.abertos.has(m.p.id)?htmlCorpo(m):''}</div>`).join('');
     if(!ms.length && est.tabelasOk && !est.filtroSit) html='<div class="oex-vazio">Nenhum projeto cadastrado ainda.<br>Clique em <b>＋ Novo projeto</b> para informar as horas orçadas.</div>';
     else if(!ms.length && est.filtroSit) html='<div class="oex-vazio">Nenhum projeto nesta situação.</div>';
+    // projetos com orçamento mas SEM nenhum RDO: candidatos a encerrar/excluir (nada é apagado sozinho)
+    const vazios=projetosSemRdo().filter(m=>!est.filtroCliente||m.p.cliente_chave===est.filtroCliente);
+    if(est.tabelasOk && vazios.length && !est.filtroSit){
+      html+=`<details class="oex-det oex-limpa" data-limpa${est.limpaAberta?' open':''}><summary>🧹 Projetos sem RDO (${vazios.length}) — candidatos a encerrar ou excluir</summary>
+        <p>Têm orçamento, mas nenhum RDO lançou horas neles. Pode ser só um projeto que ainda não começou — por isso nada é apagado sozinho. <b>Encerrar</b> esconde da lista (dá pra reativar); <b>Excluir</b> apaga o orçamento.</p>
+        ${vazios.map(m=>`<div class="oex-lv"><div><b>📁 ${esc(m.p.projeto)}</b><div class="sub">${esc(m.p.cliente)} · orçado ${fmtH(m.tot.orc)} · cadastrado em ${dataBR(m.p.criado_em)}${diasDesde(m.p.criado_em)!=null?' (há '+diasDesde(m.p.criado_em)+' dia(s))':''}</div></div>
+          <div class="oex-acoes"><button type="button" class="oex-btn perigo" data-oex="encerrar" data-id="${escA(m.p.id)}">🔒 Encerrar</button><button type="button" class="oex-btn perigo" data-oex="excluir" data-id="${escA(m.p.id)}">🗑️ Excluir…</button></div></div>`).join('')}
+        <div class="oex-acoes" style="margin:8px 10px 10px"><button type="button" class="oex-btn sec" data-oex="encerrar-todos">🔒 Encerrar todos os listados</button></div></details>`;
+    }
     // projetos que aparecem nos RDOs mas ainda não têm cadastro
     const sem=calc.sem.filter(g=>!est.filtroCliente||g.cliente_chave===est.filtroCliente);
     if(sem.length && !est.filtroSit){
@@ -14526,6 +14665,7 @@ window.addEventListener('beforeinstallprompt',(e)=>{
             <div class="oex-vac">${est.tabelasOk?`<button type="button" class="oex-btn ok" data-oex="cadastrar" data-idx="${idx}">Cadastrar orçamento</button>`:''}${est.tabelasOk?vinc:''}</div></div>`;
         }).join('')+'</div>';
     }
+    if(est.tabelasOk) html+=`<div class="oex-sec"><button type="button" class="oex-btn sec" data-oex="ver-log">📜 ${est.logAberto?'Ocultar':'Ver'} registro de exclusões</button>${est.logAberto?htmlLog():''}</div>`;
     $('oex-lista').innerHTML=html;
   }
 
@@ -14556,7 +14696,7 @@ window.addEventListener('beforeinstallprompt',(e)=>{
     catch(e){
       console.error('oex ação',e);
       const m=(e&&e.message)||String(e);
-      toast('❌ '+(/duplicate|23505/i.test(m)?'Já existe um registro igual (nome repetido para esse cliente).':m),VERM);
+      toast('❌ '+msgErro(e),VERM);
       try{ await recarregar(); }catch(x){}
     }finally{ est.ocupado=false; }
   }
@@ -14673,21 +14813,120 @@ window.addEventListener('beforeinstallprompt',(e)=>{
     render();
   }
 
+  /* ---------- Excluir projeto · lista de limpeza · registro de exclusões (2026-10) ----------
+     Excluir apaga SÓ o orçamento (disciplinas orçadas, nomes vinculados e histórico) — os RDOs
+     e as horas lançadas nunca são tocados. Quem apaga é uma função do banco (oex_excluir_projeto,
+     arquivo 9_oex_excluir_projeto.sql): ou apaga tudo ou nada, só admin, e só se o nome do projeto
+     for digitado igual. Cada exclusão guarda uma cópia completa no registro de exclusões. */
+  function msgErro(e){
+    const m=(e&&e.message)||String(e||'');
+    if(/duplicate|23505/i.test(m)) return 'Já existe um registro igual (nome repetido para esse cliente).';
+    if(/CONFIRMACAO_INCORRETA/.test(m)) return 'O nome digitado não confere com o nome do projeto.';
+    if(/SEM_PERMISSAO/.test(m)) return 'Só o administrador pode excluir projetos.';
+    if(/NAO_ENCONTRADO/.test(m)) return 'Esse projeto não existe mais (talvez já tenha sido excluído).';
+    if(/could not find the function|PGRST202|schema cache/i.test(m)) return 'A função de excluir ainda não existe no banco. Rode o arquivo 9_oex_excluir_projeto.sql no Supabase e tente de novo.';
+    return m;
+  }
+  const normNome=s=>String(s==null?'':s).trim().replace(/\s+/g,' ').toUpperCase();
+  const dataBR=iso=>{ try{ const d=new Date(iso); return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear(); }catch(e){ return ''; } };
+  const diasDesde=iso=>{ try{ const n=Math.floor((Date.now()-new Date(iso).getTime())/86400000); return isFinite(n)&&n>=0?n:null; }catch(e){ return null; } };
+  function projetosSemRdo(){
+    return est.projetos.filter(p=>p.ativo!==false&&!calc.reg.has(p.id)).map(modeloProjeto)
+      .sort((a,b)=>a.p.projeto.localeCompare(b.p.projeto,'pt-BR'));
+  }
+  function abrirExclusao(id){
+    const p=est.projetos.find(x=>x.id===id); if(!p) return;
+    const m=modeloProjeto(p); const tot=m.tot;
+    const horas=tot.exec+tot.extra;
+    const nApel=est.apelidos.filter(a=>a.projeto_id===id).length;
+    const nDisc=m.linhas.filter(l=>l.tem).length;
+    est.dlg={id,nome:p.projeto};
+    $('oex-dlg').innerHTML=`<div class="oex-dlg" role="dialog" aria-modal="true"><h4>🗑️ Excluir o projeto “${esc(p.projeto)}”?</h4>
+      <div class="oex-info">${esc(p.cliente)}${p.ativo===false?' · encerrado':''}</div>
+      <div class="col apaga"><b>O que será APAGADO</b><ul>
+        <li>O orçamento: ${nDisc} disciplina(s), ${fmtH(tot.orc)} orçadas</li>
+        <li>${nApel} nome(s) vinculado(s) a este projeto</li>
+        <li>O histórico de alterações do orçamento (uma cópia completa fica no registro de exclusões)</li></ul></div>
+      <div class="col ok"><b>O que NÃO será apagado</b><ul>
+        <li>Os RDOs e as horas lançadas: ${fmtH(tot.exec)} executadas${tot.extra>0.04?' + '+fmtH(tot.extra)+' de Extra Escopo':''}</li>
+        <li>Se ainda houver RDOs com este nome, o projeto volta em “Projetos nos RDOs sem cadastro”, com as horas dele.</li></ul></div>
+      ${horas>0.04?`<div class="oex-aviso">Este projeto tem horas lançadas nos RDOs. Para tirá-lo da lista <b>sem perder o orçamento</b>, prefira <b>Encerrar</b> (dá pra reativar).</div>`:''}
+      <label>Para confirmar, digite o nome do projeto: <b>${esc(p.projeto)}</b></label>
+      <input type="text" id="oex-dlg-in" autocomplete="off" placeholder="Digite o nome do projeto">
+      <div class="oex-acoes"><button type="button" class="oex-btn sec" data-oex="dlg-cancelar">Cancelar</button>
+        ${p.ativo!==false?'<button type="button" class="oex-btn" data-oex="dlg-encerrar">🔒 Encerrar em vez de excluir</button>':''}
+        <button type="button" class="oex-btn perigo" id="oex-dlg-ok" data-oex="dlg-confirmar" disabled>🗑️ Excluir definitivamente</button></div></div>`;
+    $('oex-dlg').style.display='flex';
+    const f=$('oex-dlg-in'); if(f) f.focus();
+  }
+  function fecharDlg(){ est.dlg=null; const d=$('oex-dlg'); if(d){ d.style.display='none'; d.innerHTML=''; } }
+  function atualizarBotaoExcluir(){
+    const b=$('oex-dlg-ok'), i=$('oex-dlg-in'); if(!b||!i||!est.dlg) return;
+    b.disabled=normNome(i.value)!==normNome(est.dlg.nome);
+  }
+  async function excluirProjeto(){
+    const dlg=est.dlg; if(!dlg) return;
+    const p=est.projetos.find(x=>x.id===dlg.id); if(!p){ fecharDlg(); return; }
+    const digitado=($('oex-dlg-in')||{}).value||'';
+    if(normNome(digitado)!==normNome(p.projeto)){ toast('O nome digitado não confere.',LARANJA); return; }
+    const t=modeloProjeto(p).tot; const r1=x=>Math.round((Number(x)||0)*10)/10;
+    await proteger(async()=>{
+      const r=await cliente().rpc('oex_excluir_projeto',{p_id:p.id,p_confirmacao:digitado,p_contexto:{executado_h:r1(t.exec),extra_escopo_h:r1(t.extra),he70_h:r1(t.he70),he100_h:r1(t.he100)}});
+      if(r.error) throw r.error;
+      est.abertos.delete(p.id); est.histAbertos.delete(p.id); fecharDlg();
+      toast('✓ Projeto “'+p.projeto+'” excluído. Os RDOs não foram tocados.');
+      await recarregar();
+      if(est.logAberto) await carregarLog();
+    });
+  }
+  async function encerrarTodosSemRdo(){
+    const lista=projetosSemRdo().filter(m=>!est.filtroCliente||m.p.cliente_chave===est.filtroCliente);
+    if(!lista.length) return;
+    if(!confirm('Encerrar '+lista.length+' projeto(s) sem RDO?\n\n'+lista.map(m=>'• '+m.p.projeto+' ('+m.p.cliente+')').join('\n')+'\n\nNada é apagado: eles somem da lista (marque "mostrar encerrados" pra ver) e podem ser reativados.')) return;
+    await proteger(async()=>{
+      const r=await cliente().from(T_PROJ).update({ativo:false}).in('id',lista.map(m=>m.p.id)); if(r.error) throw r.error;
+      toast('✓ '+lista.length+' projeto(s) encerrado(s).'); await recarregar();
+    });
+  }
+  async function carregarLog(){
+    try{
+      const r=await cliente().from('orcamentos_exclusoes').select('*').order('excluido_em',{ascending:false}).limit(50);
+      if(r.error) throw r.error; est.log=r.data||[];
+    }catch(e){ console.error('oex log',e); est.log=tabelaAusente(e)?'ausente':'falha'; }
+  }
+  function htmlLog(){
+    if(est.log===null) return '<div class="oex-log"><div class="l">Carregando…</div></div>';
+    if(est.log==='ausente') return '<div class="oex-log"><div class="l">O registro de exclusões ainda não existe no banco. Rode o arquivo <b>9_oex_excluir_projeto.sql</b> no Supabase.</div></div>';
+    if(est.log==='falha') return '<div class="oex-log"><div class="l">Não foi possível ler o registro agora.</div></div>';
+    if(!est.log.length) return '<div class="oex-log"><div class="l">Nenhum projeto foi excluído até agora.</div></div>';
+    return '<div class="oex-log">'+est.log.map(x=>{
+      const r=x.resumo||{}, c=r.contexto||{};
+      return `<div class="l">${esc(dataHora(x.excluido_em))} · <b>${esc(x.excluido_por_nome||'—')}</b> excluiu <b>${esc(x.projeto)}</b> (${esc(x.cliente||'—')}) — orçamento de ${fmtH(Number(r.horas_orcadas)||0)} em ${(r.disciplinas||[]).length} disciplina(s)${c.executado_h!=null?' · executado na hora: '+fmtH(Number(c.executado_h)||0):''}</div>`;
+    }).join('')+'</div>';
+  }
+  async function alternarLog(){
+    est.logAberto=!est.logAberto;
+    if(!est.logAberto){ render(); return; }
+    est.log=null; render(); await carregarLog(); render();
+  }
+
   /* ---------- Abrir / atualizar ---------- */
   async function atualizar(sincronizar){
+    // (o parâmetro "sincronizar" ficou só por compatibilidade: o painel agora lê direto da nuvem)
     const btn=$('oex-btn-atualizar');
     if(btn){ btn.disabled=true; btn.textContent='🔄 Atualizando...'; }
+    est.carregando=true;
     try{
-      if(sincronizar){ try{ await sincronizarSeAdmin(true); }catch(e){ console.warn('oex sync',e); } }
-      lerRegistros(); await carregarOrcamentos(); calcular(); est.atualizadoEm=new Date(); render();
+      await Promise.all([lerRegistros(),carregarOrcamentos()]);
+      calcular(); est.atualizadoEm=new Date();
     }catch(e){ console.error('oex atualizar',e); toast('❌ Erro ao atualizar o painel.',VERM); }
-    finally{ if(btn){ btn.disabled=false; btn.textContent='🔄 Atualizar'; } }
+    finally{ est.carregando=false; render(); if(btn){ btn.disabled=false; btn.textContent='🔄 Atualizar'; } }
   }
   async function abrir(){
     if(!exigirAdmin()) return;
     $('oex-modal').classList.add('show');
-    lerRegistros(); calcular(); render();      // mostra já o que existe neste aparelho...
-    await atualizar(true);                       // ...e atualiza com a nuvem em seguida
+    $('oex-lista').innerHTML='<div class="oex-vazio">⏳ Carregando orçamentos e RDOs da nuvem…</div>';
+    await atualizar(false);
   }
   function fechar(){ $('oex-modal').classList.remove('show'); }
   window.oexAbrir=abrir;
@@ -14698,6 +14937,7 @@ window.addEventListener('beforeinstallprompt',(e)=>{
     try{ if(typeof IDS_MODAIS_COM_ESC!=='undefined' && !IDS_MODAIS_COM_ESC.includes('oex-modal')) IDS_MODAIS_COM_ESC.push('oex-modal'); }catch(e){}
     modal.addEventListener('click',e=>{
       if(e.target===modal){ fechar(); return; }
+      if(e.target.id==='oex-dlg'){ fecharDlg(); return; }   // clicar fora da janelinha de confirmação só fecha a janelinha
       const el=e.target.closest('[data-oex]'); if(!el||!modal.contains(el)) return;
       const a=el.dataset.oex;
       if(a==='fechar') fechar();
@@ -14715,6 +14955,12 @@ window.addEventListener('beforeinstallprompt',(e)=>{
       else if(a==='vincular') vincular(el);
       else if(a==='del-apel') removerApelido(el.dataset.id);
       else if(a==='hist') alternarHist(el.dataset.id);
+      else if(a==='excluir') abrirExclusao(el.dataset.id);
+      else if(a==='dlg-cancelar') fecharDlg();
+      else if(a==='dlg-encerrar'){ const id=est.dlg&&est.dlg.id; fecharDlg(); if(id) mudarAtivo(id,false); }
+      else if(a==='dlg-confirmar') excluirProjeto();
+      else if(a==='encerrar-todos') encerrarTodosSemRdo();
+      else if(a==='ver-log') alternarLog();
       else if(a==='cadastrar'){ const g=calc.sem[Number(el.dataset.idx)]; if(g) abrirForm({cliente:g.cliente,nome:g.projeto}); }
     });
     modal.addEventListener('change',e=>{
@@ -14723,11 +14969,15 @@ window.addEventListener('beforeinstallprompt',(e)=>{
       else if(t.id==='oex-f-enc'){ est.mostrarEnc=t.checked; render(); }
       else if(t.hasAttribute&&t.hasAttribute('data-oex-orc')) aoMudarOrcado(t);
     });
+    modal.addEventListener('input',e=>{ if(e.target&&e.target.id==='oex-dlg-in') atualizarBotaoExcluir(); });
     modal.addEventListener('keydown',e=>{
+      if(e.key==='Escape'&&est.dlg){ e.stopPropagation(); e.preventDefault(); fecharDlg(); return; }   // ESC com a janelinha aberta fecha só ela
+      if(e.key==='Enter'&&e.target&&e.target.id==='oex-dlg-in'){ e.preventDefault(); return; }       // Enter nunca confirma uma exclusão
       if(e.key==='Enter'&&e.target.hasAttribute&&e.target.hasAttribute('data-oex-orc')){ e.preventDefault(); e.target.blur(); }
     });
     modal.addEventListener('toggle',e=>{
       const d=e.target; if(d&&d.dataset&&d.dataset.det){ d.open?est.detAbertos.add(d.dataset.det):est.detAbertos.delete(d.dataset.det); }
+      if(d&&d.hasAttribute&&d.hasAttribute('data-limpa')) est.limpaAberta=d.open;
     },true);
   }
   iniciar();
