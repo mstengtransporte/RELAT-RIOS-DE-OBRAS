@@ -1731,7 +1731,7 @@ body.dark #workers-body tr:hover{background-color:rgba(58,110,232,.08)}
      fontes) — os dois sistemas usam a mesma "moldura" de login, só
      o papel de parede muda entre eles. -->
 <div id="login-overlay" style="position:fixed;inset:0;z-index:99999;background:#0b1220 url('login-fundo-rdo.jpg') center center / cover no-repeat;color-scheme:dark">
-  <div style="position:absolute;bottom:6px;right:8px;font-size:9px;color:rgba(255,255,255,.35);font-family:monospace;pointer-events:none">v2026.10.13-orcado-valores-rs</div>
+  <div style="position:absolute;bottom:6px;right:8px;font-size:9px;color:rgba(255,255,255,.35);font-family:monospace;pointer-events:none">v2026.10.14-orcado-limpar-extras</div>
   <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:calc(100% - 32px);max-width:380px;background:rgb(10,17,32);border:1px solid rgba(255,255,255,.14);border-radius:18px;padding:32px 28px;box-shadow:0 20px 60px rgba(0,0,0,.6);text-transform:none;font-weight:400">
     <h1 style="font-size:20px;margin:0 0 4px;color:#fff;text-align:center;font-weight:700">RDO <span style="color:#3ea6ff">Master Energy</span></h1>
     <p style="margin:0 0 24px;text-align:center;color:#9ca3af;font-size:13px;letter-spacing:.5px;font-weight:600">DIÁRIO DE OBRA PRO</p>
@@ -10691,7 +10691,7 @@ function gerarRelatorioMultiplo(){
     const tabName=(dataFmt+' '+h.nrdo).replace(/[/\\*?[\]:]/g,'-').slice(0,31);
     const ws=XLSX.utils.aoa_to_sheet(rows);
     ws['!cols']=[{wch:4},{wch:22},{wch:16},{wch:7},{wch:7},{wch:7},{wch:7},{wch:7},{wch:7},{wch:10}];
-    XLSX.utils.book_append_sheet(wb,ws,tabName||`RDO-${oi+1}`);
+    XLSX.utils.book_append_sheet(wb,ws,tabName||`RDO-${wb.SheetNames.length+1}`);
   });
   const de=document.getElementById('mpdf-de').value||'';
   const ate=document.getElementById('mpdf-ate').value||'';
@@ -14215,7 +14215,7 @@ window.addEventListener('beforeinstallprompt',(e)=>{
   };
 });
 </script>
-<div class="no-print" style="position:fixed;bottom:2px;right:4px;font-size:8px;color:rgba(120,120,120,.4);font-family:monospace;pointer-events:none;z-index:5">v2026.10.13-orcado-valores-rs</div>
+<div class="no-print" style="position:fixed;bottom:2px;right:4px;font-size:8px;color:rgba(120,120,120,.4);font-family:monospace;pointer-events:none;z-index:5">v2026.10.14-orcado-limpar-extras</div>
 
 <!-- MODAL DE ALERTA DE PENDÊNCIAS — substitui o toast/alert escuro de antes. Aparece
      sempre que a validação unificada (validarFormularioRDO) bloqueia uma tentativa de
@@ -14343,6 +14343,17 @@ window.addEventListener('beforeinstallprompt',(e)=>{
 .oex-log{margin-top:8px;border:1px solid #000;background:var(--surface2);font-size:11px;font-weight:600;color:var(--text2)}
 .oex-log .l{padding:6px 10px;border-top:1px dashed rgba(128,128,128,.4)}
 .oex-log .l:first-child{border-top:none}
+/* Orçar com horas extras, limpar orçamento (2026-10) */
+.oex-fw{overflow-x:auto;max-width:100%}
+.oex-ftab{border-collapse:collapse;font-size:12px}
+.oex-ftab th{font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.3px;color:var(--text3);padding:3px 4px;text-align:center;white-space:nowrap}
+.oex-ftab td{padding:3px 4px;font-weight:800;white-space:nowrap}
+.oex-ftab td:first-child{text-align:left}
+.oex-ftab .oex-in{width:68px}
+.oex-add{flex-wrap:wrap}
+.oex-addl{display:inline-flex;flex-direction:column;gap:2px;font-size:10px;font-weight:900;color:var(--text3);text-transform:uppercase}
+.oex-addl .oex-in{width:64px}
+.oex-dica{font-size:11px;font-weight:700;color:var(--text3);margin:6px 0 2px}
 /* Orçado vs Executado: R$ ao lado das horas, período, valores (2026-10) */
 .oex-rs{display:block;font-size:10.5px;font-weight:700;opacity:.85;white-space:nowrap}
 .oex-r .num2{font-size:12px;font-weight:800;margin-top:1px}
@@ -14881,11 +14892,34 @@ body.dark .ose-orc-nota.info{color:#93c5fd}
   }
 
   /* ---------- Renderização ---------- */
+  // A tela é redesenhada depois de cada gravação. Sem isto, quem digita vários números em sequência
+  // (Tab de um campo pro outro) perdia o cursor a cada gravação — e o que já tinha digitado no campo novo.
+  function guardarFoco(){
+    const el=document.activeElement, lista=$('oex-lista');
+    if(!el||!lista||!lista.contains(el)||!/^(INPUT|TEXTAREA)$/.test(el.tagName)||el.type==='checkbox') return null;
+    const attrs=el.getAttributeNames().filter(n=>n.startsWith('data-')).map(n=>'['+n+'="'+String(el.getAttribute(n)).replace(/\\/g,'\\\\').replace(/"/g,'\\"')+'"]').join('');
+    if(!attrs) return null;
+    const card=el.closest('.oex-card');
+    return {sel:el.tagName.toLowerCase()+attrs,card:card?card.dataset.id:null,v:el.value,a:el.selectionStart,b:el.selectionEnd};
+  }
+  function devolverFoco(f){
+    if(!f) return;
+    try{
+      const lista=$('oex-lista'); let raiz=lista;
+      if(f.card) raiz=[...lista.querySelectorAll('.oex-card')].find(c=>c.dataset.id===f.card)||lista;
+      const el=raiz.querySelector(f.sel); if(!el) return;
+      if(el.value!==f.v) el.value=f.v;                 // devolve também o que estava sendo digitado e ainda não tinha sido gravado
+      el.focus();
+      if(f.a!=null&&typeof el.setSelectionRange==='function'){ try{ el.setSelectionRange(f.a,f.b); }catch(x){} }
+    }catch(e){}
+  }
   function render(){
     try{
       const corpo=document.querySelector('#oex-modal .oex-body'); const rolagem=corpo?corpo.scrollTop:0;
+      const foco=guardarFoco();
       renderToolbar(); renderChips(); renderAvisos(); renderLista();
       if(corpo) corpo.scrollTop=rolagem;
+      devolverFoco(foco);
     }catch(e){ console.error('oex render',e); }
   }
   function renderToolbar(){
@@ -15066,8 +15100,9 @@ body.dark .ose-orc-nota.info{color:#93c5fd}
     const livres=listaDisciplinas().filter(d=>!linhas.some(l=>l.chave===d.k));
     const add=livres.length?`<div class="oex-add"><span class="oex-info">Orçar outra disciplina:</span>
       <select data-oex-addsel>${livres.map(d=>`<option value="${escA(d.n)}">${esc(d.n)}</option>`).join('')}</select>
-      <input type="text" inputmode="decimal" class="oex-in" data-oex-addh placeholder="horas normais">
+      ${COLS_FORM.map(c=>`<label class="oex-addl">${esc(c[1])}<input type="text" inputmode="decimal" class="oex-in" ${c[0]==='horas_orcadas'?'data-oex-addh':'data-oex-adde="'+c[0]+'"'} placeholder="0"></label>`).join('')}
       <button type="button" class="oex-btn" data-oex="add-disc" data-proj="${escA(p.id)}">Adicionar</button></div>`:'';
+    const dica=`<div class="oex-dica">💡 Para orçar <b>horas extras</b> de uma disciplina já cadastrada (dia útil acima de 9 h, sábado, domingo e feriado), clique no <b>▸</b> ao lado do nome dela.</div>`;
     const det=[]; linhas.forEach(l=>l.det.forEach(d=>det.push(d))); det.sort((a,b)=>(a.data+a.nrdo).localeCompare(b.data+b.nrdo));
     const heLanc=d=>(d.he70+d.he100)>0.04?` <small>(HE ${d.he70>0.04?'70% '+fmtH(d.he70):''}${d.he70>0.04&&d.he100>0.04?' · ':''}${d.he100>0.04?'100% '+fmtH(d.he100):''})</small>`:'';
     const extraHtml=htmlExtraProjeto(m,det,heLanc);
@@ -15081,12 +15116,13 @@ body.dark .ose-orc-nota.info{color:#93c5fd}
     return `<div class="oex-card-b"><div class="oex-tw"><table class="oex-tb ${m.sit.cls}"><thead><tr><th>Disciplina</th><th>Orçado</th><th>HH normais</th><th class="he">HE 70%</th><th class="he">HE 100%</th><th>Executado</th>${perOn?'<th class="per" title="Executado só dentro do período escolhido (o saldo e o % continuam acumulados)">No período</th>':''}<th>Saldo</th><th>%</th><th>Situação</th><th>Extra (à parte)</th><th></th></tr></thead>
       <tbody>${rows||`<tr><td colspan="${nc}" style="text-align:center">Nenhuma disciplina ainda — use "Orçar outra disciplina".</td></tr>`}</tbody>
       <tfoot><tr class="${m.sit.cls}"><td>TOTAL</td><td>${tot.orc>0?fmtH(tot.orc):'—'}${rs(m,tot.rOrc,tot.orc>0)}</td><td class="nm">${hv(tot.norm)}${rs(m,tot.rc.n,tot.norm>0.04)}</td><td class="he">${hv(tot.he70)}${rs(m,tot.rc.u+tot.rc.s,tot.he70>0.04)}</td><td class="he">${hv(tot.he100)}${rs(m,tot.rc.d+tot.rc.f,tot.he100>0.04)}</td><td>${fmtH(tot.exec)}${rs(m,tot.rExec)}</td>${perOn?`<td class="per">${hv(tot.per.exec)}${rs(m,somac(tot.per.rc)+tot.per.rsd,tot.per.exec>0.04)}</td>`:''}<td class="cor">${tot.orc>0?fmtSaldo(tot.orc-tot.exec):'—'}${rsS(m,tot.rOrc-tot.rExec,tot.orc>0)}</td><td class="cor">${m.sit.pct==null?'—':fmtN(m.sit.pct)+'%'}${rPct(m,tot.rExec,tot.rOrc)}</td><td>${esc(m.vd.txt.replace(/^\S+\s/,''))}</td><td>${fmtSaldo(tot.extra)}${rs(m,tot.rExtra,tot.extra>0.04)}</td><td></td></tr></tfoot></table></div>
-      ${nota}${notaSd}${add}${extraHtml}${htmlValores(m)}${obs}${apHtml}
+      ${nota}${notaSd}${dica}${add}${extraHtml}${htmlValores(m)}${obs}${apHtml}
       <div class="oex-acoes" style="margin-top:10px">
         <button type="button" class="oex-btn sec" data-oex="renomear" data-id="${escA(p.id)}">✏️ Renomear</button>
         <button type="button" class="oex-btn sec" data-oex="hist" data-id="${escA(p.id)}">📜 Histórico</button>
+        <button type="button" class="oex-btn sec" data-oex="limpar-orc" data-id="${escA(p.id)}" title="Zera o orçamento (horas, horas extras, Extra Escopo aprovado, valores em R$ e observação). O projeto continua cadastrado e os RDOs não são tocados.">🧹 Limpar orçamento</button>
         ${p.ativo===false?`<button type="button" class="oex-btn ok" data-oex="reativar" data-id="${escA(p.id)}">♻️ Reativar</button>`:`<button type="button" class="oex-btn perigo" data-oex="encerrar" data-id="${escA(p.id)}">🔒 Encerrar projeto</button>`}
-        <button type="button" class="oex-btn perigo" data-oex="excluir" data-id="${escA(p.id)}">🗑️ Excluir projeto</button>
+        <button type="button" class="oex-btn perigo" data-oex="excluir" data-id="${escA(p.id)}" title="Apaga o CADASTRO e o orçamento deste projeto no painel. Os RDOs e as horas NÃO são apagados: o projeto volta em &quot;sem cadastro&quot;.">🗑️ Excluir cadastro</button>
       </div>${histHtml}</div>`;
   }
   // Resumo geral dos projetos que estão na tela (respeita os filtros de obra e de encerrados)
@@ -15169,11 +15205,12 @@ body.dark .ose-orc-nota.info{color:#93c5fd}
         }).join('')+'</div>';
     }
     if(est.tabelasOk) html+=htmlConferencia();
-    if(est.tabelasOk) html+=`<div class="oex-sec"><button type="button" class="oex-btn sec" data-oex="ver-log">📜 ${est.logAberto?'Ocultar':'Ver'} registro de exclusões</button>${est.logAberto?htmlLog():''}</div>`;
+    if(est.tabelasOk) html+=`<div class="oex-sec"><button type="button" class="oex-btn sec" data-oex="ver-log">📜 ${est.logAberto?'Ocultar':'Ver'} registro de exclusões e limpezas</button>${est.logAberto?htmlLog():''}</div>`;
     $('oex-lista').innerHTML=html;
   }
 
   /* ---------- Formulário "Novo projeto" ---------- */
+  const COLS_FORM=[['horas_orcadas','Normais'],['horas_he_util','HE dia útil >9 h'],['horas_he_sabado','HE sábado'],['horas_he_domingo','HE domingo'],['horas_he_feriado','HE feriado']];
   function abrirForm(pre){
     est.form={cliente:(pre&&pre.cliente)||'',nome:(pre&&pre.nome)||''};
     const cl=listaClientes(), ds=listaDisciplinas();
@@ -15183,8 +15220,10 @@ body.dark .ose-orc-nota.info{color:#93c5fd}
       <select id="oex-fn-cli"><option value="">— Escolha a obra —</option>${cl.map(c=>`<option value="${escA(c.n)}"${c.k===preK?' selected':''}>${esc(c.n)}</option>`).join('')}</select>
       <label>Nome do projeto — o mesmo que o encarregado vai digitar na OSE do RDO</label>
       <input type="text" id="oex-fn-nome" maxlength="120" value="${escA(est.form.nome)}" placeholder="Ex.: PROJETO REFINARIA ALFA">
-      <label>Horas NORMAIS orçadas por disciplina (as horas extras previstas você lança depois, dentro do projeto)</label>
-      <div class="oex-fgrid">${ds.map(d=>`<div><span>${esc(d.n)}</span><input type="text" inputmode="decimal" class="oex-in" data-fd="${escA(d.n)}" placeholder="0"></div>`).join('')}</div>
+      <label>Horas orçadas por disciplina — normais e horas extras previstas (deixe em branco o que não foi orçado)</label>
+      <div class="oex-fw"><table class="oex-ftab"><thead><tr><th>Disciplina</th>${COLS_FORM.map(c=>`<th>${esc(c[1])}</th>`).join('')}</tr></thead>
+        <tbody>${ds.map(d=>`<tr><td>${esc(d.n)}</td>${COLS_FORM.map(c=>`<td><input type="text" inputmode="decimal" class="oex-in" data-fd="${escA(d.n)}" data-fc="${c[0]}" placeholder="0"></td>`).join('')}</tr>`).join('')}</tbody></table></div>
+      <div class="oex-info">💡 As horas extras previstas são opcionais. Se você lançar alguma, o painel passa a controlar aquela disciplina por categoria. O Extra Escopo aprovado e o valor da hora em R$ você informa depois, dentro do projeto.</div>
       <div class="oex-acoes"><button type="button" class="oex-btn ok" data-oex="salvar-novo">💾 Salvar projeto</button><button type="button" class="oex-btn sec" data-oex="cancelar-form">Cancelar</button></div></div>`;
     const f=$('oex-fn-nome'); if(f) f.focus();
     const corpo=document.querySelector('#oex-modal .oex-body'); if(corpo) corpo.scrollTop=0;
@@ -15427,19 +15466,25 @@ body.dark .ose-orc-nota.info{color:#93c5fd}
     if(dup){ toast('Esse projeto já está cadastrado para esta obra'+(dup.ativo===false?' (está encerrado — reative-o).':'.'),LARANJA); return; }
     const outro=est.apelidos.find(a=>a.cliente_chave===cc&&a.apelido_chave===pc);
     if(outro){ toast('Esse nome já é apelido de outro projeto desta obra. Desfaça o vínculo antes.',LARANJA); return; }
-    const horas=[]; document.querySelectorAll('#oex-form [data-fd]').forEach(i=>{
-      const v=i.value.trim(); if(v==='') return; const n=parseNum(v);
-      if(n==null){ horas.push({erro:i.dataset.fd}); } else horas.push({disc:i.dataset.fd,n});
+    const porDisc=new Map(); let ruim=null;
+    document.querySelectorAll('#oex-form [data-fd]').forEach(i=>{
+      const v=i.value.trim(); if(v==='') return;
+      const col=i.dataset.fc||'horas_orcadas', n=parseNum(v);
+      if(n==null){ ruim=ruim||(i.dataset.fd+' ('+((COLS_FORM.find(c=>c[0]===col)||['',col])[1])+')'); return; }
+      if(!porDisc.has(i.dataset.fd)) porDisc.set(i.dataset.fd,{}); porDisc.get(i.dataset.fd)[col]=n;
     });
-    const ruim=horas.find(h=>h.erro); if(ruim){ toast('Horas inválidas em '+ruim.erro+' — digite só números.',LARANJA); return; }
+    if(ruim){ toast('Horas inválidas em '+ruim+' — digite só números.',LARANJA); return; }
+    const temExtra=[...porDisc.values()].some(o=>Object.keys(o).some(k=>k!=='horas_orcadas'&&o[k]>0));
+    if(temExtra&&est.semCategorias){ toast('Para orçar horas extras, rode antes o arquivo 11_oex_orcamento_por_categoria.sql no Supabase.',LARANJA); return; }
     await proteger(async()=>{
       const c=cliente();
       const r=await c.from(T_PROJ).insert({cliente:cli,cliente_chave:cc,projeto:nome,projeto_chave:pc}).select().single();
       if(r.error) throw r.error;
       const id=r.data.id;
-      if(horas.length){
-        const r2=await c.from(T_DISC).insert(horas.map(h=>({projeto_id:id,disciplina:h.disc,disciplina_chave:kDisc(h.disc),horas_orcadas:h.n})));
-        if(r2.error) throw r2.error;
+      if(porDisc.size){
+        const linhas=[...porDisc.entries()].map(([disc,o])=>Object.assign({projeto_id:id,disciplina:disc,disciplina_chave:kDisc(disc),horas_orcadas:0},o));
+        const r2=await c.from(T_DISC).insert(linhas);
+        if(r2.error){ try{ await c.from(T_PROJ).delete().eq('id',id); }catch(x){} throw r2.error; }   // não deixa um projeto "pela metade"
       }
       est.abertos.add(id); fecharForm();
       toast('✓ Projeto "'+nome+'" cadastrado.');
@@ -15447,9 +15492,20 @@ body.dark .ose-orc-nota.info{color:#93c5fd}
     });
   }
   async function addDisciplina(btn){
-    const caixa=btn.closest('.oex-add'); const disc=caixa.querySelector('[data-oex-addsel]').value; const n=parseNum(caixa.querySelector('[data-oex-addh]').value);
-    if(n==null){ toast('Digite as horas orçadas (só números).',LARANJA); return; }
-    await proteger(async()=>{ await salvarOrcado(btn.dataset.proj,disc,n); toast('✓ '+disc+' orçada: '+fmtH(n)); await recarregar(); });
+    const caixa=btn.closest('.oex-add'); const disc=caixa.querySelector('[data-oex-addsel]').value;
+    const o={}; let ruim=false;
+    caixa.querySelectorAll('input').forEach(i=>{
+      const v=i.value.trim(); if(v==='') return;
+      const n=parseNum(v); if(n==null){ ruim=true; return; }
+      o[i.dataset.oexAdde||'horas_orcadas']=n;
+    });
+    if(ruim||!Object.keys(o).length){ toast('Digite as horas orçadas (só números).',LARANJA); return; }
+    if(Object.keys(o).some(k=>k!=='horas_orcadas'&&o[k]>0)&&est.semCategorias){ toast('Para orçar horas extras, rode antes o arquivo 11_oex_orcamento_por_categoria.sql no Supabase.',LARANJA); return; }
+    await proteger(async()=>{
+      const linha=Object.assign({projeto_id:btn.dataset.proj,disciplina:disc,disciplina_chave:kDisc(disc),horas_orcadas:0},o);
+      const r=await cliente().from(T_DISC).upsert(linha,{onConflict:'projeto_id,disciplina_chave'}); if(r.error) throw r.error;
+      toast('✓ '+disc+' orçada: '+fmtH(Object.values(o).reduce((s,v)=>s+v,0))); await recarregar();
+    });
   }
   async function removerDisc(btn){
     const ex=est.disciplinas.find(d=>d.projeto_id===btn.dataset.proj&&d.disciplina_chave===kDisc(btn.dataset.disc)); if(!ex) return;
@@ -15516,8 +15572,10 @@ body.dark .ose-orc-nota.info{color:#93c5fd}
     const m=(e&&e.message)||String(e||'');
     if(/duplicate|23505/i.test(m)) return 'Já existe um registro igual (nome repetido para essa obra).';
     if(/CONFIRMACAO_INCORRETA/.test(m)) return 'O nome digitado não confere com o nome do projeto.';
-    if(/SEM_PERMISSAO/.test(m)) return 'Só o administrador pode excluir projetos.';
+    if(/SEM_PERMISSAO/.test(m)) return 'Só o administrador pode fazer isso.';
     if(/NAO_ENCONTRADO/.test(m)) return 'Esse projeto não existe mais (talvez já tenha sido excluído).';
+    if(/FALTA_ARQUIVO_9|orcamentos_exclusoes/i.test(m)) return 'Falta rodar o arquivo 9_oex_excluir_projeto.sql no Supabase (ele cria o registro de exclusões e limpezas). Nada foi apagado.';
+    if(/oex_limpar_orcamento/i.test(m)) return 'Falta rodar o arquivo 13_oex_limpar_orcamento.sql no Supabase (a função de limpar ainda não existe). Rode e tente de novo.';
     if(/orcamentos_valores/i.test(m)) return 'Falta rodar o arquivo 12_oex_valores_hora.sql no Supabase (a tabela de valores ainda não existe). Rode e clique em Atualizar.';
     if(/horas_he_|ee_horas_|observacao_contrato/i.test(m)) return 'Falta rodar o arquivo 11_oex_orcamento_por_categoria.sql no Supabase (as colunas de hora extra ainda não existem). Rode e clique em Atualizar.';
     if(/could not find the function|PGRST202|schema cache/i.test(m)) return 'A função de excluir ainda não existe no banco. Rode o arquivo 9_oex_excluir_projeto.sql no Supabase e tente de novo.';
@@ -15540,16 +15598,19 @@ body.dark .ose-orc-nota.info{color:#93c5fd}
     $('oex-dlg').innerHTML=`<div class="oex-dlg" role="dialog" aria-modal="true"><h4>🗑️ Excluir o projeto “${esc(p.projeto)}”?</h4>
       <div class="oex-info">${esc(p.cliente)}${p.ativo===false?' · encerrado':''}</div>
       <div class="col apaga"><b>O que será APAGADO</b><ul>
-        <li>O orçamento: ${nDisc} disciplina(s), ${fmtH(tot.orc)} orçadas</li>
+        <li>O orçamento: ${nDisc} disciplina(s), ${fmtH(tot.orc)} orçadas (normais + horas extras previstas)${tot.eeAprov>0?' e '+fmtH(tot.eeAprov)+' de Extra Escopo aprovado':''}</li>
+        ${m.val?`<li>Os valores da hora em R$ (${m.val.vigs.length} linha(s))</li>`:''}
         <li>${nApel} nome(s) vinculado(s) a este projeto</li>
         <li>O histórico de alterações do orçamento (uma cópia completa fica no registro de exclusões)</li></ul></div>
       <div class="col ok"><b>O que NÃO será apagado</b><ul>
         <li>Os RDOs e as horas lançadas: ${fmtH(tot.exec)} executadas${tot.extra>0.04?' + '+fmtH(tot.extra)+' de Extra Escopo':''}</li>
         <li>Se ainda houver RDOs com este nome, o projeto volta em “Projetos nos RDOs sem cadastro”, com as horas dele.</li></ul></div>
+      <div class="oex-aviso">Excluir apaga <b>só o cadastro e o orçamento</b> aqui no painel — nenhum RDO é apagado. Se você só quer <b>zerar os números e manter o projeto cadastrado</b>, use <b>🧹 Limpar orçamento</b>.</div>
       ${horas>0.04?`<div class="oex-aviso">Este projeto tem horas lançadas nos RDOs. Para tirá-lo da lista <b>sem perder o orçamento</b>, prefira <b>Encerrar</b> (dá pra reativar).</div>`:''}
       <label>Para confirmar, digite o nome do projeto: <b>${esc(p.projeto)}</b></label>
       <input type="text" id="oex-dlg-in" autocomplete="off" placeholder="Digite o nome do projeto">
       <div class="oex-acoes"><button type="button" class="oex-btn sec" data-oex="dlg-cancelar">Cancelar</button>
+        <button type="button" class="oex-btn" data-oex="dlg-para-limpar">🧹 Só limpar o orçamento</button>
         ${p.ativo!==false?'<button type="button" class="oex-btn" data-oex="dlg-encerrar">🔒 Encerrar em vez de excluir</button>':''}
         <button type="button" class="oex-btn perigo" id="oex-dlg-ok" data-oex="dlg-confirmar" disabled>🗑️ Excluir definitivamente</button></div></div>`;
     $('oex-dlg').style.display='flex';
@@ -15559,6 +15620,45 @@ body.dark .ose-orc-nota.info{color:#93c5fd}
   function atualizarBotaoExcluir(){
     const b=$('oex-dlg-ok'), i=$('oex-dlg-in'); if(!b||!i||!est.dlg) return;
     b.disabled=normNome(i.value)!==normNome(est.dlg.nome);
+  }
+  /* ---------- Limpar o orçamento (o projeto continua cadastrado; RDOs intactos) ---------- */
+  function abrirLimpeza(id){
+    const p=est.projetos.find(x=>x.id===id); if(!p) return;
+    const m=modeloProjeto(p), t=m.tot;
+    const nDisc=m.linhas.filter(l=>l.tem).length, nVal=vigenciasDe(id).length, temObs=!!(p.observacao_contrato&&String(p.observacao_contrato).trim());
+    if(!nDisc&&!nVal&&!temObs){ toast('Este projeto já está sem orçamento — não há nada para limpar.',LARANJA); return; }
+    const prevHE=t.b.u+t.b.s+t.b.d+t.b.f;
+    est.dlg={id,nome:p.projeto,tipo:'limpar'};
+    $('oex-dlg').innerHTML=`<div class="oex-dlg" role="dialog" aria-modal="true"><h4>🧹 Limpar o orçamento de “${esc(p.projeto)}”?</h4>
+      <div class="oex-info">${esc(p.cliente)}${p.ativo===false?' · encerrado':''}</div>
+      <div class="col apaga"><b>O que será LIMPO</b><ul>
+        ${nDisc?`<li>${nDisc} disciplina(s) orçada(s): ${fmtH(t.orc)} (${fmtH(t.b.n)} normais${prevHE>0?' + '+fmtH(prevHE)+' de horas extras previstas':''})</li>`:''}
+        ${t.eeAprov>0?`<li>Extra Escopo aprovado: ${fmtH(t.eeAprov)}</li>`:''}
+        ${nVal?`<li>Valores da hora em R$: ${nVal} linha(s)</li>`:''}
+        ${temObs?'<li>A observação do contrato</li>':''}</ul></div>
+      <div class="col ok"><b>O que NÃO será mexido</b><ul>
+        <li>O projeto continua cadastrado (nome e obra), só que sem orçamento</li>
+        <li>Os RDOs e as horas lançadas: ${fmtH(t.exec)} executadas${t.extra>0.04?' + '+fmtH(t.extra)+' de Extra Escopo':''}</li>
+        <li>Os nomes vinculados e o histórico de alterações</li>
+        <li>Uma cópia completa do que foi limpo fica no registro de exclusões e limpezas</li></ul></div>
+      <div class="oex-acoes"><button type="button" class="oex-btn sec" id="oex-dlg-cancel" data-oex="dlg-cancelar">Cancelar</button>
+        <button type="button" class="oex-btn perigo" data-oex="dlg-limpar">🧹 Limpar orçamento</button></div></div>`;
+    $('oex-dlg').style.display='flex';
+    const f=$('oex-dlg-cancel'); if(f) f.focus();      // o foco fica no Cancelar: um Enter sem querer não limpa nada
+  }
+  async function limparOrcamento(){
+    const dlg=est.dlg; if(!dlg||dlg.tipo!=='limpar') return;
+    const p=est.projetos.find(x=>x.id===dlg.id); if(!p){ fecharDlg(); return; }
+    const t=modeloProjeto(p).tot; const r1=x=>Math.round((Number(x)||0)*10)/10;
+    await proteger(async()=>{
+      const r=await cliente().rpc('oex_limpar_orcamento',{p_id:p.id,p_contexto:{executado_h:r1(t.exec),extra_escopo_h:r1(t.extra)}});
+      if(r.error) throw r.error;
+      fecharDlg();
+      [...est.catAbertos].forEach(k=>{ if(k.startsWith(p.id+'|')) est.catAbertos.delete(k); }); delete est.valDraft[p.id];
+      toast((r.data&&r.data.nada)?'Este projeto já estava sem orçamento.':'✓ Orçamento de “'+p.projeto+'” limpo. O projeto continua cadastrado e os RDOs não foram tocados.');
+      await recarregar();
+      if(est.logAberto) await carregarLog();
+    });
   }
   async function excluirProjeto(){
     const dlg=est.dlg; if(!dlg) return;
@@ -15570,7 +15670,7 @@ body.dark .ose-orc-nota.info{color:#93c5fd}
       const r=await cliente().rpc('oex_excluir_projeto',{p_id:p.id,p_confirmacao:digitado,p_contexto:{executado_h:r1(t.exec),extra_escopo_h:r1(t.extra),he70_h:r1(t.he70),he100_h:r1(t.he100)}});
       if(r.error) throw r.error;
       est.abertos.delete(p.id); est.histAbertos.delete(p.id); fecharDlg();
-      toast('✓ Projeto “'+p.projeto+'” excluído. Os RDOs não foram tocados.');
+      toast('✓ Cadastro de “'+p.projeto+'” excluído. Os RDOs não foram tocados.');
       await recarregar();
       if(est.logAberto) await carregarLog();
     });
@@ -15594,10 +15694,10 @@ body.dark .ose-orc-nota.info{color:#93c5fd}
     if(est.log===null) return '<div class="oex-log"><div class="l">Carregando…</div></div>';
     if(est.log==='ausente') return '<div class="oex-log"><div class="l">O registro de exclusões ainda não existe no banco. Rode o arquivo <b>9_oex_excluir_projeto.sql</b> no Supabase.</div></div>';
     if(est.log==='falha') return '<div class="oex-log"><div class="l">Não foi possível ler o registro agora.</div></div>';
-    if(!est.log.length) return '<div class="oex-log"><div class="l">Nenhum projeto foi excluído até agora.</div></div>';
+    if(!est.log.length) return '<div class="oex-log"><div class="l">Nenhuma exclusão ou limpeza até agora.</div></div>';
     return '<div class="oex-log">'+est.log.map(x=>{
       const r=x.resumo||{}, c=r.contexto||{};
-      return `<div class="l">${esc(dataHora(x.excluido_em))} · <b>${esc(x.excluido_por_nome||'—')}</b> excluiu <b>${esc(x.projeto)}</b> (${esc(x.cliente||'—')}) — orçamento de ${fmtH(Number(r.horas_orcadas)||0)} em ${(r.disciplinas||[]).length} disciplina(s)${c.executado_h!=null?' · executado na hora: '+fmtH(Number(c.executado_h)||0):''}</div>`;
+      return `<div class="l">${esc(dataHora(x.excluido_em))} · <b>${esc(x.excluido_por_nome||'—')}</b> ${r.tipo==='limpeza'?'limpou o orçamento de':'excluiu'} <b>${esc(x.projeto)}</b> (${esc(x.cliente||'—')}) — orçamento de ${fmtH(Number(r.horas_orcadas)||0)} em ${(r.disciplinas||[]).length} disciplina(s)${c.executado_h!=null?' · executado na hora: '+fmtH(Number(c.executado_h)||0):''}</div>`;
     }).join('')+'</div>';
   }
   async function alternarLog(){
@@ -15662,6 +15762,9 @@ body.dark .ose-orc-nota.info{color:#93c5fd}
       else if(a==='dlg-cancelar') fecharDlg();
       else if(a==='dlg-encerrar'){ const id=est.dlg&&est.dlg.id; fecharDlg(); if(id) mudarAtivo(id,false); }
       else if(a==='dlg-confirmar') excluirProjeto();
+      else if(a==='limpar-orc') abrirLimpeza(el.dataset.id);
+      else if(a==='dlg-limpar') limparOrcamento();
+      else if(a==='dlg-para-limpar'){ const id=est.dlg&&est.dlg.id; fecharDlg(); if(id) abrirLimpeza(id); }
       else if(a==='encerrar-todos') encerrarTodosSemRdo();
       else if(a==='ver-log') alternarLog();
       else if(a==='cadastrar'){ const g=calc.sem[Number(el.dataset.idx)]; if(g) abrirForm({cliente:g.cliente,nome:g.projeto}); }
