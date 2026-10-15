@@ -1731,7 +1731,7 @@ body.dark #workers-body tr:hover{background-color:rgba(58,110,232,.08)}
      fontes) — os dois sistemas usam a mesma "moldura" de login, só
      o papel de parede muda entre eles. -->
 <div id="login-overlay" style="position:fixed;inset:0;z-index:99999;background:#0b1220 url('login-fundo-rdo.jpg') center center / cover no-repeat;color-scheme:dark">
-  <div style="position:absolute;bottom:6px;right:8px;font-size:9px;color:rgba(255,255,255,.35);font-family:monospace;pointer-events:none">v2026.10.15-orcado-separado-valor-cabecalho</div>
+  <div style="position:absolute;bottom:6px;right:8px;font-size:9px;color:rgba(255,255,255,.35);font-family:monospace;pointer-events:none">v2026.10.17-obras-trava-reenvio</div>
   <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:calc(100% - 32px);max-width:380px;background:rgb(10,17,32);border:1px solid rgba(255,255,255,.14);border-radius:18px;padding:32px 28px;box-shadow:0 20px 60px rgba(0,0,0,.6);text-transform:none;font-weight:400">
     <h1 style="font-size:20px;margin:0 0 4px;color:#fff;text-align:center;font-weight:700">RDO <span style="color:#3ea6ff">Master Energy</span></h1>
     <p style="margin:0 0 24px;text-align:center;color:#9ca3af;font-size:13px;letter-spacing:.5px;font-weight:600">DIÁRIO DE OBRA PRO</p>
@@ -1912,9 +1912,9 @@ body.dark #workers-body tr:hover{background-color:rgba(58,110,232,.08)}
     <span style="text-align:center;width:100%">👷 FUNCIONÁRIOS — HORAS POR ORDEM DE SERVIÇO</span>
     <span style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center">
       <button class="btn-manage-list" style="background:#1457c8;color:#fff;border-color:#0d3a82" onclick="atualizarDaEscala(this)" title="Busca de novo na Escala os nomes e veículos novos e reconfere cada linha com a Escala do dia deste RDO">🔄 Atualizar da Escala</button>
-      <button class="btn-manage-list admin-only-btn" onclick="abrirListModal('names')">✏️ Editar Lista de Nomes</button>
-      <button class="btn-manage-list admin-only-btn" onclick="abrirListModal('funcs')">🔧 Editar Lista de Funções</button>
-      <button class="btn-manage-list admin-only-btn" onclick="abrirListModal('vehicles')">🚚 Editar Lista de Veículos</button>
+      <button class="btn-manage-list admin-only-btn" onclick="abrirListModal('names')" title="Os nomes vêm da Escala — toque pra ver como mudar">ℹ️ Lista de Nomes (vem da Escala)</button>
+      <button class="btn-manage-list admin-only-btn" onclick="abrirListModal('funcs')" title="As funções vêm da Escala — toque pra ver como mudar">ℹ️ Lista de Funções (vem da Escala)</button>
+      <button class="btn-manage-list admin-only-btn" onclick="abrirListModal('vehicles')" title="Os veículos vêm da Escala — toque pra ver como mudar">ℹ️ Lista de Veículos (vem da Escala)</button>
       <button class="btn-manage-list" style="background:#b91c1c;color:#fff;border-color:#7f1414" onclick="limparPlanilha()" title="Apaga nomes, funções, veículos, horas e descrições desta tela — a obra, data e disciplina continuam as mesmas">🧹 Limpar Planilha</button>
     </span>
   </div>
@@ -2708,29 +2708,84 @@ async function limparSessaoNaTelaDeLogin(){
 // mundo logado pode ver e escolher da lista no campo Obra do RDO.
 // ═══════════════════════════════════════════════════════════════════════
 const CHAVE_CACHE_CLIENTES='rdo-clientes-cache';
+const CHAVE_CACHE_MODO_OBRAS='rdo-obras-modo-cache';
 
+// (2026-10) A ESCALA É A BASE das obras. Quando TODAS as obras que o RDO já usa (tabela "clientes") têm uma
+// obra correspondente na Escala (comparando sem acento/maiúscula/pontuação), a lista do RDO passa a ser a da
+// Escala: o que for cadastrado, corrigido ou excluído lá aparece aqui. Nas obras que existem nos dois lados
+// fica a grafia que os RDOs antigos já usam — o número do RDO é contado pelo NOME da obra, então o nome nunca
+// pode mudar sem querer. Se ainda houver obra do RDO sem par na Escala, nada muda (lista antiga) e o
+// administrador é avisado pra alinhar (Escala › 🔎 Auditar sobras › Alinhar obras do RDO).
+function resolverListaDeObras(clientes,obrasEscala){
+  const cli=(clientes||[]).filter(Boolean);
+  const esc=(obrasEscala||[]).filter(Boolean);
+  const desalinhados=cli.filter(c=>!esc.some(o=>normalizarObra(o)===normalizarObra(c)));
+  if(!esc.length||desalinhados.length) return {modo:'clientes',lista:cli,desalinhados};
+  const unicos=[];
+  esc.map(o=>cli.find(c=>normalizarObra(c)===normalizarObra(o))||o).forEach(n=>{
+    if(!unicos.some(u=>normalizarObra(u)===normalizarObra(n))) unicos.push(n);
+  });
+  unicos.sort((a,b)=>a.localeCompare(b,'pt-BR'));
+  return {modo:'escala',lista:unicos,desalinhados:[]};
+}
+function avisarObrasDesalinhadas(){
+  if(window._avisouObrasDesalinhadas) return;
+  if(window._obrasModo!=='clientes'||!(window._obrasDesalinhadas||[]).length) return;
+  if(!usuarioAtual||usuarioAtual.papel!=='admin_mestre') return;
+  window._avisouObrasDesalinhadas=true;
+  const n=window._obrasDesalinhadas.length, ex=window._obrasDesalinhadas.slice(0,2).join(', ');
+  showToast('⚠️ '+n+' obra(s) do RDO ainda não têm par na Escala ('+ex+(n>2?'…':'')+'). Abra a Escala › 🔎 Auditar sobras › Alinhar obras do RDO.','#d97706');
+}
 async function carregarClientes(){
   const supabaseClient=getSupabaseClient();
-  let nomes=[];
+  let clientes=null, obrasEscala=null;
   if(supabaseClient&&usuarioAtual){
     const resultado=await comRetry(async()=>{
       const r=await supabaseClient.from('clientes').select('nome').eq('ativo',true).order('nome');
       if(r.error) throw r.error;
       return r;
     },{nomeParaLog:'carregar obras/clientes'});
-    if(resultado&&resultado.data){
-      nomes=resultado.data.map(c=>c.nome);
+    if(resultado&&resultado.data) clientes=resultado.data.map(c=>c.nome);
+    // obras da Escala (mesmo banco). Se não der pra ler, segue com a lista antiga — nunca quebra.
+    try{
+      const ro=await supabaseClient.from('obras').select('nome').order('nome');
+      if(!ro.error&&ro.data) obrasEscala=ro.data.map(o=>o.nome).filter(Boolean);
+    }catch(e){}
+  }
+  let nomes=[], modo='clientes', desalinhados=[];
+  if(clientes){
+    const res=resolverListaDeObras(clientes,obrasEscala);
+    nomes=res.lista; modo=res.modo; desalinhados=res.desalinhados;
+    try{
       localStorage.setItem(CHAVE_CACHE_CLIENTES,JSON.stringify(nomes));
-    }
+      localStorage.setItem(CHAVE_CACHE_MODO_OBRAS,JSON.stringify({modo,desalinhados}));
+    }catch(e){}
   }
   if(!nomes.length){
     // Sem internet ou sem resultado (mesmo depois das tentativas) — usa o que tiver
     // salvo de uma consulta anterior, em vez de deixar o campo Obra vazio à toa.
     try{ nomes=JSON.parse(localStorage.getItem(CHAVE_CACHE_CLIENTES)||'[]'); }catch(e){}
+    try{ const c=JSON.parse(localStorage.getItem(CHAVE_CACHE_MODO_OBRAS)||'null'); if(c){ modo=c.modo||'clientes'; desalinhados=c.desalinhados||[]; } }catch(e){}
   }
+  window._obrasModo=modo; window._obrasDesalinhadas=desalinhados;
   const valorAtual=document.getElementById('h-obra')?.value||'';
   popularSelectObra(nomes,valorAtual);
+  avisarObrasDesalinhadas();
 }
+
+// (2026-10) ATUALIZAÇÃO AUTOMÁTICA DAS LISTAS DA ESCALA: antes, nomes, veículos, funções e obras só eram
+// reconsultados ao abrir o RDO ou no botão 🔄 — quem corrigia um nome na Escala não via a mudança aqui.
+// Agora reconsulta sozinho quando a pessoa volta pra esta tela e a cada poucos minutos (no máximo 1x por minuto).
+let _ultimaAtualizacaoListas=0;
+async function atualizarListasDaEscala(forcar){
+  if(!usuarioAtual||!navigator.onLine) return;
+  const agora=Date.now();
+  if(!forcar&&agora-_ultimaAtualizacaoListas<60000) return;
+  _ultimaAtualizacaoListas=agora;
+  try{ await Promise.all([carregarClientes(),carregarFuncionariosDaEscala(),carregarVeiculosDaEscala(),prefetchMapaFuncoes()]); await reconciliarObraDoRDOEnviadoNaTela(); }
+  catch(e){ console.error('atualizarListasDaEscala:',e); }
+}
+document.addEventListener('visibilitychange',()=>{ if(!document.hidden) atualizarListasDaEscala(false); });
 
 // Lista de nomes de encarregados — usada tanto no filtro do admin (Extra Escopo,
 // Andamento, Horas/Projeto) quanto no campo Encarregado do próprio RDO (pra ninguém
@@ -3543,6 +3598,15 @@ function abrirGerenciarClientes(){
       <div id="lista-clientes-admin" style="overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:6px">Carregando...</div>
     </div>`;
   document.body.appendChild(ov);
+  if(window._obrasModo==='escala'){
+    // As obras vêm da Escala: aqui não se adiciona nem desativa nada (era a "segunda lista" que causava confusão).
+    const add=ov.querySelector('#novo-cliente-input')?.parentElement;
+    if(add) add.innerHTML='<div style="font-size:12px;font-weight:700;line-height:1.45;padding:8px 10px;border-radius:8px;background:#DCEBFF;color:#0d3a82">ℹ️ As obras vêm da <b>Escala</b>. Para adicionar, corrigir o nome ou excluir uma obra, use o sistema de Escala (Obras/Empresas). Aqui a lista atualiza sozinha.</div>';
+    const lista=ov.querySelector('#lista-clientes-admin');
+    const nomes=[...document.querySelectorAll('#h-obra option')].map(o=>o.value).filter(v=>v&&v!=='__outro__');
+    if(lista) lista.innerHTML=nomes.map(n=>`<div style="padding:8px 10px;border:1px solid var(--border,#e5e5e5);border-radius:8px;font-size:13px;font-weight:700">${escapeHtmlGlobal(n)}</div>`).join('')||'Nenhuma obra.';
+    return;
+  }
   carregarListaClientesAdmin();
 }
 
@@ -3619,6 +3683,48 @@ async function alternarClienteAtivo(id,novoStatus,nome){
 // dois inserem de novo) e duplicar as horas de um funcionário no banco. Com a fila abaixo,
 // cada RDO só processa um salvamento de cada vez, na ordem, nunca dois ao mesmo tempo.
 const _filaSyncPorRdo={};
+// (2026-10) O NOME DA OBRA DE UM RDO JÁ ENVIADO É O QUE O BANCO TEM. Quando a obra é renomeada na Escala, o banco
+// troca o nome nos RDOs dela. Uma tela/aparelho que ainda mostra o nome antigo (aberta antes da troca) NÃO pode
+// devolver o nome antigo ao reenviar esse RDO — o banco grava a obra que a tela manda e a sequência de
+// numeração da obra racharia. Por isso, antes de enviar (e ao abrir/atualizar), conferimos no banco o nome atual
+// da obra DESTE RDO e adotamos. A obra de um RDO enviado já era travada pra ninguém trocar por engano: aqui ela
+// só acompanha a renomeação feita pelo administrador. Falha de rede/permissão nunca bloqueia nada.
+async function obraAtualDoRDONoServidor(supabaseClient,rdoKey){
+  try{
+    const{data,error}=await supabaseClient.from('rdos').select('obra').eq('rdo_key',rdoKey).maybeSingle();
+    if(error||!data) return null;
+    const o=(data.obra||'').trim();
+    return o||null;
+  }catch(e){ return null; }
+}
+function adotarObraRenomeadaDoServidor(rdoKey,obraNova){
+  // 1) o registro guardado neste aparelho (vale também pro reenvio de pendentes, que não estão na tela)
+  try{
+    const raw=localStorage.getItem(rdoKey);
+    if(raw){
+      const r=JSON.parse(raw);
+      if(r&&r.header&&r.header.obra!==obraNova){ r.header.obra=obraNova; localStorage.setItem(rdoKey,JSON.stringify(r)); }
+    }
+  }catch(e){}
+  // 2) se é o RDO que está na tela (já enviado): atualiza o campo Obra e a trava
+  if(chaveServidorAtual&&rdoKey===chaveServidorAtual){
+    setObraSelecionada(obraNova);
+    obraTravadaAtual=(document.getElementById('h-obra')?.value)||obraNova;
+    showToast('🔄 A obra deste RDO foi renomeada na Escala: agora "'+obraNova+'". O número do RDO continua o mesmo.','#1457c8');
+  }
+}
+async function reconciliarObraDoRDOEnviadoNaTela(){
+  if(!chaveServidorAtual||!usuarioAtual||!navigator.onLine) return;
+  const supabaseClient=getSupabaseClient(); if(!supabaseClient) return;
+  const chave=chaveServidorAtual;
+  const obraSrv=await obraAtualDoRDONoServidor(supabaseClient,chave);
+  if(!obraSrv||chave!==chaveServidorAtual) return;                        // sem dado, ou a pessoa já abriu outro RDO
+  const atual=(document.getElementById('h-obra')?.value)||'';
+  if(normalizarObra(obraSrv)===normalizarObra(atual)) return;             // mesma obra (só grafia pode diferir): nada a fazer
+  adotarObraRenomeadaDoServidor(chave,obraSrv);
+  autoSilentSave();
+}
+
 async function syncSalvarSupabase(d,chaveExplicita){
   const h=d.header||{};
   // Rascunho sem Obra escolhida ainda não vai pra nuvem — evita "RDO fantasma" sem nome
@@ -3666,6 +3772,12 @@ async function _syncSalvarSupabaseReal(d,rdoKey){
     }
     const idAtualConfirmado=usuarioAtual.id;
     const h=d.header||{};
+    // Se este RDO já existe no banco e a obra dele foi renomeada na Escala, manda o nome ATUAL (nunca o antigo).
+    const obraServidor=await obraAtualDoRDONoServidor(supabaseClient,rdoKey);
+    if(obraServidor&&normalizarObra(obraServidor)!==normalizarObra(h.obra||'')){
+      h.obra=obraServidor;
+      adotarObraRenomeadaDoServidor(rdoKey,obraServidor);
+    }
 
     // CORREÇÃO v3 (auditoria 2026-08-18 — fecha a causa raiz da duplicação): antes, o
     // CABEÇALHO (tabela rdos) era salvo numa chamada separada, ANTES das OSEs/funcionários
@@ -4854,6 +4966,8 @@ function iniciarAppAposLogin(){
   // já foi decidido.
   clearInterval(window._intervalAtualizarVeiculosEscala);
   window._intervalAtualizarVeiculosEscala=setInterval(atualizarVeiculosVaziosAutomaticamente,25000);
+  clearInterval(window._intervalListasEscala);
+  window._intervalListasEscala=setInterval(()=>{ if(!document.hidden) atualizarListasDaEscala(false); },180000);   // nomes, veículos, funções e obras da Escala
 }
 // Roda em segundo plano: reconsulta a Escala só pras linhas com nome preenchido e
 // veículo ainda vazio. Não mexe em nada que já tenha um veículo definido, não mostra
@@ -5238,7 +5352,19 @@ async function gerarProximoNRDOAsync(obra){
   const obraTrim=(obra||'').trim();
   if(!obraTrim) return 'RDO-001'; // sem obra escolhida ainda, nada pra buscar
   const supabaseClient=getSupabaseClient();
+  // (2026-10) O NÚMERO QUE VAI SER GRAVADO é decidido pelo BANCO (máximo + 1 entre os RDOs da mesma obra, comparando
+  // o nome sem acento/maiúscula/pontuação). Pedimos o número ao próprio banco: a prévia na tela passa a ser exatamente
+  // o que será gravado. A busca antiga (abaixo) filtrava com ilike, que ignora maiúscula mas NÃO acento — por isso
+  // errava ("Itupéva" não achava "ITUPEVA") — e fica só de reserva, caso a função do banco ainda não exista.
+  let usouRpc=false;
   if(supabaseClient){
+    try{
+      const rp=await supabaseClient.rpc('proximo_nrdo_obra',{p_obra:obraTrim});
+      const m=(!rp.error&&typeof rp.data==='string')?rp.data.match(/(\d+)/):null;
+      if(m){ maior=parseInt(m[1],10)-1; usouRpc=true; }
+    }catch(e){}
+  }
+  if(supabaseClient&&!usouRpc){
     try{
       // CORREÇÃO (2026-08-31): faltava o curinga (%) — sem ele, o ilike exige texto
       // IDÊNTICO ponta a ponta, não "contém". Qualquer diferença mínima (espaço a
@@ -6374,6 +6500,17 @@ async function prefetchMapaFuncoes(){
       const aindaTemEssaFuncao=data.some(row=>row.nome===nome && row.funcao);
       if(!aindaTemEssaFuncao){ delete mapaFuncaoPorNome[nome]; mudou=true; }
     });
+    // (2026-10) As funções cadastradas na Escala (funcionarios.funcao) ENTRAM nas opções de função do RDO — só
+    // ADICIONA, nunca remove (a lista nunca encolhe sozinha, pelo motivo explicado abaixo).
+    let funcsMudou=false;
+    data.forEach(row=>{
+      const f=(row.funcao||'').trim();
+      if(f&&!funcsList.some(x=>normalizarParaComparar(x)===normalizarParaComparar(f))){ funcsList.push(f); funcsMudou=true; }
+    });
+    if(funcsMudou){
+      salvarListas();
+      document.querySelectorAll('select.cell-func').forEach(sel=>{ const atual=sel.value; sel.innerHTML=buildFuncOptions(atual); sel.value=atual; });
+    }
     // NÃO reconcilia funcsList aqui (revertido) — funcsList é a lista de OPÇÕES
     // de função que aparecem pra digitar em qualquer linha do RDO, e nem toda
     // função ali corresponde a um "funcionarios.funcao" da Escala (encarregado
@@ -6399,24 +6536,29 @@ async function prefetchMapaFuncoes(){
 }
 
 // Modal gerenciar listas
+// (2026-10) Nomes, veículos e funções vêm da ESCALA (mesmo banco) e a tela só espelha. A edição local que
+// existia aqui só mexia numa lista do aparelho — não ia pra nuvem nem pra Escala — e brigava com a
+// atualização (ex.: o nome "corrigido" aqui voltava com a grafia antiga na próxima sincronização e a lista
+// ficava com os dois). Agora o botão só explica onde editar.
 function abrirListModal(type){
-  // Proteção de verdade, não só visual — mesmo que alguém tente chamar essa
-  // função sem passar pelo botão (ex: pelo console), só admin consegue abrir.
-  if(!usuarioAtual||usuarioAtual.papel!=='admin_mestre'){
-    showToast('Só o administrador pode editar essas listas.','#dc2626');
-    return;
-  }
-  listModalType=type;
-  const isNames=type==='names';
-  const isVehicles=type==='vehicles';
-  const titulo=isNames?'👷 Gerenciar Lista de Nomes':(isVehicles?'🚚 Gerenciar Lista de Veículos':'🔧 Gerenciar Lista de Funções');
-  const placeholder=isNames?'Nome do funcionário...':(isVehicles?'Placa ou identificação do veículo...':'Função...');
-  document.getElementById('list-modal-title').textContent=titulo;
-  document.getElementById('list-new-item').placeholder=placeholder;
-  listModalTemp=[...(isNames?namesList:(isVehicles?vehiclesList:funcsList))];
-  renomeacoesPendentes=[];
-  renderListItems();
-  document.getElementById('list-modal').classList.add('show');
+  const o=type==='names'?'nomes dos funcionários':(type==='vehicles'?'veículos':'funções');
+  const como=type==='names'?'Para adicionar, corrigir o nome ou excluir um funcionário, use o sistema de <b>Escala</b>.'
+    :(type==='vehicles'?'Para adicionar, corrigir o nome ou excluir um veículo, use o sistema de <b>Escala</b>.'
+    :'As funções vêm do cadastro de cada funcionário na <b>Escala</b> (ícone 🏷️ do funcionário). Para uma função nova aparecer aqui, cadastre-a lá.');
+  document.getElementById('aviso-escala-modal')?.remove();
+  const ov=document.createElement('div');
+  ov.id='aviso-escala-modal';
+  ov.style.cssText='position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;padding:16px';
+  ov.innerHTML=`<div style="background:var(--surface,#fff);color:var(--text,#111);max-width:400px;width:100%;border-radius:14px;padding:20px;box-shadow:0 10px 40px rgba(0,0,0,.4)">
+    <div style="font-size:16px;font-weight:900;margin-bottom:10px">ℹ️ Os ${o} vêm da Escala</div>
+    <div style="font-size:13px;line-height:1.5;margin-bottom:14px">${como}<br><br>Aqui a lista <b>atualiza sozinha</b> (ao voltar pra esta tela e a cada poucos minutos). Se acabou de mudar na Escala e quer ver agora, use <b>🔄 Atualizar da Escala</b>.</div>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button id="aviso-escala-atualizar" style="background:#1457c8;color:#fff;border:none;padding:8px 14px;border-radius:8px;font-weight:800;cursor:pointer">🔄 Atualizar agora</button>
+      <button id="aviso-escala-fechar" style="background:none;border:1px solid #999;color:inherit;padding:8px 14px;border-radius:8px;font-weight:800;cursor:pointer">Entendi</button>
+    </div></div>`;
+  document.body.appendChild(ov);
+  document.getElementById('aviso-escala-fechar').onclick=()=>ov.remove();
+  document.getElementById('aviso-escala-atualizar').onclick=async()=>{ ov.remove(); await atualizarListasDaEscala(true); showToast('✓ Listas atualizadas a partir da Escala.','#16a34a'); };
 }
 function fecharListModal(){renomeacoesPendentes=[];document.getElementById('list-modal').classList.remove('show');}
 let renomeacoesPendentes=[]; // {de,para} — pra corrigir nas linhas já preenchidas ao salvar
@@ -7673,7 +7815,7 @@ function carregarRDO(){
       restaurarEstadoCompleto(d);
       // RDO já enviado reaberto: a chave dele (que é a mesma do banco) e a obra ficam fixas —
       // dá pra editar tudo e trocar a data, sempre reenviando o MESMO RDO, sem duplicar.
-      if(estaEnviado(key)) travarIdentidadeRDOEnviado(key);
+      if(estaEnviado(key)){ travarIdentidadeRDOEnviado(key); reconciliarObraDoRDOEnviadoNaTela().catch(()=>{}); }
     }
   }catch(e){console.error('carregarRDO error:',e);}
 }
@@ -14215,7 +14357,7 @@ window.addEventListener('beforeinstallprompt',(e)=>{
   };
 });
 </script>
-<div class="no-print" style="position:fixed;bottom:2px;right:4px;font-size:8px;color:rgba(120,120,120,.4);font-family:monospace;pointer-events:none;z-index:5">v2026.10.15-orcado-separado-valor-cabecalho</div>
+<div class="no-print" style="position:fixed;bottom:2px;right:4px;font-size:8px;color:rgba(120,120,120,.4);font-family:monospace;pointer-events:none;z-index:5">v2026.10.17-obras-trava-reenvio</div>
 
 <!-- MODAL DE ALERTA DE PENDÊNCIAS — substitui o toast/alert escuro de antes. Aparece
      sempre que a validação unificada (validarFormularioRDO) bloqueia uma tentativa de
