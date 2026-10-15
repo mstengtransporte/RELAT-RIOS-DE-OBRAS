@@ -1731,7 +1731,7 @@ body.dark #workers-body tr:hover{background-color:rgba(58,110,232,.08)}
      fontes) — os dois sistemas usam a mesma "moldura" de login, só
      o papel de parede muda entre eles. -->
 <div id="login-overlay" style="position:fixed;inset:0;z-index:99999;background:#0b1220 url('login-fundo-rdo.jpg') center center / cover no-repeat;color-scheme:dark">
-  <div style="position:absolute;bottom:6px;right:8px;font-size:9px;color:rgba(255,255,255,.35);font-family:monospace;pointer-events:none">v2026.10.18-obras-alinhamento-assistido</div>
+  <div style="position:absolute;bottom:6px;right:8px;font-size:9px;color:rgba(255,255,255,.35);font-family:monospace;pointer-events:none">v2026.10.19-obras-aviso-discreto</div>
   <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:calc(100% - 32px);max-width:380px;background:rgb(10,17,32);border:1px solid rgba(255,255,255,.14);border-radius:18px;padding:32px 28px;box-shadow:0 20px 60px rgba(0,0,0,.6);text-transform:none;font-weight:400">
     <h1 style="font-size:20px;margin:0 0 4px;color:#fff;text-align:center;font-weight:700">RDO <span style="color:#3ea6ff">Master Energy</span></h1>
     <p style="margin:0 0 24px;text-align:center;color:#9ca3af;font-size:13px;letter-spacing:.5px;font-weight:600">DIÁRIO DE OBRA PRO</p>
@@ -2728,30 +2728,29 @@ function resolverListaDeObras(clientes,obrasEscala){
   unicos.sort((a,b)=>a.localeCompare(b,'pt-BR'));
   return {modo:'escala',lista:unicos,desalinhados:[]};
 }
-function avisarObrasDesalinhadas(){
-  if(window._avisouObrasDesalinhadas) return;
-  if(window._obrasModo!=='clientes'||!(window._obrasDesalinhadas||[]).length) return;
-  if(!usuarioAtual||usuarioAtual.papel!=='admin_mestre') return;
-  window._avisouObrasDesalinhadas=true;
-  const n=window._obrasDesalinhadas.length, ex=window._obrasDesalinhadas.slice(0,2).join(', ');
-  showToast('⚠️ '+n+' obra(s) do RDO ainda não têm par na Escala ('+ex+(n>2?'…':'')+'). Abra a Escala › 🔎 Auditar sobras › Alinhar obras do RDO.','#d97706');
-}
-// Aviso FIXO (só pro administrador) enquanto a lista de obras ainda é a antiga porque alguma obra do RDO não tem par
-// na Escala — antes era só um aviso passageiro, que passava despercebido. Some sozinho quando tudo estiver alinhado.
+// Indicador DISCRETO (só pro administrador): um ⚠️ na etiqueta do campo Obra enquanto a lista ainda é a antiga porque
+// alguma obra do RDO não tem par na Escala. Não ocupa espaço (antes era uma caixa que apertava o campo), mostra o
+// motivo ao passar o mouse e, ao tocar, reconsulta a Escala. Some sozinho quando tudo estiver alinhado.
 function atualizarAvisoObrasDesalinhadas(){
   const sel=document.getElementById('h-obra'); if(!sel) return;
+  const lab=sel.parentElement&&sel.parentElement.querySelector('label');
   let el=document.getElementById('aviso-obras-desalinhadas');
   const nomes=window._obrasDesalinhadas||[];
-  const deve=window._obrasModo==='clientes'&&nomes.length>0&&!!usuarioAtual&&usuarioAtual.papel==='admin_mestre';
+  const deve=!!lab&&window._obrasModo==='clientes'&&nomes.length>0&&!!usuarioAtual&&usuarioAtual.papel==='admin_mestre';
   if(!deve){ if(el) el.remove(); return; }
   if(!el){
-    el=document.createElement('div'); el.id='aviso-obras-desalinhadas'; el.className='no-print';
-    el.style.cssText='margin-top:4px;padding:6px 8px;border-radius:8px;background:#FEF3C7;color:#92400E;font-size:11px;font-weight:700;line-height:1.4;text-transform:none';
-    sel.insertAdjacentElement('afterend',el);
+    el=document.createElement('span'); el.id='aviso-obras-desalinhadas'; el.className='no-print';
+    el.style.cssText='cursor:pointer;margin-left:4px;font-size:12px;text-transform:none';
+    el.textContent='⚠️';
+    el.onclick=async(ev)=>{
+      ev.preventDefault(); ev.stopPropagation();
+      await atualizarListasDaEscala(true);
+      const ainda=window._obrasDesalinhadas||[];
+      showToast(ainda.length?'Lista de obras ainda antiga: '+ainda.slice(0,3).map(n=>'"'+n+'"').join(', ')+' sem par na Escala.':'✓ Obras alinhadas com a Escala.',ainda.length?'#d97706':'#16a34a');
+    };
+    lab.appendChild(el);
   }
-  const ex=nomes.slice(0,3).map(n=>'"'+n+'"').join(', ')+(nomes.length>3?' e mais '+(nomes.length-3):'');
-  el.innerHTML='⚠️ A lista de obras ainda é a <b>antiga</b>: '+escapeHtmlGlobal(ex)+' não tem par na Escala. Na Escala: <b>🔎 Auditar sobras › Alinhar obras do RDO</b>. <button type="button" id="aviso-obras-verificar" style="margin-left:4px;padding:2px 8px;border-radius:6px;border:1px solid #92400E;background:#fff;color:#92400E;font-size:11px;font-weight:800;cursor:pointer">🔄 Verificar agora</button>';
-  document.getElementById('aviso-obras-verificar').onclick=async()=>{ await atualizarListasDaEscala(true); };
+  el.title='Só para o administrador: a lista de obras ainda é a antiga porque '+nomes.slice(0,3).map(n=>'"'+n+'"').join(', ')+(nomes.length>3?' e mais '+(nomes.length-3):'')+' não tem par na Escala. Toque para verificar de novo.';
 }
 async function carregarClientes(){
   const supabaseClient=getSupabaseClient();
@@ -2787,7 +2786,6 @@ async function carregarClientes(){
   window._obrasModo=modo; window._obrasDesalinhadas=desalinhados;
   const valorAtual=document.getElementById('h-obra')?.value||'';
   popularSelectObra(nomes,valorAtual);
-  avisarObrasDesalinhadas();
   atualizarAvisoObrasDesalinhadas();
 }
 
@@ -14375,7 +14373,7 @@ window.addEventListener('beforeinstallprompt',(e)=>{
   };
 });
 </script>
-<div class="no-print" style="position:fixed;bottom:2px;right:4px;font-size:8px;color:rgba(120,120,120,.4);font-family:monospace;pointer-events:none;z-index:5">v2026.10.18-obras-alinhamento-assistido</div>
+<div class="no-print" style="position:fixed;bottom:2px;right:4px;font-size:8px;color:rgba(120,120,120,.4);font-family:monospace;pointer-events:none;z-index:5">v2026.10.19-obras-aviso-discreto</div>
 
 <!-- MODAL DE ALERTA DE PENDÊNCIAS — substitui o toast/alert escuro de antes. Aparece
      sempre que a validação unificada (validarFormularioRDO) bloqueia uma tentativa de
