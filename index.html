@@ -1731,7 +1731,7 @@ body.dark #workers-body tr:hover{background-color:rgba(58,110,232,.08)}
      fontes) — os dois sistemas usam a mesma "moldura" de login, só
      o papel de parede muda entre eles. -->
 <div id="login-overlay" style="position:fixed;inset:0;z-index:99999;background:#0b1220 url('login-fundo-rdo.jpg') center center / cover no-repeat;color-scheme:dark">
-  <div style="position:absolute;bottom:6px;right:8px;font-size:9px;color:rgba(255,255,255,.35);font-family:monospace;pointer-events:none">v2026.10.19-obras-aviso-discreto</div>
+  <div style="position:absolute;bottom:6px;right:8px;font-size:9px;color:rgba(255,255,255,.35);font-family:monospace;pointer-events:none">v2026.10.20-imagens-leves</div>
   <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:calc(100% - 32px);max-width:380px;background:rgb(10,17,32);border:1px solid rgba(255,255,255,.14);border-radius:18px;padding:32px 28px;box-shadow:0 20px 60px rgba(0,0,0,.6);text-transform:none;font-weight:400">
     <h1 style="font-size:20px;margin:0 0 4px;color:#fff;text-align:center;font-weight:700">RDO <span style="color:#3ea6ff">Master Energy</span></h1>
     <p style="margin:0 0 24px;text-align:center;color:#9ca3af;font-size:13px;letter-spacing:.5px;font-weight:600">DIÁRIO DE OBRA PRO</p>
@@ -9690,7 +9690,7 @@ function execFmt(cmd,val){
  * @returns {Promise<string>} Data URL da imagem já comprimida.
  */
 function comprimirImagem(arquivo, opcoes = {}) {
-  const { maxLado = 1600, qualidade = 0.75, preservarTransparencia = false } = opcoes;
+  const { maxLado = 1600, qualidade = 0.75, preservarTransparencia = false, tamanhoAlvoKB = 0 } = opcoes;
   return new Promise((resolve, reject) => {
     if (!arquivo || !arquivo.type || !arquivo.type.startsWith('image/')) {
       reject(new Error('Arquivo selecionado não é uma imagem.'));
@@ -9702,28 +9702,44 @@ function comprimirImagem(arquivo, opcoes = {}) {
       const img = new Image();
       img.onerror = () => reject(new Error('Não foi possível abrir essa imagem.'));
       img.onload = () => {
-        let largura = img.naturalWidth || img.width;
-        let altura = img.naturalHeight || img.height;
-        if (largura > maxLado || altura > maxLado) {
-          if (largura >= altura) { altura = Math.round(altura * (maxLado / largura)); largura = maxLado; }
-          else { largura = Math.round(largura * (maxLado / altura)); altura = maxLado; }
+        const largura0 = img.naturalWidth || img.width;
+        const altura0 = img.naturalHeight || img.height;
+        // Desenha a imagem com o maior lado = "lado" (nunca amplia) e devolve a Data URL.
+        const codificar = (lado, q) => {
+          let largura = largura0, altura = altura0;
+          if (largura > lado || altura > lado) {
+            if (largura >= altura) { altura = Math.round(altura * (lado / largura)); largura = lado; }
+            else { largura = Math.round(largura * (lado / altura)); altura = lado; }
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = largura; canvas.height = altura;
+          const ctx = canvas.getContext('2d');
+          ctx.imageSmoothingEnabled = true;
+          ctx.imageSmoothingQuality = 'high';
+          if (!preservarTransparencia) {
+            ctx.fillStyle = '#FFFFFF'; // fundo branco atrás de PNG transparente (senão vira preto no JPEG)
+            ctx.fillRect(0, 0, largura, altura);
+          }
+          ctx.drawImage(img, 0, 0, largura, altura);
+          if (preservarTransparencia) {
+            const webp = canvas.toDataURL('image/webp', q);
+            return webp.startsWith('data:image/webp') ? webp : canvas.toDataURL('image/png'); // navegador sem suporte a WebP cai pra PNG
+          }
+          return canvas.toDataURL('image/jpeg', q);
+        };
+        let lado = maxLado, q = qualidade, url = codificar(lado, q);
+        // TAMANHO-ALVO: se pediram um limite (em KB), reduz a qualidade e depois o tamanho da imagem até caber.
+        if (tamanhoAlvoKB > 0) {
+          const alvo = tamanhoAlvoKB * 1024;
+          let tentativas = 0;
+          while (url.length > alvo && tentativas < 14) {
+            if (!url.startsWith('data:image/png') && q > 0.5) q = Math.max(0.5, Math.round((q - 0.1) * 100) / 100);
+            else lado = Math.max(48, Math.round(lado * 0.85));
+            url = codificar(lado, q);
+            tentativas++;
+          }
         }
-        const canvas = document.createElement('canvas');
-        canvas.width = largura; canvas.height = altura;
-        const ctx = canvas.getContext('2d');
-        ctx.imageSmoothingEnabled = true;
-        ctx.imageSmoothingQuality = 'high';
-        if (!preservarTransparencia) {
-          ctx.fillStyle = '#FFFFFF'; // fundo branco atrás de PNG transparente (senão vira preto no JPEG)
-          ctx.fillRect(0, 0, largura, altura);
-        }
-        ctx.drawImage(img, 0, 0, largura, altura);
-        if (preservarTransparencia) {
-          const webp = canvas.toDataURL('image/webp', qualidade);
-          resolve(webp.startsWith('data:image/webp') ? webp : canvas.toDataURL('image/png')); // navegador sem suporte a WebP cai pra PNG
-          return;
-        }
-        resolve(canvas.toDataURL('image/jpeg', qualidade));
+        resolve(url);
       };
       img.src = leitor.result;
     };
@@ -9755,7 +9771,7 @@ function handlePaste(e){
     if(item.type.startsWith('image/')){
       e.preventDefault();
       const file=item.getAsFile();
-      comprimirImagem(file,{maxLado:1600,qualidade:0.75}).then(dataUrl=>{
+      comprimirImagem(file,{maxLado:800,qualidade:0.7,tamanhoAlvoKB:90}).then(dataUrl=>{
         document.execCommand('insertHTML',false,`<img src="${dataUrl}" style="max-width:100%;max-height:100px;border-radius:4px;margin:2px">`);
       }).catch(()=>{
         showToast('⚠️ Não foi possível processar essa imagem colada.','#dc2626');
@@ -9783,7 +9799,7 @@ function inserirImagem(o){
   input.type='file'; input.accept='image/*';
   input.onchange=()=>{
     const file=input.files[0]; if(!file) return;
-    comprimirImagem(file,{maxLado:1600,qualidade:0.75}).then(dataUrl=>{
+    comprimirImagem(file,{maxLado:800,qualidade:0.7,tamanhoAlvoKB:90}).then(dataUrl=>{
       const el=document.getElementById(`ose-desc-${o}`);
       if(el){ el.focus(); document.execCommand('insertHTML',false,`<img src="${dataUrl}" style="max-width:100%;max-height:100px;border-radius:4px;margin:2px">`); }
     }).catch(()=>{
@@ -14373,7 +14389,7 @@ window.addEventListener('beforeinstallprompt',(e)=>{
   };
 });
 </script>
-<div class="no-print" style="position:fixed;bottom:2px;right:4px;font-size:8px;color:rgba(120,120,120,.4);font-family:monospace;pointer-events:none;z-index:5">v2026.10.19-obras-aviso-discreto</div>
+<div class="no-print" style="position:fixed;bottom:2px;right:4px;font-size:8px;color:rgba(120,120,120,.4);font-family:monospace;pointer-events:none;z-index:5">v2026.10.20-imagens-leves</div>
 
 <!-- MODAL DE ALERTA DE PENDÊNCIAS — substitui o toast/alert escuro de antes. Aparece
      sempre que a validação unificada (validarFormularioRDO) bloqueia uma tentativa de
