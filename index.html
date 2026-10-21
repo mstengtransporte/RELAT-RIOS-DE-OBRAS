@@ -1731,7 +1731,7 @@ body.dark #workers-body tr:hover{background-color:rgba(58,110,232,.08)}
      fontes) — os dois sistemas usam a mesma "moldura" de login, só
      o papel de parede muda entre eles. -->
 <div id="login-overlay" style="position:fixed;inset:0;z-index:99999;background:#0b1220 url('login-fundo-rdo.jpg') center center / cover no-repeat;color-scheme:dark">
-  <div style="position:absolute;bottom:6px;right:8px;font-size:9px;color:rgba(255,255,255,.35);font-family:monospace;pointer-events:none">v2026.10.25-catalogo-isolamento</div>
+  <div style="position:absolute;bottom:6px;right:8px;font-size:9px;color:rgba(255,255,255,.35);font-family:monospace;pointer-events:none">v2026.10.26-busca-referencia</div>
   <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:calc(100% - 32px);max-width:380px;background:rgb(10,17,32);border:1px solid rgba(255,255,255,.14);border-radius:18px;padding:32px 28px;box-shadow:0 20px 60px rgba(0,0,0,.6);text-transform:none;font-weight:400">
     <h1 style="font-size:20px;margin:0 0 4px;color:#fff;text-align:center;font-weight:700">RDO <span style="color:#3ea6ff">Master Energy</span></h1>
     <p style="margin:0 0 24px;text-align:center;color:#9ca3af;font-size:13px;letter-spacing:.5px;font-weight:600">DIÁRIO DE OBRA PRO</p>
@@ -14391,7 +14391,7 @@ window.addEventListener('beforeinstallprompt',(e)=>{
   };
 });
 </script>
-<div class="no-print" style="position:fixed;bottom:2px;right:4px;font-size:8px;color:rgba(120,120,120,.4);font-family:monospace;pointer-events:none;z-index:5">v2026.10.25-catalogo-isolamento</div>
+<div class="no-print" style="position:fixed;bottom:2px;right:4px;font-size:8px;color:rgba(120,120,120,.4);font-family:monospace;pointer-events:none;z-index:5">v2026.10.26-busca-referencia</div>
 
 <!-- MODAL DE ALERTA DE PENDÊNCIAS — substitui o toast/alert escuro de antes. Aparece
      sempre que a validação unificada (validarFormularioRDO) bloqueia uma tentativa de
@@ -16174,6 +16174,13 @@ Pra desativar: remova o botão "Orçamento" do menu e este bloco inteiro.
 .orc-chip{display:inline-block;padding:1px 7px;border-radius:10px;font-size:10.5px;font-weight:700;background:rgba(100,116,139,.2);color:inherit}.orc-chip.ok{background:#dcfce7;color:#166534}.orc-chip.az{background:#dbeafe;color:#1d4ed8}.orc-chip.er{background:#fee2e2;color:#b91c1c}.orc-chip.am{background:#fef3c7;color:#92400e}
 .orc-inv{outline:2px solid #dc2626 !important}.orc-dlg-lg{max-width:min(980px,96vw)}.orc-mapa{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0}.orc-mapa select{min-width:118px}.orc-kitrow{display:grid;grid-template-columns:24px 1fr 70px 80px 120px;gap:6px;align-items:center;padding:3px 0;border-bottom:1px solid rgba(100,116,139,.2)}
 
+.orc-calc .ref{flex-basis:100%;font-size:11.5px;color:var(--text2,#556);line-height:1.55;font-weight:600}.orc-calc .ref b{color:var(--text,#111)}.orc-calc .ref small{opacity:.8}.orc-calc .ref.man{color:#b45309}
+.orc-calc .falta{flex-basis:100%;margin:2px 0;padding:5px 8px;font-size:11.5px}
+.orc-flash{animation:orcflash 1s ease-out}@keyframes orcflash{0%{background:rgba(250,204,21,.5)}100%{background:transparent}}
+.orc-ac{position:fixed;z-index:10050;background:var(--surface,#fff);color:var(--text,#111);border:1.5px solid var(--border,#9aa7bf);border-radius:8px;box-shadow:0 10px 30px rgba(0,0,0,.35);overflow:auto;-webkit-overflow-scrolling:touch}
+.orc-ac-i{padding:8px 10px;cursor:pointer;border-bottom:1px solid rgba(100,116,139,.18);font-size:13px;line-height:1.35}.orc-ac-i:last-child{border-bottom:0}.orc-ac-i.sel,.orc-ac-i:hover{background:rgba(59,130,246,.18)}
+.orc-ac-i small{display:block;opacity:.72;font-size:11px;font-weight:600}.orc-ac-i em{font-style:normal;font-size:10px;background:rgba(100,116,139,.25);border-radius:8px;padding:1px 6px;margin-left:6px;font-weight:700}.orc-ac-t{padding:7px 10px;font-size:11.5px;opacity:.78;font-weight:600}
+
 </style>
 <script>
 /* ============================================================================
@@ -16605,7 +16612,7 @@ async function carregarBase(){
   const c=cli(); if(!c||(typeof navigator!=='undefined'&&navigator.onLine===false)) return;
   try{
     const [ind,cat]=await Promise.all([lerPaginado(()=>c.from(TB.idx).select('*').order('disciplina').order('grupo').order('codigo')),lerPaginado(()=>c.from(TB.cat).select('*').order('disciplina').order('categoria').order('descricao'))]);
-    est.indices=ind; est.catalogo=cat; est.baseOk=true; est.semTabelas=false; indexarCatalogo(); await carregarKits();
+    est.indices=ind; est.catalogo=cat; est.baseOk=true; est.semTabelas=false; indexarCatalogo(); await carregarKits(); await carregarSugestoes();
     try{ sessionStorage.setItem(LS_BASE,JSON.stringify({ts:Date.now(),indices:ind,catalogo:cat})); }catch(e){}
   }catch(e){ if(erroTabela(e)) est.semTabelas=true; else console.warn('orçamento: base indisponível',e); }
 }
@@ -16697,6 +16704,7 @@ function abasLista(){ return ABAS_FIXAS_INI.concat(E.DISCIPLINAS.map(d=>[d.codig
 function abasHTML(){ return abasLista().map(([id,nome])=>{ const h=badgeAba(id); return `<button type="button" class="orc-tab${est.aba===id?' on':''}" data-orc="aba" data-aba="${id}">${esc(nome)}${h}</button>`; }).join(''); }
 function badgeAba(id){ if(!est.res) return ''; const d=est.res.porDisc[id]; if(d&&(d.hhC+d.hhO>0||d.mat>0)) return `<i class="orc-b">${nf(d.hhC+d.hhO,0)} h</i>`; return ''; }
 function renderCorpo(){
+  if(typeof acFechar==='function') acFechar();
   const c=$('orc-corpo'); if(!c) return;
   if(est.semTabelas){ c.innerHTML=`<div class="orc-pad"><div class="orc-aviso erro"><b>Falta criar as tabelas do Orçamento.</b><br>Rode o arquivo <b>18_orcamento_modulo.sql</b> no Supabase (SQL Editor) e abra esta tela de novo.</div></div>`; return; }
   if(est.ocupado){ c.innerHTML='<div class="orc-pad orc-info">⏳ Carregando…</div>'; return; }
@@ -16719,7 +16727,7 @@ function renderRodape(){
 }
 function atualizarCalculados(){
   if(!est.res) return; renderRodape();
-  document.querySelectorAll('#orc-corpo [data-calc]').forEach(el=>{ const it=est.itens.find(x=>x.id===el.getAttribute('data-calc')); if(it&&typeof htmlCalc==='function') el.innerHTML=htmlCalc(it); });
+  document.querySelectorAll('#orc-corpo [data-calc]').forEach(el=>{ const it=est.itens.find(x=>x.id===el.getAttribute('data-calc')); if(it&&typeof htmlCalc==='function'){ const novo=htmlCalc(it); if(el.innerHTML!==novo){ el.innerHTML=novo; el.classList.remove('orc-flash'); void el.offsetWidth; el.classList.add('orc-flash'); } } });
   document.querySelectorAll('#orc-corpo [data-sectot]').forEach(el=>{ el.innerHTML=totSecaoHTML(el.getAttribute('data-sectot')); });
   const tb=$('orc-tabs'); if(tb){ tb.querySelectorAll('.orc-tab').forEach(b=>{ const id=b.getAttribute('data-aba'); const nome=(abasLista().find(a=>a[0]===id)||[])[1]||''; b.innerHTML=esc(nome)+badgeAba(id); }); }
   const live=document.querySelectorAll('#orc-corpo [data-live]'); live.forEach(el=>{ const k=el.getAttribute('data-live'); if(typeof liveVal==='function') el.innerHTML=liveVal(k); });
@@ -16974,7 +16982,7 @@ function opcoesIndice(disc,sec,sel){
 function opcoesMat(disc,cats,sel,vazio){ const ms=est.catalogo.filter(m=>m.disciplina===disc&&m.ativo!==false&&cats.includes(m.categoria)); return `<option value="">${vazio||'— nenhum —'}</option>`+ms.map(m=>`<option value="${esc(m.chave||m.id)}"${sel===(m.chave||m.id)?' selected':''}>${esc(m.descricao)}</option>`).join(''); }
 const FN=(it,f)=>'it.'+it.id+'.'+f;
 const iN=(it,f,v,ph,cls)=>`<input type="text" inputmode="decimal" class="orc-in ${cls||''}" data-fo="${FN(it,f)}" value="${esc(nv(v))}" placeholder="${esc(ph||'')}">`;
-const iT=(it,f,v,ph,extra)=>`<input type="text" class="orc-in" data-fo="${FN(it,f)}" value="${esc(v==null?'':v)}" placeholder="${esc(ph||'')}"${extra||''}>`;
+const iT=(it,f,v,ph,extra)=>`<input type="text" class="orc-in" data-fo="${FN(it,f)}" value="${esc(v==null?'':v)}" placeholder="${esc(ph||'')}"${f==='descricao'?' data-ac="desc" autocomplete="off"':''}${extra||''}>`;
 const iS=(it,f,opts,v)=>`<select class="orc-in" data-fo="${FN(it,f)}">${typeof opts==='string'?opts:OPT(opts,v)}</select>`;
 const fl=(rot,html,cls)=>`<label class="orc-f ${cls||''}"><span>${rot}</span>${html}</label>`;
 const acoesRow=(it)=>`<div class="orc-acoes"><button type="button" class="orc-mini" data-orc="adv" data-id="${it.id}" title="Mais opções (K de acesso, rigging, observação)">⋯</button><button type="button" class="orc-mini" data-orc="dup-item" data-id="${it.id}" title="Duplicar">⧉</button><button type="button" class="orc-mini" data-orc="del-item" data-id="${it.id}" title="Excluir">🗑️</button></div>`;
@@ -17001,9 +17009,9 @@ function lPintura(it){ const prep=est.indices.filter(i=>i.disciplina==='PINTURA'
 function lRigMec(it){ return `<div class="orc-row" data-id="${it.id}"><div class="orc-fields">${fl('Equipamento (munck / guindaste)',iT(it,'descricao',it.descricao,'ex.: Munck 20 t'),'w2')}${fl('Cobrança por',iS(it,'p.unidade_equip',[['dia','Diária'],['h','Hora']],P(it,'unidade_equip','dia')))}${fl('Quantidade',iN(it,'qtd',it.qtd,'0'))}${fl('Custo unitário (R$)',iN(it,'preco_unit',it.preco_unit,'sem preço'))}${fl('Quem fornece',iS(it,'fornecimento',[['MASTER','Master'],['CLIENTE','Cliente']],it.fornecimento))}</div><div class="orc-calc" data-calc="${it.id}">${htmlCalc(it)}</div>${acoesRow(it)}${avancado(it)}</div>`; }
 function lMaterial(it){
   const m=est.catalogo.find(x=>x.id===it.material_id); const temPeso=m&&m.atributos&&E.num(m.atributos.peso_kg_m)>0; const barra=m&&E.num(m.comprimento_barra_m)>0;
-  const texto=it.descricao||(m?m.descricao:''); const desc='orc-dl-'+it.disciplina;
+  const texto=it.descricao||(m?m.descricao:'');
   const conhecido=!!(m&&m.descricao===texto); const novo=texto&&!conhecido&&!it.material_id;
-  return `<div class="orc-row" data-id="${it.id}"><div class="orc-fields">${fl('Material (digite para buscar no catálogo)',`<input type="text" class="orc-in" list="${desc}" data-fo="${FN(it,'mat_q')}" value="${esc(texto)}" placeholder="ex.: Tubo aço carbono 4&quot; Sch 40" autocomplete="off">`,'w3')}
+  return `<div class="orc-row" data-id="${it.id}"><div class="orc-fields">${fl('Material (digite para buscar no catálogo)',`<input type="text" class="orc-in" data-ac="mat" data-disc="${it.disciplina}" data-fo="${FN(it,'mat_q')}" value="${esc(texto)}" placeholder="ex.: Tubo aço carbono 4&quot; Sch 40" autocomplete="off">`,'w3')}
   ${fl('Quantidade ('+esc(it.unidade||(m?m.unidade:'un'))+')',iN(it,'qtd',it.qtd,'0'))}${temPeso?fl('ou comprimento (m)',iN(it,'p.ml',P(it,'ml',''),'→ kg')):''}${fl('Perda (%)',iN(it,'perda_pct',it.perda_pct,m?String(m.perda_pct):'0'))}
   ${fl('Preço unitário (R$)',iN(it,'preco_unit',it.preco_unit,m&&m.preco_unitario!=null?nv(m.preco_unitario)+' (catálogo)':'sem preço'))}${fl('Quem fornece',iS(it,'fornecimento',[['MASTER','Master'],['CLIENTE','Cliente'],['FAT_DIRETO','Faturamento direto']],it.fornecimento))}${barra?`<label class="orc-ck"><input type="checkbox" data-fo="${FN(it,'p.preco_por_barra')}"${P(it,'preco_por_barra',false)===true?' checked':''}> preço é por barra</label>`:''}</div>
   ${novo?`<div class="orc-novo">“${esc(texto)}” não está no catálogo. <button type="button" class="orc-btn sec" data-orc="cad-mat" data-id="${it.id}">＋ Cadastrar como novo material</button></div>`:''}
@@ -17013,8 +17021,8 @@ function lExtra(it){ const un=['h','dia','mês','un','vb','km'];
   ${it.tipo==='INDIRETO'?`<label class="orc-ck"><input type="checkbox" data-fo="${FN(it,'p.cobrar')}"${P(it,'cobrar',true)!==false?' checked':''}> cobrar à parte no preço</label>`:''}<label class="orc-ck"><input type="checkbox" data-fo="${FN(it,'cliente_fornece')}"${it.fornecimento==='CLIENTE'?' checked':''}> cliente fornece</label></div><div class="orc-calc" data-calc="${it.id}">${htmlCalc(it)}</div>${acoesRow(it)}</div>`; }
 function linhaItem(it,sec){ if(it.tipo==='MATERIAL') return lMaterial(it); if(it.tipo!=='SERVICO') return lExtra(it); if(it.modelo==='PIPING') return lPiping(it); if(it.modelo==='ANDAIME') return lAndaime(it); if(it.modelo==='ISOLAMENTO') return lIsolamento(it); if(it.modelo==='PINTURA') return lPintura(it); if(it.modelo==='RIG_MEC') return lRigMec(it); return lGenerico(it,sec||{g:[]}); }
 function htmlCalc(it){
-  const r=resItem(it); if(!r) return ''; const c=r.calc; let s=''; if(it.tipo==='SERVICO'&&P(it,'forn_derivados','')&&P(it,'forn_derivados','')!=='MASTER') s+=`<span class="man" title="Os materiais gerados por este serviço não entram no preço da Master">📦 materiais: ${P(it,'forn_derivados','')==='CLIENTE'?'do cliente':'fat. direto'}</span>`;
-  if(it.tipo==='SERVICO'){ s+=`<span class="k">HH campo</span><b>${nf(c.hh_usado_campo,1)}</b>`; if(c.hh_oficina>0) s+=`<span class="k">oficina</span><b>${nf(c.hh_oficina,1)}</b>`; if(c.manual) s+=`<span class="man" title="HH digitado à mão">✏️ calculado: ${nf(c.hh_calc_campo,1)}</span>`;
+  const r=resItem(it); if(!r) return ''; const c=r.calc; let s=htmlRef(it,c)+htmlFalta(it); if(it.tipo==='SERVICO'&&P(it,'forn_derivados','')&&P(it,'forn_derivados','')!=='MASTER') s+=`<span class="man" title="Os materiais gerados por este serviço não entram no preço da Master">📦 materiais: ${P(it,'forn_derivados','')==='CLIENTE'?'do cliente':'fat. direto'}</span>`;
+  if(it.tipo==='SERVICO'){ s+=`<span class="k">HH campo</span><b>${nf(c.hh_usado_campo,1)}</b>`; if(c.hh_oficina>0) s+=`<span class="k">oficina</span><b>${nf(c.hh_oficina,1)}</b>`; if(c.manual) s+=`<div class="man ref">✏️ O HH digitado à mão (<b>${nf(c.hh_usado_campo,1)} h</b>) está valendo — pelo índice, o cálculo daria <b>${nf(c.hh_calc_campo,1)} h</b>. <button type="button" class="orc-mini" data-orc="limpar-hh" data-id="${it.id}">usar o calculado</button></div>`;
     if(c.detalhe.base!=null) s+=`<span class="k">${c.detalhe.unidade_base==='PD'?'PD':'juntas'}</span><b>${nf(c.detalhe.base,1)}</b>`;
     if(c.detalhe.area_isolante_m2!=null) s+=`<span class="k">isolante</span><b>${nf(c.detalhe.area_isolante_m2,1)} m²</b><span class="k">jaqueta</span><b>${nf(c.detalhe.area_revest_m2,1)} m²</b>`;
     const f=c.detalhe.fatores; if(f&&(f.K!==1||f.planta!==1||f.rig!==1)&&c.hh_calc_campo>0) s+=`<span class="k">fatores</span><b>×${nf(f.f,2)}</b>`;
@@ -17024,7 +17032,7 @@ function htmlCalc(it){
   if(c.avisos.length) s+=`<div class="orc-warn">⚠️ ${esc(c.avisos.join(' · '))}</div>`; return s; }
 
 function abaDisciplina(disc){
-  const secs=SECOES[disc]; const dl=`<datalist id="orc-dl-${disc}">${est.catalogo.filter(m=>m.disciplina===disc&&m.ativo!==false).map(m=>`<option value="${esc(m.descricao)}">`).join('')}</datalist>`;
+  const secs=SECOES[disc]; const dl='';
   const nm=nomeDisc(disc), d=est.res&&est.res.porDisc[disc];
   const cab=d?`<div class="orc-kpis"><div><small>HH campo</small><b>${nf(d.hhC,1)}</b></div><div><small>HH oficina</small><b>${nf(d.hhO,1)}</b></div><div><small>Materiais (Master)</small><b>${fm(d.mat)}</b></div><div><small>Equip. + terceiros</small><b>${fm(d.equip+d.terc)}</b></div></div>`:'';
   return `<div class="orc-pad">${dl}<div class="orc-h2">${esc(nm)}</div>${cab}${secs.map(sec=>{ const its=itensSec(disc,sec); return `<div class="orc-sec"><div class="orc-sec-h"><b>${esc(sec.t)}</b><span class="orc-sec-t" data-sectot="${disc}|${sec.id}">${totSecaoHTML(disc+'|'+sec.id)}</span><button type="button" class="orc-btn" data-orc="add-item" data-disc="${disc}" data-sec="${sec.id}">＋ ${sec.tipo==='MATERIAL'?'Material':'Linha'}</button>${sec.tipo==='MATERIAL'?` <button type="button" class="orc-btn sec" data-orc="kit-aplicar" data-disc="${disc}">🧰 Kit</button> <button type="button" class="orc-btn sec" data-orc="lv-abrir" data-disc="${disc}">📋 Lista</button>`:''}</div>${sec.nota?`<div class="orc-nota">${esc(sec.nota)}</div>`:''}<div class="orc-rows">${its.map(it=>linhaItem(it,sec)).join('')||'<div class="orc-vazio">Nenhum item. Clique em ＋ '+(sec.tipo==='MATERIAL'?'Material':'Linha')+'.</div>'}</div></div>`; }).join('')}</div>`;
@@ -17090,7 +17098,7 @@ document.addEventListener('change',e=>{ const t=e.target; if(t&&t.getAttribute&&
 
 // ── COMPRAS ──────────────────────────────────────────────────────────────────
 est.cf={disc:'',forn:'',sp:false,q:''};
-function comprasFiltradas(){ if(!est.res) return []; const f=est.cf, q=f.q.trim().toLowerCase(); return est.res.compras.filter(c=>(!f.disc||c.disciplinas.includes(f.disc))&&(!f.forn||c.fornecimento===f.forn)&&(!f.sp||(c.preco==null&&c.qtd>0))&&(!q||(c.desc+' '+(c.chave||'')).toLowerCase().includes(q))); }
+function comprasFiltradas(){ if(!est.res) return []; const f=est.cf, q=f.q.trim().toLowerCase(); return est.res.compras.filter(c=>(!f.disc||c.disciplinas.includes(f.disc))&&(!f.forn||c.fornecimento===f.forn)&&(!f.sp||(c.preco==null&&c.qtd>0))&&(!q||casaBusca(c.desc+' '+(c.chave||''),q))); }
 function abaCompras(){
   const lst=comprasFiltradas(), f=est.cf; const tot=lst.reduce((s,c)=>s+(c.fornecimento==='MASTER'?(c.custo||0):0),0);
   const forn={MASTER:'Master',CLIENTE:'Cliente',FAT_DIRETO:'Fat. direto'};
@@ -17121,7 +17129,7 @@ Object.assign(window.ORC_ACOES,{
 // ── CATÁLOGO ─────────────────────────────────────────────────────────────────
 function abaCatalogo(){
   const f=est.cat; const cats=[...new Set(est.catalogo.filter(m=>m.disciplina===f.disc).map(m=>m.categoria))].sort(); const q=f.q.trim().toLowerCase();
-  const lst=est.catalogo.filter(m=>m.disciplina===f.disc&&(!f.cat||m.categoria===f.cat)&&(!q||(m.descricao+' '+(m.especificacao||'')).toLowerCase().includes(q))); const pag=Math.max(0,Math.min(f.pag,Math.ceil(lst.length/50)-1)); const vis=lst.slice(pag*50,pag*50+50); const semPreco=lst.filter(m=>m.preco_unitario==null).length;
+  const lst=est.catalogo.filter(m=>m.disciplina===f.disc&&(!f.cat||m.categoria===f.cat)&&(!q||casaBusca(m.descricao+' '+(m.especificacao||'')+' '+(m.chave||''),q))); const pag=Math.max(0,Math.min(f.pag,Math.ceil(lst.length/50)-1)); const vis=lst.slice(pag*50,pag*50+50); const semPreco=lst.filter(m=>m.preco_unitario==null).length;
   const un=['un','m','kg','m2','m3','L','jogo','cento','dia','mês','m3.dia','kit'];
   return `<div class="orc-pad"><div class="orc-h2">Catálogo de materiais</div><div class="orc-nota">O preço é <b>opcional</b>: sem preço o orçamento mostra as quantidades e os HH normalmente e lista o item como "sem cotação". Preencha conforme cotar — vale para todos os orçamentos.</div>
   <div class="orc-bar"><select class="orc-in" id="orc-cat-disc" data-livre="1">${E.DISCIPLINAS.map(d=>`<option value="${d.codigo}"${f.disc===d.codigo?' selected':''}>${esc(d.nome)}</option>`).join('')}</select><select class="orc-in" id="orc-cat-cat" data-livre="1"><option value="">Todas as categorias</option>${cats.map(c=>`<option${f.cat===c?' selected':''}>${esc(c)}</option>`).join('')}</select><input type="search" class="orc-in" id="orc-cat-q" placeholder="Buscar" value="${esc(f.q)}" data-livre="1"><button type="button" class="orc-btn ok" data-orc="novo-mat" data-livre="1">＋ Novo material</button></div>
@@ -17457,10 +17465,10 @@ const clone=o=>JSON.parse(JSON.stringify(o));
 // ── busca de material por texto (casamento exato e aproximado) ─────────────────
 const STOP=new Set(['de','do','da','dos','das','em','com','para','e','a','o','as','os','un','und','uni','unid','pc','peca','pecas','tipo']);
 const TKC=new WeakMap();
-function toks(s){ return nrm(s).replace(/["”“″]/g,' pol ').replace(/[^a-z0-9.,#\/ ]+/g,' ').split(/\s+/).map(t=>t.replace(/^[.,#\/]+|[.,#\/]+$/g,'')).filter(t=>t&&!STOP.has(t)); }
+function toks(s){ return nrm(s).replace(/["”“″]/g,' pol ').replace(/([a-z])(\d)/g,'$1 $2').replace(/(\d)([a-z])/g,'$1 $2').replace(/[^a-z0-9.,#\/ ]+/g,' ').split(/\s+/).map(t=>t.replace(/^[.,#\/]+|[.,#\/]+$/g,'')).filter(t=>t&&!STOP.has(t)); }
 function dice(a,b){ if(!a.length||!b.length) return 0; const B=new Map(); b.forEach(t=>B.set(t,(B.get(t)||0)+1)); let n=0; a.forEach(t=>{ const q=B.get(t); if(q>0){ n++; B.set(t,q-1); } }); return 2*n/(a.length+b.length); }
 function tokCat(m){ let t=TKC.get(m); if(!t){ t={d:toks(m.descricao),e:toks(m.descricao+' '+(m.especificacao||''))}; TKC.set(m,t); } return t; }
-function rankCat(texto,disc,cats,max){ const ta=toks(texto), x=nrm(texto), out=[];
+function rankCat(texto,disc,cats,max){ const ta=toksQ(texto), x=nrm(texto), out=[];
   est.catalogo.forEach(m=>{ if(m.ativo===false||(disc&&m.disciplina!==disc)||(cats&&!cats.includes(m.categoria))) return; let s;
     if(nrm(m.descricao)===x||(m.chave&&nrm(m.chave)===x)) s=1; else { const t=tokCat(m); s=Math.max(dice(ta,t.d),dice(ta,t.e)); if(ta.length>=3&&ta.every(k=>t.d.includes(k))) s=Math.max(s,0.9); }
     if(s>0.35) out.push({m,s}); });
@@ -17733,12 +17741,11 @@ function abaKits(){ if(est.semKits) return `<div class="orc-pad"><div class="orc
   ${ks.length?ks.map(k=>`<div class="orc-sec"><div class="orc-sec-h"><b>${esc(k.nome)}</b><small>${k.disciplina?esc(nomeDisc(k.disciplina)):'qualquer disciplina'} · ${k.itens.length} item(ns)</small><span><button type="button" class="orc-btn" data-orc="kit-aplicar" data-id="${k.id}" data-livre="1">🧰 Aplicar</button> <button type="button" class="orc-btn sec" data-orc="kit-editar" data-id="${k.id}" data-livre="1">✏️ Editar</button> <button type="button" class="orc-btn perigo" data-orc="kit-excluir" data-id="${k.id}" data-livre="1">🗑️</button></span></div>${k.descricao?`<div class="orc-nota">${esc(k.descricao)}</div>`:''}<div class="orc-nota">${k.itens.map(i=>esc(nomeItemKit(i))+' <b>×'+nv(i.qtd_base)+'</b>'+(i.padrao===false?' <i>(opcional)</i>':'')).join(' · ')||'(sem itens)'}</div></div>`).join(''):'<div class="orc-vazio">Nenhum kit ainda. Crie um novo ou salve linhas deste orçamento como kit.</div>'}</div>`; }
 // editor
 function dlgKit(id){ const k=id?(est.kits||[]).find(x=>x.id===id):null; est.kitEd=k?{id:k.id,nome:k.nome,descricao:k.descricao||'',disciplina:k.disciplina||'',itens:k.itens.map(i=>({material_id:i.material_id||null,descricao:i.descricao||'',unidade:i.unidade,qtd_base:i.qtd_base,perda_pct:i.perda_pct,fornecimento:i.fornecimento,padrao:i.padrao!==false,obs:i.obs||'',txt:nomeItemKit(i)}))}:{id:null,nome:'',descricao:'',disciplina:'',itens:[{material_id:null,descricao:'',unidade:'un',qtd_base:1,perda_pct:null,fornecimento:'MASTER',padrao:true,obs:'',txt:''}]}; dlgKitRender(); }
-function dlgKitRender(){ const K=est.kitEd; const cat=est.catalogo.filter(m=>m.ativo!==false&&(!K.disciplina||K.disciplina==='GERAL'||m.disciplina===K.disciplina));
-  dlg(`<div class="orc-dh">${K.id?'✏️ Editar kit':'➕ Novo kit'}</div><div class="orc-dc"><div class="orc-grid">${fo('Nome do kit',`<input class="orc-in" data-ke="nome" data-livre="1" value="${esc(K.nome)}" placeholder="ex.: Kit flange WN 150# 4&quot;" data-foco>`,'w2')}${fo('Disciplina padrão',`<select class="orc-in" data-ke="disc" data-livre="1"><option value="">Qualquer</option>${E.DISCIPLINAS.map(d=>`<option value="${d.codigo}"${K.disciplina===d.codigo?' selected':''}>${esc(d.nome)}</option>`).join('')}</select>`)}</div>
+function dlgKitRender(){ const K=est.kitEd;   dlg(`<div class="orc-dh">${K.id?'✏️ Editar kit':'➕ Novo kit'}</div><div class="orc-dc"><div class="orc-grid">${fo('Nome do kit',`<input class="orc-in" data-ke="nome" data-livre="1" value="${esc(K.nome)}" placeholder="ex.: Kit flange WN 150# 4&quot;" data-foco>`,'w2')}${fo('Disciplina padrão',`<select class="orc-in" data-ke="disc" data-livre="1"><option value="">Qualquer</option>${E.DISCIPLINAS.map(d=>`<option value="${d.codigo}"${K.disciplina===d.codigo?' selected':''}>${esc(d.nome)}</option>`).join('')}</select>`)}</div>
    ${fo('Descrição (opcional)',`<input class="orc-in" data-ke="descr" data-livre="1" value="${esc(K.descricao)}">`,'w2')}
-   <datalist id="orc-dl-kit">${cat.map(m=>`<option value="${esc(m.descricao)}">`).join('')}</datalist>
+   
    <div class="orc-nota">Cada item: ☑ = vem marcado por padrão ao aplicar · material do catálogo (escolha na lista) ou texto livre · quantidade <b>por unidade do kit</b> (ex.: 8 parafusos por flange).</div>
-   <div style="max-height:40vh;overflow:auto">${K.itens.map((i,n)=>`<div class="orc-kitrow" style="grid-template-columns:24px 1fr 56px 74px 60px 108px 28px"><input type="checkbox" data-ke="padrao" data-i="${n}" data-livre="1"${i.padrao?' checked':''} title="vem marcado ao aplicar"><input class="orc-in" list="orc-dl-kit" data-ke="mat" data-i="${n}" data-livre="1" value="${esc(i.txt)}" placeholder="material ou descrição"><input class="orc-in" data-ke="un" data-i="${n}" data-livre="1" value="${esc(i.unidade)}" placeholder="un"><input class="orc-in" inputmode="decimal" data-ke="qtd" data-i="${n}" data-livre="1" value="${esc(nv(i.qtd_base))}" placeholder="qtd"><input class="orc-in" inputmode="decimal" data-ke="perda" data-i="${n}" data-livre="1" value="${esc(nv(i.perda_pct))}" placeholder="perda%"><select class="orc-in" data-ke="forn" data-i="${n}" data-livre="1">${FORN_OP.map(([a,b])=>`<option value="${a}"${i.fornecimento===a?' selected':''}>${b}</option>`).join('')}</select><button type="button" class="orc-mini" data-orc="ke-rem" data-i="${n}" data-livre="1" title="remover item">✖</button></div>`).join('')}</div>
+   <div style="max-height:40vh;overflow:auto">${K.itens.map((i,n)=>`<div class="orc-kitrow" style="grid-template-columns:24px 1fr 56px 74px 60px 108px 28px"><input type="checkbox" data-ke="padrao" data-i="${n}" data-livre="1"${i.padrao?' checked':''} title="vem marcado ao aplicar"><input class="orc-in" data-ac="mat" data-disc="" data-ke="mat" data-i="${n}" data-livre="1" value="${esc(i.txt)}" placeholder="material ou descrição"><input class="orc-in" data-ke="un" data-i="${n}" data-livre="1" value="${esc(i.unidade)}" placeholder="un"><input class="orc-in" inputmode="decimal" data-ke="qtd" data-i="${n}" data-livre="1" value="${esc(nv(i.qtd_base))}" placeholder="qtd"><input class="orc-in" inputmode="decimal" data-ke="perda" data-i="${n}" data-livre="1" value="${esc(nv(i.perda_pct))}" placeholder="perda%"><select class="orc-in" data-ke="forn" data-i="${n}" data-livre="1">${FORN_OP.map(([a,b])=>`<option value="${a}"${i.fornecimento===a?' selected':''}>${b}</option>`).join('')}</select><button type="button" class="orc-mini" data-orc="ke-rem" data-i="${n}" data-livre="1" title="remover item">✖</button></div>`).join('')}</div>
    <div class="orc-linha"><button type="button" class="orc-btn sec" data-orc="ke-add" data-livre="1">＋ Item</button></div></div>
    <div class="orc-dbtn"><button type="button" class="orc-btn sec" data-orc="dlg-fechar">Cancelar</button><button type="button" class="orc-btn ok" data-orc="kit-salvar">Salvar kit</button></div>`); }
 function kitEdLer(){ /* garante que o texto digitado já virou material/descrição */ const K=est.kitEd; K.itens.forEach(i=>{ const m=i.txt?acharCat(i.txt,null):null; if(m){ i.material_id=m.id; i.descricao=''; if(!i.unidade||i.unidade==='un') i.unidade=m.unidade||i.unidade; } else { i.material_id=null; i.descricao=i.txt||''; } }); }
@@ -17921,6 +17928,73 @@ Object.assign(window.ORC_ACOES,{
  'cat-modelo':()=>tentar(async()=>{ await baixarWB(montarCatalogoXlsx({vazio:true}),'Modelo_catalogo.xlsx'); toast('✓ Modelo gerado.'); },'Falha ao gerar o modelo'),
  'cat-importar':()=>{ const i=$('orc-file-cat'); if(i) i.click(); }, 'cat-prev-conf':()=>aplicarCatalogo() });
 Object.assign(window.ORC_UI,{montarCatalogoXlsx,analisarCatalogo,importarCatalogo,recarregarCatalogo});
+
+// ── REFERÊNCIA NA LINHA: o que está sendo aplicado (índice, tubo, preço) e o que falta preencher ───────────
+const dataBR=d=>{ const m=String(d||'').match(/^(\d{4})-(\d{2})-(\d{2})/); return m?m[3]+'/'+m[2]+'/'+m[1]:''; };
+let _pc=null,_pcRef=null,_pcN=-1; function catPorChave(){ if(_pcRef!==est.catalogo||_pcN!==est.catalogo.length){ _pc=new Map(est.catalogo.map(m=>[m.chave,m])); _pcRef=est.catalogo; _pcN=est.catalogo.length; } return _pc; }
+function precoCat(m){ const sn=est.orc&&est.orc.snapshot; if(sn&&sn.precos){ const x=sn.precos[m.id]; return x?{p:x.p,d:x.d}:{p:null,d:null}; } return {p:m.preco_unitario,d:m.preco_data}; }
+function textoPreco(m,un){ const x=precoCat(m); return x.p!=null?`<b>${fm(x.p)}/${esc(un||m.unidade)}</b>${x.d?' <small>(cotado em '+dataBR(x.d)+')</small>':''}`:'<span class="orc-warn">sem preço no catálogo</span>'; }
+function htmlRef(it,c){ if(!c) return ''; const d=c.detalhe||{}; const partes=[];
+  if(it.tipo==='SERVICO'&&d.codigo){ const ind=est.indices.find(x=>x.codigo===d.codigo); if(ind){ const cal=ind.padrao_hh_campo!=null&&Math.abs(Number(ind.hh_campo)-Number(ind.padrao_hh_campo))>1e-9; partes.push(`índice <b>${nf(d.hh_un,2)} HH/${esc(d.unidade_base||ind.unidade)}</b>${d.hh_un_oficina>0?' + '+nf(d.hh_un_oficina,2)+' de oficina':''} <small>(${cal?'calibrado · padrão '+nf(ind.padrao_hh_campo,2):'estimativa inicial, sem fonte'})</small>`); } }
+  if(it.modelo==='PIPING'){ const mat=P(it,'material','CS'), sch=E.schNormalizar(mat,P(it,'sch',null)), nps=P(it,'nps',4); const t=catPorChave().get('TUBO.'+mat+'.'+sch+'.'+nps);
+    if(t){ const a=t.atributos||{}; partes.push(`tubo <b>${esc(String(nps))}" Sch ${esc(String(sch))}</b>${a.od_mm?' · Ø'+nf(a.od_mm,1)+' × '+nf(a.parede_mm,2)+' mm':''}${a.peso_kg_m?' · '+nf(a.peso_kg_m,1)+' kg/m':''}`); partes.push('catálogo '+textoPreco(t,'m')); }
+    else partes.push(`<span class="orc-warn">tubo ${esc(String(nps))}" Sch ${esc(String(sch))} não existe no catálogo</span>`); }
+  if(it.tipo==='MATERIAL'){ const m=est.catalogo.find(x=>x.id===it.material_id); if(m){ partes.push(`catálogo: perda <b>${nf(m.perda_pct,0)}%</b>${m.comprimento_barra_m?' · barra <b>'+nf(m.comprimento_barra_m,0)+' m</b>':''} · ${textoPreco(m)}`); } }
+  if(it.modelo==='ISOLAMENTO'&&d.od_mm!=null) partes.push(`Ø do tubo ${nf(d.od_mm,1)} mm → Ø isolado ${nf(d.d_ext_mm,1)} mm`);
+  const f=d.fatores; if(f&&(f.K!==1||f.planta!==1||f.rig!==1)) partes.push(`fatores ×${nf(f.f,2)} <small>(K ${nf(f.K,2)} · planta ${nf(f.planta,2)}${f.rig!==1?' · rigging '+nf(f.rig,2):''})</small>`);
+  const sn=est.orc&&est.orc.snapshot&&est.orc.snapshot.em; if(sn&&partes.length) partes.push('<small>🧊 preços e índices congelados em '+new Date(sn).toLocaleDateString('pt-BR')+'</small>');
+  return partes.length?`<div class="ref">📎 ${partes.join(' · ')}</div>`:''; }
+function htmlFalta(it){ const f=[]; const num=k=>E.num(P(it,k,null)), m=it.modelo;
+  if(m==='PIPING'){ if(!(num('metros')>0)) f.push('tubo (m)'); if(!(num('juntas')>0)) f.push('nº de juntas'); }
+  else if(m==='ISOLAMENTO'){ if(P(it,'alvo','TUBO')==='TUBO'){ if(!(num('metros')>0)) f.push('comprimento (m)'); } else if(!(num('area_m2')>0)) f.push('área (m²)'); if(!(num('espessura_mm')>0)) f.push('espessura'); }
+  else if(m==='PINTURA'){ if(!(num('area_m2')>0)) f.push('área (m²)'); }
+  else if(m==='ANDAIME'){ if(P(it,'metodo','EQUIPE')==='VOLUMETRIA'){ if(!(num('volume_m3')>0)) f.push('volume (m³)'); } else { if(!(((num('andaimeiros')||0)+(num('ajudantes')||0))>0)) f.push('equipe'); if(!(num('dias')>0)) f.push('dias'); } }
+  else if(it.tipo==='MATERIAL'||m==='GENERICO'||m==='RIG_MEC'){ if(!(E.num(it.qtd)>0)&&!(it.tipo==='MATERIAL'&&num('ml')>0)&&!(it.hh_manual>0)) f.push('quantidade'); }
+  return f.length?`<div class="orc-aviso falta">⏳ Falta preencher: <b>${f.join(', ')}</b> — até lá esta linha ainda não entra no cálculo.</div>`:''; }
+// ── BUSCA POR PALAVRAS e SUGESTÕES (no lugar da lista nativa do navegador, que só acha trecho contínuo) ───────
+const ALIAS={cs:['carbono'],ss:['inox'],vergalhao:['ca'],vergalhoes:['ca']};      // apelidos comuns: o termo digitado OU o apelido (igual, não prefixo)
+const toksQ=q=>toks(q).map(t=>(ALIAS[t]&&ALIAS[t][0])||t);
+const NUMTOK=/^[0-9][0-9.,\/]*$/;
+function ptsTok(alvo,k){ const num=NUMTOK.test(k); let m=0; for(const w of alvo){ if(w===k) return 2; if(!num&&w.startsWith(k)) m=1; } if(!m&&ALIAS[k]) for(const a of ALIAS[k]) if(alvo.includes(a)) m=1.5; return m; }
+function casaBusca(texto,q){ const qt=toks(q); if(!qt.length) return true; const alvo=toks(texto); return qt.every(k=>ptsTok(alvo,k)>0); }
+function buscaMat(q,disc,max){ const qt=toks(q); if(!qt.length) return []; const out=[];
+  est.catalogo.forEach(m=>{ if(m.ativo===false) return; const t=tokCat(m); let pts=0; for(const k of qt){ const p=ptsTok(t.e,k); if(!p){ pts=-1; break; } pts+=p; } if(pts<0) return; out.push({m,s:pts*10+(disc&&m.disciplina===disc?100:0)-t.d.length}); });
+  out.sort((a,b)=>b.s-a.s); return out.slice(0,max||40); }
+const INICIOS={PIPING:['Linha 2"-P-101','Linha de vapor','Linha de condensado','Linha de ar comprimido','Linha de água de resfriamento','Linha de processo','Rack de tubulação — área 1','Spool pré-fabricado','Tie-in'],ISOLAMENTO:['Linha de vapor — área 1','Linha fria — área 1','Tanque T-101','Equipamento — área 1','Proteção pessoal — linha quente'],PINTURA:['Estrutura metálica — área 1','Tubulação — área 1','Tanque T-101','Suportes e racks','Retoque geral'],ANDAIME:['Andaime — pipe-rack','Andaime — tanque T-101','Andaime — área 1','Andaime — parada geral'],RIG_MEC:['Munck 20 t','Guindaste 50 t','Plataforma elevatória','Empilhadeira'],GENERICO:['Área 1','Área 2','Pipe-rack','Casa de bombas','Sala elétrica','Tanque T-101']};
+async function carregarSugestoes(){ est.sugDesc=[]; const c=cli(); if(!c) return; try{ const r=await c.from(TB.itm).select('descricao,tipo,atualizado_em').order('atualizado_em',{ascending:false}).limit(1500); if(r.error) return; const vistos=new Set(), out=[]; (r.data||[]).forEach(x=>{ if(x.tipo==='MATERIAL') return; const d=String(x.descricao||'').trim(); if(d.length<3) return; const k=nrm(d); if(vistos.has(k)) return; vistos.add(k); out.push(d); }); est.sugDesc=out.slice(0,500); }catch(e){} }
+function sugDescricao(input,q){ const fo=input.getAttribute('data-fo')||''; const id=(fo.match(/^it\.([^.]+)\./)||[])[1]; const it=est.itens.find(x=>x.id===id); const geral=it&&['INDIRETO','EQUIPAMENTO','TERCEIRO'].includes(it.tipo);
+  let base=INICIOS[it&&INICIOS[it.modelo]?it.modelo:'GENERICO']; if(geral&&typeof MODELOS_GERAL!=='undefined'&&MODELOS_GERAL[it.tipo]) base=MODELOS_GERAL[it.tipo].map(x=>x[0]);
+  const doOrc=[...new Set(est.itens.filter(x=>x.tipo!=='MATERIAL'&&x.descricao&&x.id!==id).map(x=>x.descricao.trim()))]; const todas=[...new Set(doOrc.concat(est.sugDesc||[],base))]; const cur=nrm(input.value);
+  const f=todas.filter(t=>nrm(t)!==cur&&(!q.trim()||casaBusca(t,q))); return f.slice(0,12); }
+const AC={aberto:false,input:null,itens:[],idx:-1};
+function acDiv(){ let d=$('orc-ac'); if(!d){ const m=$('orc-modal'); if(!m) return null; d=document.createElement('div'); d.id='orc-ac'; d.className='orc-ac'; d.style.display='none'; d.setAttribute('role','listbox'); m.appendChild(d); } return d; }
+function acFechar(){ const d=$('orc-ac'); if(d) d.style.display='none'; AC.aberto=false; AC.idx=-1; }
+function acPosicionar(){ const d=$('orc-ac'), i=AC.input; if(!d||!i) return; const r=i.getBoundingClientRect(), w=Math.max(280,r.width), abaixo=window.innerHeight-r.bottom, h=Math.min(360,window.innerHeight*0.46);
+  d.style.minWidth=w+'px'; d.style.maxWidth=(window.innerWidth-8)+'px'; d.style.left=Math.max(4,Math.min(r.left,window.innerWidth-w-4))+'px';
+  if(abaixo<Math.min(h,200)&&r.top>abaixo){ d.style.top='auto'; d.style.bottom=(window.innerHeight-r.top+2)+'px'; d.style.maxHeight=Math.max(120,Math.min(h,r.top-8))+'px'; } else { d.style.bottom='auto'; d.style.top=(r.bottom+2)+'px'; d.style.maxHeight=Math.max(120,Math.min(h,abaixo-8))+'px'; } }
+function acMarcar(){ const d=$('orc-ac'); if(!d) return; d.querySelectorAll('.orc-ac-i').forEach((e,i)=>{ e.classList.toggle('sel',i===AC.idx); if(i===AC.idx&&e.scrollIntoView) e.scrollIntoView({block:'nearest'}); }); }
+function acMostrar(input){ const d=acDiv(); if(!d) return; const tipo=input.getAttribute('data-ac'), q=input.value; let itens=[], aviso='';
+  if(tipo==='mat'){ const disc=input.getAttribute('data-disc')||''; if(q.trim().length<2) aviso='Digite 2 letras ou mais — as palavras podem vir em qualquer ordem (ex.: "flange 150 4").'; else { let r=buscaMat(q,disc,40); if(!r.length){ r=rankCat(q,null,null,8).filter(x=>x.s>=0.5).map(x=>({m:x.m})); aviso=r.length?'Nenhum resultado exato — parecidos:':'Nenhum material encontrado para “'+q+'”. Cadastre como novo (botão abaixo da linha) ou na aba 📚 Catálogo.'; } else if(r.length>=40) aviso='Mostrando os 40 primeiros — acrescente mais palavras para refinar.'; itens=r.map(x=>({tipo:'mat',m:x.m,disc})); } }
+  else { itens=sugDescricao(input,q).map(t=>({tipo:'desc',t})); if(!itens.length&&q.trim().length>=2) aviso='Sem sugestões — pode digitar livremente.'; }
+  AC.input=input; AC.itens=itens; AC.idx=itens.length?0:-1; AC.aberto=true; if(!itens.length&&!aviso){ acFechar(); return; }
+  d.innerHTML=(aviso?`<div class="orc-ac-t">${esc(aviso)}</div>`:'')+itens.map((x,i)=>x.tipo==='mat'?`<div class="orc-ac-i${i===0?' sel':''}" data-i="${i}" role="option"><b>${esc(x.m.descricao)}</b>${x.disc&&x.m.disciplina!==x.disc?`<em>${esc(nomeDisc(x.m.disciplina))}</em>`:''}<small>${esc(x.m.especificacao||'')}${x.m.especificacao?' · ':''}${esc(x.m.unidade)}${precoCat(x.m).p!=null?' · '+fm(precoCat(x.m).p):' · sem preço'}</small></div>`:`<div class="orc-ac-i${i===0?' sel':''}" data-i="${i}" role="option"><b>${esc(x.t)}</b></div>`).join('');
+  d.style.display='block'; acPosicionar(); }
+function acEscolher(i){ const x=AC.itens[i], input=AC.input; if(!x||!input) return; acFechar();
+  if(x.tipo==='mat'){ const fo=input.getAttribute('data-fo')||''; if(/\.mat_q$/.test(fo)){ const it=est.itens.find(z=>z.id===fo.split('.')[1]); if(it&&editavel()){ if(x.m.disciplina!==it.disciplina){ it.disciplina=x.m.disciplina; toast('Linha movida para '+nomeDisc(x.m.disciplina)+' (disciplina do material).'); } it.material_id=x.m.id; it.descricao=x.m.descricao; it.unidade=x.m.unidade; marcarSujo(); recalcular(); renderCorpo(); atualizarCalculados(); } }
+    else { input.value=x.m.descricao; input.dispatchEvent(new Event('change',{bubbles:true})); } }
+  else { input.value=x.t; input.dispatchEvent(new Event('input',{bubbles:true})); input.dispatchEvent(new Event('change',{bubbles:true})); } }
+const dentro=t=>t&&t.getAttribute&&t.closest&&t.closest('#orc-modal');
+document.addEventListener('input',e=>{ const t=e.target; if(dentro(t)&&t.getAttribute('data-ac')) acMostrar(t); });
+document.addEventListener('focusin',e=>{ const t=e.target; if(dentro(t)&&t.getAttribute('data-ac')&&!t.disabled&&!t.readOnly&&(t.getAttribute('data-ac')==='desc'||t.value.trim().length>=2)) acMostrar(t); });
+document.addEventListener('keydown',e=>{ if(!AC.aberto||e.target!==AC.input) return; const k=e.key;
+  if(k==='ArrowDown'||k==='ArrowUp'){ e.preventDefault(); e.stopPropagation(); if(AC.itens.length){ AC.idx=(AC.idx+(k==='ArrowDown'?1:-1)+AC.itens.length)%AC.itens.length; acMarcar(); } }
+  else if(k==='Enter'){ if(AC.idx>=0){ e.preventDefault(); e.stopPropagation(); acEscolher(AC.idx); } else acFechar(); }
+  else if(k==='Escape'){ e.stopPropagation(); acFechar(); } else if(k==='Tab') acFechar(); },true);
+document.addEventListener('mousedown',e=>{ const d=$('orc-ac'); if(d&&d.contains(e.target)){ e.preventDefault(); const it=e.target.closest('.orc-ac-i'); if(it) acEscolher(Number(it.getAttribute('data-i'))); } else if(AC.aberto&&e.target!==AC.input) acFechar(); },true);
+document.addEventListener('scroll',e=>{ if(AC.aberto&&!(e.target&&e.target.id==='orc-ac')) acFechar(); },true);
+window.addEventListener('resize',()=>{ if(AC.aberto) acPosicionar(); });
+Object.assign(window.ORC_ACOES,{'limpar-hh':el=>{ if(!editavel()) return; const it=est.itens.find(x=>x.id===el.getAttribute('data-id')); if(!it) return; it.hh_manual=null; marcarSujo(); recalcular(); renderCorpo(); atualizarCalculados(); toast('Voltou ao HH calculado pelo índice.'); }});
+Object.assign(window.ORC_UI,{casaBusca,buscaMat,htmlRef,htmlFalta,sugDescricao,acMostrar,AC});
 
 })();
 
