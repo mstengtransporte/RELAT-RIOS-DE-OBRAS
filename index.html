@@ -1731,7 +1731,7 @@ body.dark #workers-body tr:hover{background-color:rgba(58,110,232,.08)}
      fontes) — os dois sistemas usam a mesma "moldura" de login, só
      o papel de parede muda entre eles. -->
 <div id="login-overlay" style="position:fixed;inset:0;z-index:99999;background:#0b1220 url('login-fundo-rdo.jpg') center center / cover no-repeat;color-scheme:dark">
-  <div style="position:absolute;bottom:6px;right:8px;font-size:9px;color:rgba(255,255,255,.35);font-family:monospace;pointer-events:none">v2026.10.29-orc-montar</div>
+  <div style="position:absolute;bottom:6px;right:8px;font-size:9px;color:rgba(255,255,255,.35);font-family:monospace;pointer-events:none">v2026.10.30-orc-busca</div>
   <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:calc(100% - 32px);max-width:380px;background:rgb(10,17,32);border:1px solid rgba(255,255,255,.14);border-radius:18px;padding:32px 28px;box-shadow:0 20px 60px rgba(0,0,0,.6);text-transform:none;font-weight:400">
     <h1 style="font-size:20px;margin:0 0 4px;color:#fff;text-align:center;font-weight:700">RDO <span style="color:#3ea6ff">Master Energy</span></h1>
     <p style="margin:0 0 24px;text-align:center;color:#9ca3af;font-size:13px;letter-spacing:.5px;font-weight:600">DIÁRIO DE OBRA PRO</p>
@@ -14391,7 +14391,7 @@ window.addEventListener('beforeinstallprompt',(e)=>{
   };
 });
 </script>
-<div class="no-print" style="position:fixed;bottom:2px;right:4px;font-size:8px;color:rgba(120,120,120,.4);font-family:monospace;pointer-events:none;z-index:5">v2026.10.29-orc-montar</div>
+<div class="no-print" style="position:fixed;bottom:2px;right:4px;font-size:8px;color:rgba(120,120,120,.4);font-family:monospace;pointer-events:none;z-index:5">v2026.10.30-orc-busca</div>
 
 <!-- MODAL DE ALERTA DE PENDÊNCIAS — substitui o toast/alert escuro de antes. Aparece
      sempre que a validação unificada (validarFormularioRDO) bloqueia uma tentativa de
@@ -16252,10 +16252,43 @@ E.espessuraSugerida=function(servico,tempC,nps){ // referência editável — a 
   if(t<=100) return [40,50][g]; if(t<=200) return [50,65][g]; if(t<=350) return [65,80][g]; return [80,100][g]; };
 
 // schedule coerente com o material (ex.: trocou CS→inox e ficou "40": vira "40S"; PVC/CPVC usam Sch 80; PRFV usa PN10)
-E.schNormalizar=function(mat,sch){ let s=String(sch==null?'':sch).trim().toUpperCase();
-  if(E.PURGA_MAT.includes(mat)){ if(s==='40') s='40S'; else if(s==='10') s='10S'; if(s!=='10S'&&s!=='40S') s=E.SCH_PADRAO[mat]; return s; }
-  if(mat==='CS'||mat==='GALV'||E.MAT_BASE[mat]==='CS'){ if(s==='40S') s='40'; else if(s==='10S') s='40'; if(s!=='40'&&s!=='80') s=E.SCH_PADRAO[mat]; if(mat==='GALV') s='40'; return s; }
-  return E.SCH_PADRAO[mat]||s; };
+// ── schedules: ASME B36.10M (aço carbono e ligas) e B36.19M (inox) — espessura de parede (mm) por NPS ─────────────────
+E.SCH_NPS=[0.5,0.75,1,1.25,1.5,2,2.5,3,4,6,8,10,12]; const _N=null;
+E.SCH_TAB={
+ '5S':[1.65,1.65,1.65,1.65,1.65,1.65,2.11,2.11,2.11,2.77,2.77,3.40,3.96],
+ '10S':[2.11,2.11,2.77,2.77,2.77,2.77,3.05,3.05,3.05,3.40,3.76,4.19,4.57],
+ '40S':[2.77,2.87,3.38,3.56,3.68,3.91,5.16,5.49,6.02,7.11,8.18,9.27,9.53],
+ '80S':[3.73,3.91,4.55,4.85,5.08,5.54,7.01,7.62,8.56,10.97,12.70,12.70,12.70],
+ '10':[2.11,2.11,2.77,2.77,2.77,2.77,3.05,3.05,3.05,3.40,3.76,4.19,4.57],
+ '20':[_N,_N,_N,_N,_N,_N,_N,_N,_N,_N,6.35,6.35,6.35],
+ '30':[_N,_N,_N,_N,_N,_N,_N,_N,_N,_N,7.04,7.80,8.38],
+ 'STD':[2.77,2.87,3.38,3.56,3.68,3.91,5.16,5.49,6.02,7.11,8.18,9.27,9.53],
+ '40':[2.77,2.87,3.38,3.56,3.68,3.91,5.16,5.49,6.02,7.11,8.18,9.27,10.31],
+ '60':[_N,_N,_N,_N,_N,_N,_N,_N,_N,_N,10.31,12.70,14.27],
+ 'XS':[3.73,3.91,4.55,4.85,5.08,5.54,7.01,7.62,8.56,10.97,12.70,12.70,12.70],
+ '80':[3.73,3.91,4.55,4.85,5.08,5.54,7.01,7.62,8.56,10.97,12.70,15.09,17.48],
+ '100':[_N,_N,_N,_N,_N,_N,_N,_N,_N,_N,15.09,18.26,21.44],
+ '120':[_N,_N,_N,_N,_N,_N,_N,_N,11.13,14.27,18.26,21.44,25.40],
+ '140':[_N,_N,_N,_N,_N,_N,_N,_N,_N,_N,20.62,25.40,28.58],
+ '160':[4.78,5.56,6.35,6.35,7.14,8.74,9.53,11.13,13.49,18.26,23.01,28.58,33.32],
+ 'XXS':[7.47,7.82,9.09,9.70,10.15,11.07,14.02,15.24,17.12,21.95,22.23,25.40,25.40]};
+E.SCH_AC=['10','20','30','STD','40','60','XS','80','100','120','140','160','XXS']; E.SCH_OX=['5S','10S','40S','80S'];
+E.schGrupo=function(mat){ if(E.PURGA_MAT.includes(mat)||mat==='CUNI9010') return 'ox'; if(mat==='CS'||E.MAT_BASE[mat]==='CS') return 'cs'; return mat; };
+// só os schedules que existem para o material e o diâmetro
+E.schValidos=function(mat,nps){ const g=E.schGrupo(mat), i=E.SCH_NPS.indexOf(Number(nps));
+  if(g==='ox'||g==='cs'){ const L=g==='ox'?E.SCH_OX:E.SCH_AC; return i<0?L.slice():L.filter(s=>E.SCH_TAB[s][i]!=null); }
+  if(mat==='GALV') return ['40']; if(mat==='PVC'||mat==='CPVC') return ['80']; return [E.SCH_PADRAO[mat]]; };
+E.schParede=function(nps,sch){ const i=E.SCH_NPS.indexOf(Number(nps)), t=E.SCH_TAB[sch]; return (t&&i>=0)?t[i]:null; };
+// no catálogo, STD = 40 até 10" e XS = 80 até 8" (mesma parede): um só cadastro por tubo
+E.schChave=function(nps,sch){ nps=Number(nps); if(sch==='STD'&&nps<=10) return '40'; if(sch==='XS'&&nps<=8) return '80'; return sch; };
+// schedule coerente com o material e o diâmetro (trocou CS→inox: 40 vira 40S; diâmetro sem aquele schedule: volta ao padrão)
+E.schNormalizar=function(mat,sch,nps){ let s=String(sch==null?'':sch).trim().toUpperCase(); const g=E.schGrupo(mat);
+  if(g==='ox'){ const m={'5':'5S','10':'10S','40':'40S','80':'80S','STD':'40S','XS':'80S'}; if(m[s]) s=m[s]; if(!E.SCH_OX.includes(s)) s=E.SCH_PADRAO[mat]; }
+  else if(g==='cs'){ const m={'5S':'10','10S':'10','40S':'40','80S':'80'}; if(m[s]) s=m[s]; if(!E.SCH_AC.includes(s)) s=E.SCH_PADRAO[mat]; }
+  else if(mat==='GALV') s='40'; else return E.SCH_PADRAO[mat]||s;
+  if(nps!=null&&nps!==''){ const v=E.schValidos(mat,nps); if(v.length&&!v.includes(s)) s=v.includes(E.SCH_PADRAO[mat])?E.SCH_PADRAO[mat]:v[0]; }
+  return s; };
+
 
 // ── contexto ──────────────────────────────────────────────────────────────────
 E.contexto=function(cab,indices,catalogo){
@@ -16305,8 +16338,8 @@ E.calcItem=function(item,ctx){
         const purga=inoxBW&&P(item,'purga',true)!==false; if(purga){ const pp=nz(E.num(ctx.cfg.purga_pct))/100; h*=1+pp; R.detalhe.purga_pct=pp*100; }
         R.hh_campo=h*fc.f; R.hh_oficina=base*nz(E.num(i.hh_oficina));
         const par=i.parametros||{};
-        const sch=E.schNormalizar(mat,P(item,'sch',null));
-        if(metros>0&&nps>0){ const chave='TUBO.'+(mat==='PP'?'PP':mat)+'.'+sch+'.'+nps; const m=ctx.porChave.get(chave);
+        const sch=E.schNormalizar(mat,P(item,'sch',null),nps);
+        if(metros>0&&nps>0){ const chave='TUBO.'+(mat==='PP'?'PP':mat)+'.'+E.schChave(nps,sch)+'.'+nps; const m=ctx.porChave.get(chave);
           R.materiais.push(linhaMat(ctx,{chave,mat:m,desc:m?m.descricao:('Tubo '+mat+' '+nps+'" Sch '+sch+' (fora do catálogo)'),unidade:'m',qtd:metros,categoria:'TUBO'})); if(!m) R.avisos.push('Tubo '+mat+' '+nps+'" Sch '+sch+' não está no catálogo'); }
         if(par.vareta_kg_pd&&E.VARETA[mat]&&base>0) R.materiais.push(linhaMat(ctx,{chave:E.VARETA[mat],unidade:'kg',qtd:base*par.vareta_kg_pd,categoria:'CONSUMIVEL'}));
         if(par.gas_m3_pd&&base>0) R.materiais.push(linhaMat(ctx,{chave:par.gas==='ARGONIO'?'CNS.ARGONIO':'CNS.MISTURA',unidade:'m3',qtd:base*par.gas_m3_pd,categoria:'CONSUMIVEL'}));
@@ -16592,7 +16625,7 @@ const STATUS={RASCUNHO:{nome:'Rascunho',cor:'#64748b'},ENVIADO:{nome:'Enviado',c
 const EDITAVEL=new Set(['RASCUNHO','REPROVADO']);   // ENVIADO é somente leitura: para alterar, reabrir (registrado) ou criar revisão
 const MATERIAIS={CS:'Aço carbono',INOX304:'Inox 304L',INOX316:'Inox 316L',GALV:'Galvanizado',PVC:'PVC-U',CPVC:'CPVC',PRFV:'PRFV',PP:'PP / PEAD',LTCS:'Aço carbono baixa temp. (A333)',P22:'Aço liga P22',P91:'Aço liga P91',INOX321:'Inox 321',INOX904L:'Inox 904L',DUP2205:'Duplex 2205',SDUP2507:'Super duplex 2507',ALLOY20:'Liga 20',MONEL400:'Monel 400',INC625:'Inconel 625',HAST276:'Hastelloy C-276',TI2:'Titânio Gr.2',CUNI9010:'CuNi 90/10'};
 const UNIOES={BW:'Solda de topo (BW)',SW:'Encaixe e solda (SW)',ROSCA:'Roscada (NPT/BSP)',COLA:'Colagem a frio',TERMOFUSAO:'Termofusão'};
-const SCHS={CS:['40','80'],INOX304:['10S','40S'],INOX316:['10S','40S'],GALV:['40'],PVC:['80'],CPVC:['80'],PRFV:['PN10'],PP:['PN10'],LTCS:['40','80'],P22:['40','80'],P91:['40','80'],INOX321:['10S','40S'],INOX904L:['10S','40S'],DUP2205:['10S','40S'],SDUP2507:['10S','40S'],ALLOY20:['10S','40S'],MONEL400:['10S','40S'],INC625:['10S','40S'],HAST276:['10S','40S'],TI2:['10S','40S'],CUNI9010:['10S','40S']};
+const SCHS={CS:['10','20','30','STD','40','60','XS','80','100','120','140','160','XXS'],LTCS:['10','20','30','STD','40','60','XS','80','100','120','140','160','XXS'],P22:['10','20','30','STD','40','60','XS','80','100','120','140','160','XXS'],P91:['10','20','30','STD','40','60','XS','80','100','120','140','160','XXS'],INOX304:['5S','10S','40S','80S'],INOX316:['5S','10S','40S','80S'],INOX321:['5S','10S','40S','80S'],INOX904L:['5S','10S','40S','80S'],DUP2205:['5S','10S','40S','80S'],SDUP2507:['5S','10S','40S','80S'],ALLOY20:['5S','10S','40S','80S'],MONEL400:['5S','10S','40S','80S'],INC625:['5S','10S','40S','80S'],HAST276:['5S','10S','40S','80S'],TI2:['5S','10S','40S','80S'],CUNI9010:['5S','10S','40S','80S'],GALV:['40'],PVC:['80'],CPVC:['80'],PRFV:['PN10'],PP:['PN10']};
 const $=id=>document.getElementById(id);
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const nf=(n,d)=>(n==null||!isFinite(n))?'—':Number(n).toLocaleString('pt-BR',{minimumFractionDigits:d,maximumFractionDigits:d});
@@ -16646,7 +16679,7 @@ async function carregarBase(){
   const c=cli(); if(!c||(typeof navigator!=='undefined'&&navigator.onLine===false)) return;
   try{
     const [ind,cat]=await Promise.all([lerPaginado(()=>c.from(TB.idx).select('*').order('disciplina').order('grupo').order('codigo')),atualizarCatalogo(c,cache)]);
-    est.indices=ind; est.catalogo=cat; est.baseOk=true; est.semTabelas=false; indexarCatalogo(); await carregarKits(); await carregarSugestoes(); salvarCacheBase();
+    est.indices=ind; est.catalogo=cat; est.baseOk=true; est.semTabelas=false; indexarCatalogo(); await carregarKits(); await carregarSugestoes(); salvarCacheBase(); setTimeout(()=>{ try{ iniciarVirtuais(); }catch(e){} },700);
   }catch(e){ if(erroTabela(e)) est.semTabelas=true; else console.warn('orçamento: base indisponível',e); }
 }
 async function listar(){
@@ -16662,7 +16695,7 @@ async function abrir(id){
   try{
     const r=await c.from(TB.cab).select('*').eq('id',id).single(); if(r.error) throw r.error;
     const itens=await lerPaginado(()=>c.from(TB.itm).select('*').eq('orcamento_id',id).order('disciplina').order('ordem'));
-    est.orc=normOrc(r.data); est.itens=itens.map(normItem); est.removidos=new Set(); est.desfazer=[]; est.sujo=false; est.aba='montar';
+    est.orc=normOrc(r.data); est.itens=itens.map(normItem); est.removidos=new Set(); est.desfazer=[]; est.sujo=false; est.aba='montar'; est.abaHist=['montar'];
     try{ const d=JSON.parse(localStorage.getItem(LS_DRAFT+id)||'null'); if(d&&d.base===est.orc.atualizado_em&&EDITAVEL.has(est.orc.status)){ est.orc=normOrc(d.orc); est.itens=d.itens.map(normItem); est.removidos=new Set(d.removidos||[]); est.sujo=true; toast('Rascunho local recuperado (alterações que não tinham sido salvas).'); } }catch(e){}
     est.tela='editor'; recalcular();
   }catch(e){ aviso('Não foi possível abrir: '+((e&&e.message)||e)); }
@@ -16928,11 +16961,11 @@ function ligar(m){
   m.addEventListener('input',e=>{ const t=e.target; if(t.id==='orc-busca'){ est.filtro.q=t.value; const p=t.selectionStart; renderCorpo(); const n=$('orc-busca'); if(n){ n.focus(); try{ n.setSelectionRange(p,p); }catch(x){} } return; }
     if(t.hasAttribute&&t.hasAttribute('data-fo')&&t.type!=='checkbox'&&t.type!=='radio'&&t.tagName!=='SELECT') aoMudar(t,false); });
   m.addEventListener('change',e=>{ const t=e.target; if(t.id==='orc-fstatus'){ est.filtro.status=t.value; renderCorpo(); return; } if(t.hasAttribute&&t.hasAttribute('data-fo')) aoMudar(t,true); if(t.hasAttribute&&t.hasAttribute('data-oc')) aoMudarCatIdx(t); if(t.id==='orc-cat-disc'||t.id==='orc-cat-cat'||t.id==='orc-idx-disc'){ filtroCatIdx(t); } });
-  m.addEventListener('keydown',e=>{ if(e.key==='Escape'){ e.stopPropagation(); if(est.dlg){ fecharDlg(); return; } fechar(); return; } if(e.key==='Enter'&&e.target&&e.target.tagName==='INPUT'&&e.target.type!=='search'&&e.target.type!=='date'&&!e.target.hasAttribute('data-dlg')){ e.preventDefault(); const lista=[...m.querySelectorAll('#orc-corpo input:not([disabled]):not([type=hidden]),#orc-corpo select:not([disabled])')]; const i=lista.indexOf(e.target); if(i>=0&&lista[i+1]) lista[i+1].focus(); } });
+  m.addEventListener('keydown',e=>{ if(e.key==='Escape'){ e.stopPropagation(); voltarEtapa(); return; } if(e.key==='Enter'&&e.target&&e.target.tagName==='INPUT'&&e.target.type!=='search'&&e.target.type!=='date'&&!e.target.hasAttribute('data-dlg')){ e.preventDefault(); const lista=[...m.querySelectorAll('#orc-corpo input:not([disabled]):not([type=hidden]),#orc-corpo select:not([disabled])')]; const i=lista.indexOf(e.target); if(i>=0&&lista[i+1]) lista[i+1].focus(); } });
 }
 function acao(a,el,ev){
   const A=window.ORC_ACOES; if(a==='fechar'){ fechar(); return; } if(a==='voltar'){ voltar(); return; }
-  if(a==='aba'){ est.aba=el.getAttribute('data-aba'); renderTopo(); renderCorpo(); return; }
+  if(a==='aba'){ irAba(el.getAttribute('data-aba')); renderTopo(); renderCorpo(); return; }
   if(a==='salvar'){ salvar(true); return; }
   if(a==='novo'){ dlgNovo(); return; }
   if(a==='abrir'){ abrir(el.getAttribute('data-id')); return; }
@@ -16962,11 +16995,11 @@ function filtroCatIdx(t){ if(t.id==='orc-cat-disc'){ est.cat.disc=t.value; est.c
 // ── dialogs ──────────────────────────────────────────────────────────────────
 function dlg(html){ est.dlg=true; const w=$('orc-dlg'); w.innerHTML='<div class="orc-dlg">'+html+'</div>'; w.classList.add('show'); setTimeout(()=>{ const f=w.querySelector('[data-foco]'); if(f) f.focus(); },20); }
 function fecharDlg(){ est.dlg=false; const w=$('orc-dlg'); if(w){ w.classList.remove('show'); w.innerHTML=''; } }
-function fechar(){ if(est.sujo&&est.orc&&editavel()){ salvar(false); } clearTimeout(est.timer); const m=$('orc-modal'); if(m) m.classList.remove('show'); }
-async function voltar(){ if(est.sujo&&editavel()) await salvar(false); est.tela='lista'; est.orc=null; est.res=null; renderTopo(); renderCorpo(); renderRodape(); await listar(); renderCorpo(); }
+function fechar(){ if(est.sujo&&est.orc&&editavel()){ salvar(false); } clearTimeout(est.timer); const m=$('orc-modal'); if(m) m.classList.remove('show'); navDesarmar(); }
+async function voltar(){ if(est.sujo&&editavel()) await salvar(false); est.abaHist=[]; est.tela='lista'; est.orc=null; est.res=null; renderTopo(); renderCorpo(); renderRodape(); await listar(); renderCorpo(); }
 async function orcAbrir(){
   if(typeof usuarioAtual!=='undefined'&&(!usuarioAtual||usuarioAtual.papel!=='admin_mestre')){ aviso('O módulo Orçamento é só para o administrador.'); return; }
-  garantirModal(); est.tela='lista'; est.orc=null; render();
+  garantirModal(); est.tela='lista'; est.orc=null; est.abaHist=[]; render(); navArmar();
   carregarAtividades(); await carregarBase(); await listar(); if(est.tela==='lista') render();
 }
 window.orcAbrir=orcAbrir;
@@ -17024,25 +17057,25 @@ const fl=(rot,html,cls)=>`<label class="orc-f ${cls||''}"><span>${rot}</span>${h
 const acoesRow=(it)=>`<div class="orc-acoes">${(it.tipo==='SERVICO'&&it.modelo==='GENERICO'&&!it.indice_codigo&&E.num(it.hh_manual)>0&&E.num(it.qtd)>0)?`<button type="button" class="orc-mini" data-orc="idx-da-linha" data-id="${it.id}" title="Salvar este serviço como índice (HH ÷ quantidade)">💾 salvar como índice</button>`:''}${it.modelo==='PIPING'?`<button type="button" class="orc-mini" data-orc="pk-mat-linha" data-id="${it.id}" data-livre="1" title="Ver as peças desta linha (conexões, flanges, juntas) conforme a união, o material e o diâmetro">🧱 peças desta linha</button>`:''}<button type="button" class="orc-mini" data-orc="adv" data-id="${it.id}" title="Mais opções (K de acesso, rigging, observação)">⋯</button><button type="button" class="orc-mini" data-orc="dup-item" data-id="${it.id}" title="Duplicar">⧉</button><button type="button" class="orc-mini" data-orc="del-item" data-id="${it.id}" title="Excluir">🗑️</button></div>`;
 const avancado=(it,extra)=>`<div class="orc-adv${est.abertos.has(it.id)?' on':''}">${it.tipo==='SERVICO'&&it.modelo!=='ANDAIME'?fl('K de acesso deste item',iS(it,'p.k',[['','Padrão do orçamento'],['1','1,0 — nível do solo'],['1.2','1,2 — altura com andaime'],['1.4','1,4 — pipe-rack / confinado']],P(it,'k',''))):''}${it.tipo==='SERVICO'&&it.modelo!=='ANDAIME'&&it.disciplina==='MECANICA'?fl('Rigging deste item',iS(it,'p.rigging',[['','Padrão do orçamento'],['MECANIZADO','Mecanizado'],['MANUAL','Manual / restrito']],P(it,'rigging',''))):''}${it.tipo==='SERVICO'&&it.modelo!=='ANDAIME'&&it.modelo!=='RIG_MEC'?fl('Materiais deste serviço fornecidos por',iS(it,'p.forn_derivados',[['','Master (padrão)'],['CLIENTE','Cliente'],['FAT_DIRETO','Faturamento direto']],P(it,'forn_derivados',''))):''}${extra||''}${fl('Observação',iT(it,'obs',it.obs,'opcional'),'w2')}</div>`;
 function lPiping(it){ const mat=P(it,'material','CS'), un=E.UNIAO_POR_MATERIAL[mat]||['BW']; const uni=un.includes(P(it,'uniao','BW'))?P(it,'uniao','BW'):un[0]; const schs=SCHS[mat]||['40']; const inoxBW=E.PURGA_MAT.includes(mat)&&uni==='BW';
-  return `<div class="orc-row" data-id="${it.id}"><div class="orc-fields">${fl('Linha / descrição',iT(it,'descricao',it.descricao,'ex.: Linha 3"-P-101'),'w2')}${fl('Material',iS(it,'p.material',matOpcoesPiping(mat),mat))}${fl('União',iS(it,'p.uniao',un.map(k=>[k,UNIOES[k]]),uni))}${fl('NPS (pol)',iS(it,'p.nps',npsOpcoes(P(it,'nps',4)),String(P(it,'nps',4))))}${fl('Schedule',iS(it,'p.sch',schs.map(s=>[s,s]),E.schNormalizar(mat,P(it,'sch',null))))}${fl('Tubo (m)',iN(it,'p.metros',P(it,'metros',''),'0'))}${fl('Nº de juntas',iN(it,'p.juntas',P(it,'juntas',''),'0'))}${fl('HH (digitar substitui)',iN(it,'hh_manual',it.hh_manual,'calculado'))}</div>
-  <div class="orc-calc" data-calc="${it.id}">${htmlCalc(it)}</div>${acoesRow(it)}${avancado(it,inoxBW?`<label class="orc-ck"><input type="checkbox" data-fo="${FN(it,'p.purga')}"${P(it,'purga',true)!==false?' checked':''}> Acrescentar purga (inox, solda de topo)</label>`:'')}</div>`; }
-function lGenerico(it,sec){ const ind=est.indices.find(i=>i.codigo===it.indice_codigo); const ativ=!!P(it,'ativ_cod',''); const un=ind?ind.unidade:(it.unidade||'');
-  return `<div class="orc-row" data-id="${it.id}"><div class="orc-fields">${fl('Serviço (índice de HH)',iS(it,'indice_codigo',opcoesIndice(it.disciplina,sec,it.indice_codigo)),'w2')}${fl(ativ?'Atividade (digite para trocar)':'Descrição / local (digite para buscar atividades)',iT(it,'descricao',it.descricao,ativ?'':'ex.: raqueteamento, troca de válvula, Área 2'),'w2')}${fl('Quantidade'+(un?' ('+esc(un)+')':''),iN(it,'qtd',it.qtd,'0'))}${fl('HH (digitar substitui)',iN(it,'hh_manual',it.hh_manual,'calculado'))}</div>${fichaHTML(it)}<div class="orc-calc" data-calc="${it.id}">${htmlCalc(it)}</div>${acoesRow(it)}${avancado(it)}</div>`; }
+  return `<div class="orc-row" data-id="${it.id}"><div class="orc-fields">${fl('Linha / descrição (digite para buscar atividades)',iT(it,'descricao',it.descricao,'ex.: Linha 3"-P-101'),'w2')}${fl('Material',iS(it,'p.material',matOpcoesPiping(mat),mat))}${fl('União',iS(it,'p.uniao',un.map(k=>[k,UNIOES[k]]),uni))}${fl('NPS (pol)',iS(it,'p.nps',npsOpcoes(P(it,'nps',4)),String(P(it,'nps',4))))}${fl('Schedule (parede)',iS(it,'p.sch',schOpcoes(mat,P(it,'nps',4)),E.schNormalizar(mat,P(it,'sch',null),P(it,'nps',4))))}${fl('Tubo (m)',iN(it,'p.metros',P(it,'metros',''),'0'))}${fl('Nº de juntas',iN(it,'p.juntas',P(it,'juntas',''),'0'))}${fl('HH (digitar substitui)',iN(it,'hh_manual',it.hh_manual,'calculado'))}</div>
+  ${fichaHTML(it)}<div class="orc-calc" data-calc="${it.id}">${htmlCalc(it)}</div>${acoesRow(it)}${avancado(it,inoxBW?`<label class="orc-ck"><input type="checkbox" data-fo="${FN(it,'p.purga')}"${P(it,'purga',true)!==false?' checked':''}> Acrescentar purga (inox, solda de topo)</label>`:'')}</div>`; }
+function lGenerico(it,sec){ const ind=est.indices.find(i=>i.codigo===it.indice_codigo); const ativ=!!P(it,'ativ_cod',''); const un=ind?ind.unidade:(it.unidade||''); const grp=(sec&&sec.g&&!sec.todos)?sec.g.join(','):'';
+  return `<div class="orc-row" data-id="${it.id}"><div class="orc-fields">${fl('Serviço (índice de HH) — digite para buscar',`<input class="orc-in orc-busca" data-ac="idx" data-id="${it.id}" data-disc="${it.disciplina}" data-g="${esc(grp)}" placeholder="🔎 buscar serviço, índice ou atividade…" autocomplete="off">`+iS(it,'indice_codigo',opcoesIndice(it.disciplina,sec,it.indice_codigo)),'w2')}${fl(ativ?'Atividade (digite para trocar)':'Descrição / local (digite para buscar atividades)',iT(it,'descricao',it.descricao,ativ?'':'ex.: raqueteamento, troca de válvula, Área 2'),'w2')}${fl('Quantidade'+(un?' ('+esc(un)+')':''),iN(it,'qtd',it.qtd,'0'))}${fl('HH (digitar substitui)',iN(it,'hh_manual',it.hh_manual,'calculado'))}</div>${fichaHTML(it)}<div class="orc-calc" data-calc="${it.id}">${htmlCalc(it)}</div>${acoesRow(it)}${avancado(it)}</div>`; }
 function lAndaime(it){ const m=P(it,'metodo','EQUIPE');
-  return `<div class="orc-row" data-id="${it.id}"><div class="orc-fields">${fl('Descrição / local',iT(it,'descricao',it.descricao,'ex.: Andaime pipe-rack Área 1'),'w2')}${fl('Método',iS(it,'p.metodo',[['EQUIPE','Equipe × dias'],['VOLUMETRIA','Volumetria (m³)']],m))}
+  return `<div class="orc-row" data-id="${it.id}"><div class="orc-fields">${fl('Descrição / local (digite para buscar atividades)',iT(it,'descricao',it.descricao,'ex.: Andaime pipe-rack Área 1'),'w2')}${fl('Método',iS(it,'p.metodo',[['EQUIPE','Equipe × dias'],['VOLUMETRIA','Volumetria (m³)']],m))}
   ${m==='EQUIPE'?fl('Andaimeiros',iN(it,'p.andaimeiros',P(it,'andaimeiros',''),'0'))+fl('Ajudantes',iN(it,'p.ajudantes',P(it,'ajudantes',''),'0'))+fl('Dias de obra',iN(it,'p.dias',P(it,'dias',''),'0'))+fl('Horas/dia',iN(it,'p.h_dia',P(it,'h_dia',''),String(est.orc.config.horas_dia))):fl('Estrutura',iS(it,'p.estrutura',[['TUBULAR','Tubular fachadeiro / quadro'],['ABRACADEIRA','Tubo com abraçadeiras (pipe-rack / confinado)']],P(it,'estrutura','TUBULAR')))+fl('Volume (m³)',iN(it,'p.volume_m3',P(it,'volume_m3',''),'0'))}
-  ${fl('Volume p/ locação (m³)',m==='EQUIPE'?iN(it,'p.volume_m3',P(it,'volume_m3',''),'0'):'<input class="orc-in" disabled value="= volume acima">')}${fl('Dias de permanência (locação)',iN(it,'p.dias_loc',P(it,'dias_loc',''),'0'))}${fl('HH (digitar substitui)',iN(it,'hh_manual',it.hh_manual,'calculado'))}</div><div class="orc-calc" data-calc="${it.id}">${htmlCalc(it)}</div>${acoesRow(it)}${avancado(it)}</div>`; }
+  ${fl('Volume p/ locação (m³)',m==='EQUIPE'?iN(it,'p.volume_m3',P(it,'volume_m3',''),'0'):'<input class="orc-in" disabled value="= volume acima">')}${fl('Dias de permanência (locação)',iN(it,'p.dias_loc',P(it,'dias_loc',''),'0'))}${fl('HH (digitar substitui)',iN(it,'hh_manual',it.hh_manual,'calculado'))}</div>${fichaHTML(it)}<div class="orc-calc" data-calc="${it.id}">${htmlCalc(it)}</div>${acoesRow(it)}${avancado(it)}</div>`; }
 function lIsolamento(it){ const alvo=P(it,'alvo','TUBO'), serv=P(it,'servico','QUENTE'); const nps=Number(P(it,'nps',4));
-  return `<div class="orc-row" data-id="${it.id}"><div class="orc-fields">${fl('Descrição / local',iT(it,'descricao',it.descricao,alvo==='TUBO'?'ex.: Vapor 4" Área 2':'ex.: Tanque T-101'),'w2')}${fl('Serviço',iS(it,'p.servico',[['QUENTE','Quente'],['FRIO','Frio (com barreira de vapor)'],['PROTECAO','Proteção pessoal']],serv))}
+  return `<div class="orc-row" data-id="${it.id}"><div class="orc-fields">${fl('Descrição / local (digite para buscar atividades)',iT(it,'descricao',it.descricao,alvo==='TUBO'?'ex.: Vapor 4" Área 2':'ex.: Tanque T-101'),'w2')}${fl('Serviço',iS(it,'p.servico',[['QUENTE','Quente'],['FRIO','Frio (com barreira de vapor)'],['PROTECAO','Proteção pessoal']],serv))}
   ${alvo==='TUBO'?fl('NPS (pol)',iS(it,'p.nps',E.NPS.map(n=>[String(n),n+'"']),String(nps)))+fl('Comprimento (m)',iN(it,'p.metros',P(it,'metros',''),'0'))+fl('Curvas (un)',iN(it,'p.curvas',P(it,'curvas',''),'0'))+fl('Válvulas / flanges c/ capa (un)',iN(it,'p.valvulas',P(it,'valvulas',''),'0')):fl('Área (m²)',iN(it,'p.area_m2',P(it,'area_m2',''),'0'))}
   ${fl('Espessura (mm)',iN(it,'p.espessura_mm',P(it,'espessura_mm',''),'0')+`<button type="button" class="orc-mini" data-orc="iso-sug" data-id="${it.id}" title="Sugere uma espessura de referência (a final vem do projeto)">💡</button>`)}
   ${fl('Isolante',iS(it,'p.isolante',opcoesMat('ISOLAMENTO',['ISOLANTE'],P(it,'isolante',''),'— escolha —'),''),'w2')}${fl('Revestimento (jaqueta)',iS(it,'p.revestimento',opcoesMat('ISOLAMENTO',['REVESTIMENTO'],P(it,'revestimento',''),'— escolha —'),''),'w2')}${fl('HH (digitar substitui)',iN(it,'hh_manual',it.hh_manual,'calculado'))}</div>
-  <div class="orc-calc" data-calc="${it.id}">${htmlCalc(it)}</div>${acoesRow(it)}${avancado(it)}</div>`; }
+  ${fichaHTML(it)}<div class="orc-calc" data-calc="${it.id}">${htmlCalc(it)}</div>${acoesRow(it)}${avancado(it)}</div>`; }
 function lPintura(it){ const prep=est.indices.filter(i=>i.disciplina==='PINTURA'&&i.grupo==='PREPARO').map(i=>[i.codigo,i.descricao]); const tintas=(k)=>iS(it,'p.'+k+'_tinta',opcoesMat('PINTURA',['TINTA'],P(it,k+'_tinta',''),'— sem esta demão —'),'');
   return `<div class="orc-row" data-id="${it.id}"><div class="orc-fields">${fl('Superfície / descrição',iT(it,'descricao',it.descricao,'ex.: Estrutura da Área 1'),'w2')}${fl('Área (m²)',iN(it,'p.area_m2',P(it,'area_m2',''),'0'))}${fl('Preparo de superfície',iS(it,'p.preparo',prep.length?prep:[['PIN_JATO_SA25','Jateamento Sa 2½']],P(it,'preparo','PIN_JATO_SA25')),'w2')}
   ${fl('Primer',tintas('primer'),'w2')}${fl('Demãos',iN(it,'p.primer_demaos',P(it,'primer_demaos',''),'1'))}${fl('Intermediário',tintas('interm'),'w2')}${fl('Demãos',iN(it,'p.interm_demaos',P(it,'interm_demaos',''),'1'))}${fl('Acabamento',tintas('acab'),'w2')}${fl('Demãos',iN(it,'p.acab_demaos',P(it,'acab_demaos',''),'1'))}
-  ${fl('Abrasivo (jato)',iS(it,'p.abrasivo',opcoesMat('PINTURA',['ABRASIVO'],P(it,'abrasivo',''),'— nenhum —'),''),'w2')}${fl('HH (digitar substitui)',iN(it,'hh_manual',it.hh_manual,'calculado'))}</div><div class="orc-calc" data-calc="${it.id}">${htmlCalc(it)}</div>${acoesRow(it)}${avancado(it)}</div>`; }
-function lRigMec(it){ return `<div class="orc-row" data-id="${it.id}"><div class="orc-fields">${fl('Equipamento (munck / guindaste)',iT(it,'descricao',it.descricao,'ex.: Munck 20 t'),'w2')}${fl('Cobrança por',iS(it,'p.unidade_equip',[['dia','Diária'],['h','Hora']],P(it,'unidade_equip','dia')))}${fl('Quantidade',iN(it,'qtd',it.qtd,'0'))}${fl('Custo unitário (R$)',iN(it,'preco_unit',it.preco_unit,'sem preço'))}${fl('Quem fornece',iS(it,'fornecimento',[['MASTER','Master'],['CLIENTE','Cliente']],it.fornecimento))}</div><div class="orc-calc" data-calc="${it.id}">${htmlCalc(it)}</div>${acoesRow(it)}${avancado(it)}</div>`; }
+  ${fl('Abrasivo (jato)',iS(it,'p.abrasivo',opcoesMat('PINTURA',['ABRASIVO'],P(it,'abrasivo',''),'— nenhum —'),''),'w2')}${fl('HH (digitar substitui)',iN(it,'hh_manual',it.hh_manual,'calculado'))}</div>${fichaHTML(it)}<div class="orc-calc" data-calc="${it.id}">${htmlCalc(it)}</div>${acoesRow(it)}${avancado(it)}</div>`; }
+function lRigMec(it){ return `<div class="orc-row" data-id="${it.id}"><div class="orc-fields">${fl('Equipamento (munck / guindaste)',iT(it,'descricao',it.descricao,'ex.: Munck 20 t'),'w2')}${fl('Cobrança por',iS(it,'p.unidade_equip',[['dia','Diária'],['h','Hora']],P(it,'unidade_equip','dia')))}${fl('Quantidade',iN(it,'qtd',it.qtd,'0'))}${fl('Custo unitário (R$)',iN(it,'preco_unit',it.preco_unit,'sem preço'))}${fl('Quem fornece',iS(it,'fornecimento',[['MASTER','Master'],['CLIENTE','Cliente']],it.fornecimento))}</div>${fichaHTML(it)}<div class="orc-calc" data-calc="${it.id}">${htmlCalc(it)}</div>${acoesRow(it)}${avancado(it)}</div>`; }
 function lMaterial(it){
   const m=est.catalogo.find(x=>x.id===it.material_id); const temPeso=m&&m.atributos&&E.num(m.atributos.peso_kg_m)>0; const barra=m&&E.num(m.comprimento_barra_m)>0;
   const texto=it.descricao||(m?m.descricao:'');
@@ -17051,10 +17084,10 @@ function lMaterial(it){
   ${fl('Quantidade ('+esc(it.unidade||(m?m.unidade:'un'))+')',iN(it,'qtd',it.qtd,'0'))}${temPeso?fl('ou comprimento (m)',iN(it,'p.ml',P(it,'ml',''),'→ kg')):''}${fl('Perda (%)',iN(it,'perda_pct',it.perda_pct,m?String(m.perda_pct):'0'))}
   ${fl('Preço unitário (R$)',iN(it,'preco_unit',it.preco_unit,m&&m.preco_unitario!=null?nv(m.preco_unitario)+' (catálogo)':'sem preço'))}${fl('Quem fornece',iS(it,'fornecimento',[['MASTER','Master'],['CLIENTE','Cliente'],['FAT_DIRETO','Faturamento direto']],it.fornecimento))}${barra?`<label class="orc-ck"><input type="checkbox" data-fo="${FN(it,'p.preco_por_barra')}"${P(it,'preco_por_barra',false)===true?' checked':''}> preço é por barra</label>`:''}</div>
   ${novo?`<div class="orc-novo">“${esc(texto)}” não está no catálogo. <button type="button" class="orc-btn sec" data-orc="cad-mat" data-id="${it.id}">＋ Cadastrar como novo material</button></div>`:''}
-  <div class="orc-calc" data-calc="${it.id}">${htmlCalc(it)}</div>${acoesRow(it)}${avancado(it)}</div>`; }
+  ${fichaHTML(it)}<div class="orc-calc" data-calc="${it.id}">${htmlCalc(it)}</div>${acoesRow(it)}${avancado(it)}</div>`; }
 function lExtra(it){ const un=['h','dia','mês','un','vb','km'];
   return `<div class="orc-row" data-id="${it.id}"><div class="orc-fields">${fl('Descrição',iT(it,'descricao',it.descricao,'descrição'),'w2')}${fl('Área',iS(it,'disciplina',['GERAL'].concat(E.DISCIPLINAS.map(d=>d.codigo)).map(c=>[c,nomeDisc(c)]),it.disciplina))}${fl('Unidade',iS(it,'unidade',un.map(u=>[u,u]),it.unidade||'mês'))}${fl('Quantidade',iN(it,'qtd',it.qtd,'0'))}${fl('Custo unitário (R$)',iN(it,'preco_unit',it.preco_unit,'sem preço'))}
-  ${it.tipo==='INDIRETO'?`<label class="orc-ck"><input type="checkbox" data-fo="${FN(it,'p.cobrar')}"${P(it,'cobrar',true)!==false?' checked':''}> cobrar à parte no preço</label>`:''}<label class="orc-ck"><input type="checkbox" data-fo="${FN(it,'cliente_fornece')}"${it.fornecimento==='CLIENTE'?' checked':''}> cliente fornece</label></div><div class="orc-calc" data-calc="${it.id}">${htmlCalc(it)}</div>${acoesRow(it)}</div>`; }
+  ${it.tipo==='INDIRETO'?`<label class="orc-ck"><input type="checkbox" data-fo="${FN(it,'p.cobrar')}"${P(it,'cobrar',true)!==false?' checked':''}> cobrar à parte no preço</label>`:''}<label class="orc-ck"><input type="checkbox" data-fo="${FN(it,'cliente_fornece')}"${it.fornecimento==='CLIENTE'?' checked':''}> cliente fornece</label></div>${fichaHTML(it)}<div class="orc-calc" data-calc="${it.id}">${htmlCalc(it)}</div>${acoesRow(it)}</div>`; }
 function linhaItem(it,sec){ if(it.tipo==='MATERIAL') return lMaterial(it); if(it.tipo!=='SERVICO') return lExtra(it); if(it.modelo==='PIPING') return lPiping(it); if(it.modelo==='ANDAIME') return lAndaime(it); if(it.modelo==='ISOLAMENTO') return lIsolamento(it); if(it.modelo==='PINTURA') return lPintura(it); if(it.modelo==='RIG_MEC') return lRigMec(it); return lGenerico(it,sec||{g:[]}); }
 function htmlCalc(it){
   const r=resItem(it); if(!r) return ''; const c=r.calc; let s=htmlRef(it,c)+htmlFalta(it); if(it.tipo==='SERVICO'&&P(it,'forn_derivados','')&&P(it,'forn_derivados','')!=='MASTER') s+=`<span class="man" title="Os materiais gerados por este serviço não entram no preço da Master">📦 materiais: ${P(it,'forn_derivados','')==='CLIENTE'?'do cliente':'fat. direto'}</span>`;
@@ -17097,8 +17130,8 @@ function aoMudarItem(t,f,v,fim){
   else if(campo==='indice_codigo'){ it.indice_codigo=val||null; const ind=est.indices.find(i=>i.codigo===val); it.grupo=(ind&&!it.params.ativ_cod&&it.grupo!=='ATIV')?ind.grupo:it.grupo; it.unidade=ind?ind.unidade:(it.params.ativ_un?unIdx(it.params.ativ_un):''); estrut=true; }
   else if(campo==='disciplina'){ it.disciplina=val; estrut=true; }
   else if(campo.startsWith('p.')){ const k=campo.slice(2); if(val===''||val==null) delete it.params[k]; else it.params[k]=val;
-    if(k==='material'){ const un=E.UNIAO_POR_MATERIAL[val]||['BW']; if(!un.includes(it.params.uniao)) it.params.uniao=un[0]; it.params.sch=E.schNormalizar(val,it.params.sch); estrut=true; }
-    if(k==='uniao'||k==='metodo'||k==='servico') estrut=true; if(t.type==='checkbox') estrut=false; }
+    if(k==='material'){ const un=E.UNIAO_POR_MATERIAL[val]||['BW']; if(!un.includes(it.params.uniao)) it.params.uniao=un[0]; it.params.sch=E.schNormalizar(val,it.params.sch,it.params.nps); estrut=true; }
+    if(k==='uniao'||k==='metodo'||k==='servico') estrut=true; if(k==='nps'&&it.modelo==='PIPING'){ it.params.sch=E.schNormalizar(P(it,'material','CS'),it.params.sch,val); estrut=true; } if(t.type==='checkbox') estrut=false; }
   else it[campo]=val;
   marcarSujo(); recalcular(); if(estrut&&fim){ renderCorpo(); atualizarCalculados(); } else atualizarCalculados();
 }
@@ -17240,7 +17273,7 @@ async function copiarItens(origemItens,novoId){ const c=cli(); const rows=origem
 function dlgNovo(){
   dlg(`<div class="orc-dh">＋ Novo orçamento</div><datalist id="orc-dl-ob">${listaClientes().map(x=>`<option value="${esc(x)}">`).join('')}</datalist><div class="orc-dg"><label class="orc-f w2"><span>Título *</span><input class="orc-in" id="no-tit" data-dlg="1" data-foco="1" placeholder="Ex.: Montagem de tubulação — Linha 3" maxlength="140"></label><label class="orc-f"><span>Cliente *</span><input class="orc-in" id="no-cli" data-dlg="1" list="orc-dl-ob" maxlength="120"></label><label class="orc-f"><span>Obra / projeto</span><input class="orc-in" id="no-obra" data-dlg="1" list="orc-dl-ob" maxlength="120"></label></div><div class="orc-nota">O número (ORC-AAAA-NNN) é gerado automaticamente. Todo o resto você completa dentro do orçamento.</div><div class="orc-dbtn"><button type="button" class="orc-btn sec" data-orc="dlg-fechar">Cancelar</button><button type="button" class="orc-btn ok" data-orc="no-criar">Criar orçamento</button></div>`); }
 Object.assign(window.ORC_ACOES,{
- async 'no-criar'(){ const t=($('no-tit').value||'').trim(), cl=($('no-cli').value||'').trim(), ob=($('no-obra').value||'').trim(); if(!t||!cl){ aviso('Informe o título e o cliente.'); return; } try{ const o=await criarCabecalho({titulo:t,cliente:cl,obra:ob||cl}); fecharDlg(); est.orc=o; est.itens=[]; est.removidos=new Set(); est.desfazer=[]; est.sujo=false; est.aba='dados'; est.tela='editor'; recalcular(); render(); toast('✓ Orçamento '+o.numero+' criado.'); }catch(e){ aviso('Não foi possível criar: '+((e&&e.message)||e)); } },
+ async 'no-criar'(){ const t=($('no-tit').value||'').trim(), cl=($('no-cli').value||'').trim(), ob=($('no-obra').value||'').trim(); if(!t||!cl){ aviso('Informe o título e o cliente.'); return; } try{ const o=await criarCabecalho({titulo:t,cliente:cl,obra:ob||cl}); fecharDlg(); est.orc=o; est.itens=[]; est.removidos=new Set(); est.desfazer=[]; est.sujo=false; est.aba='dados'; est.abaHist=['dados']; est.tela='editor'; recalcular(); render(); toast('✓ Orçamento '+o.numero+' criado.'); }catch(e){ aviso('Não foi possível criar: '+((e&&e.message)||e)); } },
  async 'st-enviado'(){ recalcular(); const falt=checklistEnvio().filter(x=>x.obrig&&!x.ok);
   if(falt.length){ dlg(`<div class="orc-dh">⛔ Ainda falta para enviar</div><div class="orc-dc"><ul>${falt.map(x=>`<li>${esc(x.txt)}</li>`).join('')}</ul>O checklist completo está no topo da aba Documentos.</div><div class="orc-dbtn"><button type="button" class="orc-btn" data-orc="dlg-fechar">Entendi</button></div>`); return; }
   const sn=est.orc.snapshot||E.criarSnapshot(est.indices,est.catalogo);
@@ -18002,15 +18035,200 @@ const toksQ=q=>toks(q).map(t=>(ALIAS[t]&&ALIAS[t][0])||t);
 const NUMTOK=/^[0-9][0-9.,\/]*$/;
 function ptsTok(alvo,k){ const num=NUMTOK.test(k); let m=0; for(const w of alvo){ if(w===k) return 2; if(!num&&w.startsWith(k)) m=1; } if(!m&&ALIAS[k]) for(const a of ALIAS[k]) if(alvo.includes(a)) m=1.5; return m; }
 function casaBusca(texto,q){ const qt=toks(q); if(!qt.length) return true; const alvo=toks(texto); return qt.every(k=>ptsTok(alvo,k)>0); }
-function buscaMat(q,disc,max){ const qt=toks(q); if(!qt.length) return []; const out=[];
-  est.catalogo.forEach(m=>{ if(m.ativo===false) return; if(!passaEsp(m)) return; const t=tokCat(m); let pts=0; for(const k of qt){ const p=ptsTok(t.e,k); if(!p){ pts=-1; break; } pts+=p; } if(pts<0) return; out.push({m,s:pts*10+(disc&&m.disciplina===disc?100:0)-t.d.length}); });
-  out.sort((a,b)=>b.s-a.s); return out.slice(0,max||40); }
+function buscaMat(q,disc,max){ iniciarVirtuais(); return buscaMatBQ(q,{disc,max:max||40}).lista.map(m=>({m,s:1})); }
+// ══ BUSCA INTELIGENTE (BQ) — qualquer palavra, siglas, sinônimos, plural/verbo, erro de digitação, medidas ═══════════
+const BQ=(function(){
+  const sa=s=>String(s==null?'':s).normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  const STOPS=new Set(['de','do','da','dos','das','em','com','para','por','e','a','o','as','os','um','uma','un','und','unid','pc','pcs','pol','tipo','peca','pecas','material','materiais','item','itens','sem','ao','na','no','nas','nos','que']);
+  const GENERICOS=new Set(['aco','servico','servicos','obra','geral']);          // palavras "de enfeite": ajudam, mas não são exigidas
+  // ── normalização de texto (medidas, classes, schedule, frações) ────────────────────────────────────────────────
+  const R_FR1=/\b(\d+)[ .\-](\d+)\/(\d+)\b/g, R_FR2=/\b(\d+)\/(\d+)\b/g, R_VIRG=/(\d),(\d)/g, R_NAO=/[^a-z0-9. ]+/g;
+  function norm(s){ let t=sa(s).toLowerCase();
+    if(/[½¼¾⅜⅝⅞]/.test(t)) t=t.replace(/½/g,' 1/2 ').replace(/¼/g,' 1/4 ').replace(/¾/g,' 3/4 ').replace(/⅜/g,' 3/8 ').replace(/⅝/g,' 5/8 ').replace(/⅞/g,' 7/8 ');
+    if(/["”“″]|pol|inch|\bin\b/.test(t)) t=t.replace(/[\"”“″]/g,' pol ').replace(/\b(?:polegadas?|pols?|inch|in)\b\.?/g,' pol ');
+    if(t.indexOf('/')>=0){ t=t.replace(R_FR1,(m,a,b,c)=>' '+(+(Number(a)+Number(b)/Number(c)).toFixed(4))+' ').replace(R_FR2,(m,a,b)=>' '+(+(Number(a)/Number(b)).toFixed(4))+' '); }
+    if(t.indexOf(',')>=0) t=t.replace(R_VIRG,'$1.$2');
+    if(t.indexOf('#')>=0||/lb|libra|psi|class|\bcl/.test(t)) t=t.replace(/(\d+)\s*(#|lbs?\b|libras?\b|psi\b)/g,' $1 ').replace(/#\s*(\d+)/g,' $1 ').replace(/\b(?:classe|class|cl)\s*(\d{3,4})\b/g,' $1 ');
+    if(/sch|sc\b|\bs\b|\d+s\b/.test(t)) t=t.replace(/\b(?:sch|schedule|sched|sc|s)\s*\.?\s*(5s|10s|40s|80s|10|20|30|40|60|80|100|120|140|160|std|xs|xxs)\b/g,' sch$1 ').replace(/\b(5s|10s|40s|80s)\b/g,' sch$1 ');
+    if(t.indexOf('dn')>=0||t.indexOf('pn')>=0) t=t.replace(/\bdn\s*(\d+)\b/g,' dn$1 ').replace(/\bpn\s*(\d+)\b/g,' pn$1 ');
+    return t.replace(R_NAO,' '); }
+  // ── radical simples (português): troca/trocar/trocado → troc ; montagem/montar → mont ... ─────────────────────────
+  const SUF=['amentos','imentos','amento','imento','adoras','adores','adora','ador','acoes','cao','coes','agens','agem','mente','istas','ismos','ista','ismo','idade','avel','ivel','ados','adas','idos','idas','ado','ada','ido','ida','ante','ura','ar','er','ir','es','as','os','is','s','a','o','e'];
+  const STC=new Map(); function stem(w){ let r=STC.get(w); if(r!==undefined) return r; r=w; if(w.length>=4&&!/\d/.test(w)){ for(const s of SUF){ if(w.length-s.length>=3&&w.endsWith(s)){ r=w.slice(0,-s.length); break; } } } STC.set(w,r); return r; }
+  function tokens(s){ return norm(s).split(/\s+/).map(t=>t.replace(/^\.+|\.+$/g,'')).filter(t=>t&&!STOPS.has(t)&&(t.length>1||/\d/.test(t))); }
+  // ── siglas e sinônimos (lado da consulta): palavra digitada → alternativas aceitas (peso) ─────────────────────────
+  const G=(...g)=>g;                                                                // grupos de equivalência
+  const GRUPOS=[
+    G('ac','cs','carbono','acocarbono'),                    G('ai','ss','inox','inoxidavel','stainless','inx'),
+    G('galvanizado','galv','zincado','zincada','hdg','galvanizada'), G('preto','preta','black','bruto'),
+    G('joelho','cotovelo','curva','elbow','joelhos','cotovelos'),    G('te','tee'),
+    G('cruzeta','cross','cruz'),                             G('luva','coupling','acoplamento','manguito'),
+    G('uniao','union'),                                      G('bucha','bushing','buchas'),
+    G('niple','nipple','nipel','nipples'),                   G('tampao','plug','bujao','tampa'),
+    G('cap','calota','tampa'),                               G('reducao','redutor','red','reducoes','reduction'),
+    G('flange','flanges','fl','flangeado','flangeada','flangeados','flangeadas','flanged'),
+    G('roscado','roscada','rosca','roscados','threaded','thd'),
+    G('sw','encaixe','socket','soldaencaixe'),               G('bw','topo','buttweld','soldatopo'),
+    G('solda','soldado','soldada','soldagem','soldar','weld','welded'),
+    G('tubo','tubulacao','tubos','pipe','tub','tubing'),     G('valvula','vlv','valv','valve','valvulas'),
+    G('esfera','ball'),G('gaveta','gate'),G('globo','globe'),G('retencao','check','retentora'),G('borboleta','butterfly'),
+    G('junta','vedacao','gasket','juntas'),                  G('estojo','prisioneiro','stud','estojos'),
+    G('parafuso','bolt','parafusos'),G('porca','nut','porcas'),G('arruela','washer','arruelas'),
+    G('chapa','placa','plate','chapas'),                     G('cantoneira','angulo','angle','cantoneiras'),
+    G('perfil','viga','perfis'),                             G('chumbador','ancoragem','ancora','anchor','parabolt'),
+    G('conexao','conexoes','acessorio','acessorios','fitting','fittings'),
+    G('duplex','2205','saf2205'),G('superduplex','2507','saf2507'),
+    G('wn','weldneck','pescoco'),G('so','slipon','sobreposto'),G('lj','lapjoint','livre'),G('bl','cego','blind'),
+    G('rf','ressalto'),G('rtj','anel'),G('ff','faceplana'),
+    G('forjada','forjado','forjadas','forjados','forged','b16.11'),G('maleavel','maleaveis','malleable'),
+    G('bronze','latao','brass'),G('aluminio','alu','al'),G('cobre','cu','copper'),G('titanio','ti'),
+    G('instalar','instalacao','montar','montagem','monta','assentar','assentamento'),
+    G('remover','remocao','retirar','retirada','desmontar','desmontagem','demolir','demolicao'),
+    G('trocar','troca','substituir','substituicao','reposicao'),
+    G('pintar','pintura','pinta','tinta'),G('isolar','isolamento','isolante'),
+    G('limpar','limpeza','higienizar'),G('testar','teste','ensaio','ensaiar'),G('inspecionar','inspecao','vistoria'),
+    G('hidrostatico','hidro','hidrotestar','hidrotestes'),   G('andaime','andaimes','tubular','fachadeiro'),
+    G('eletroduto','conduite','eletrodutos'),G('cabo','cabos','fio'),G('eletrocalha','calha','bandeja','leito'),
+    G('suporte','suportes','apoio','sapata','patinho'),G('grampo','abracadeira','ubolt'),
+    G('raquete','raqueteamento','figura8','cego'),
+    G('rigging','icamento','guindaste','munck','movimentacao'),
+    G('pead','polietileno','pe100'),G('pvc','pvcu'),G('prfv','fibra','fiberglass','frp')
+  ];
+  const SIN=new Map(); GRUPOS.forEach(g=>g.forEach(a=>{ const b=SIN.get(a)||new Set(); g.forEach(x=>{ if(x!==a) b.add(x); }); SIN.set(a,b); }));
+  ['npt','bsp','bspt','bspp'].forEach(x=>{ SIN.set(x,new Set(['rosca','roscado','roscada','roscados','threaded'])); ['rosca','roscado','roscada','roscados'].forEach(y=>{ const b=SIN.get(y)||new Set(); b.add(x); SIN.set(y,b); }); });
+  // ── distância de edição limitada (erro de digitação) ─────────────────────────────────────────────────────────
+  function dist(a,b,lim){ if(Math.abs(a.length-b.length)>lim) return lim+1; const m=a.length,n=b.length; let prev=new Array(n+1),cur=new Array(n+1),pp=new Array(n+1); for(let j=0;j<=n;j++) prev[j]=j;
+    for(let i=1;i<=m;i++){ cur[0]=i; let min=cur[0]; for(let j=1;j<=n;j++){ const c=a[i-1]===b[j-1]?0:1; let v=Math.min(prev[j]+1,cur[j-1]+1,prev[j-1]+c); if(i>1&&j>1&&a[i-1]===b[j-2]&&a[i-2]===b[j-1]) v=Math.min(v,pp[j-2]+1); cur[j]=v; if(v<min) min=v; } if(min>lim) return lim+1; pp=prev; prev=cur; cur=new Array(n+1); } return prev[n]; }
+  // ── índice de documentos (com índice invertido: palavra → itens) ──────────────────────────────────────────────
+  function doc(o,texto){ const n=norm(texto); const t=[...new Set(n.split(/\s+/).map(x=>x.replace(/^\.+|\.+$/g,'')).filter(x=>x&&!STOPS.has(x)&&(x.length>1||/\d/.test(x))))]; const st=t.map(stem); return {o,t,st,n:n.slice(0,60)}; }
+  function novoIdx(){ return {docs:[],post:new Map(),vocab:new Map(),n:0,pronto:false}; }
+  function addDoc(I,d){ const id=I.docs.length; I.docs.push(d); const vistos=new Set(); for(const w of d.t.concat(d.st)){ if(vistos.has(w)) continue; vistos.add(w); let p=I.post.get(w); if(!p){ p=[]; I.post.set(w,p); } p.push(id); } d.t.forEach(w=>{ if(!/\d/.test(w)) I.vocab.set(w,(I.vocab.get(w)||0)+1); }); I.n=I.docs.length; }
+  function adicionar(I,o,texto){ addDoc(I,doc(o,texto)); }
+  function indice(lista,textoDe){ const I=novoIdx(); lista.forEach(o=>addDoc(I,doc(o,textoDe(o)))); I.pronto=true; return I; }
+  function indiceLotes(lista,textoDe,passo,aoFim){ const I=novoIdx(); let k=0; const lote=()=>{ const fim=Math.min(k+passo,lista.length); for(;k<fim;k++) addDoc(I,doc(lista[k],textoDe(lista[k]))); if(k<lista.length) setTimeout(lote,6); else { I.pronto=true; if(aoFim) aoFim(I); } }; lote(); return I; }
+  // ── consulta: cada palavra → palavras do índice que a satisfazem, com peso ───────────────────────────────────────
+  function consulta(q,I){ const raw=tokens(q); const termos=[]; const vocab=I&&I.vocab, post=I&&I.post;
+    raw.forEach(w=>{ const alts=new Map(); const add=(x,p)=>{ if(!x) return; if((alts.get(x)||0)<p) alts.set(x,p); };
+      const num=/\d/.test(w); add(w,2); if(!num) add(stem(w),1.7);
+      (SIN.get(w)||[]).forEach(s=>{ add(s,1.4); if(!/\d/.test(s)) add(stem(s),1.2); });
+      if(!num&&w.length>=4&&vocab){ const stw=stem(w); let tem=vocab.has(w)||vocab.has(stw); if(!tem){ for(const v of vocab.keys()){ if(v.startsWith(w)||v.startsWith(stw)){ tem=true; break; } } }
+        if(!tem){ const lim=w.length>=8?2:1; const cand=[]; vocab.forEach((n,v)=>{ if(Math.abs(v.length-w.length)<=lim){ const d=dist(w,v,lim); if(d<=lim) cand.push([d,-n,v]); } }); cand.sort((a,b)=>a[0]-b[0]||a[1]-b[1]); cand.slice(0,6).forEach(c=>{ add(c[2],0.9); add(stem(c[2]),0.8); }); } }
+      // palavras do índice que casam: exatas, por prefixo, medidas "316"→"316l", schedule "sch10"→"sch10s"
+      const m=new Map(); const put=(x,p)=>{ if((m.get(x)||0)<p) m.set(x,p); };
+      alts.forEach((p,a)=>{ if(post&&post.has(a)) put(a,p); const dig=/\d/.test(a); const so=/^\d+$/.test(a); if(post&&(a.length>=3||so)&&(!dig||a.startsWith('sch')||so)){ for(const k of post.keys()){ if(k.length>a.length&&k.startsWith(a)){ if(so){ if(/^[a-z]+$/.test(k.slice(a.length))) put(k,p*0.8); } else put(k,p*0.75); } } } });
+      termos.push({w,num,gen:GENERICOS.has(w),m}); });
+    return termos; }
+  // ── busca ─────────────────────────────────────────────────────────────────────────────────────────────────────
+  function buscar(I,q,opts){ opts=opts||{}; const max=opts.max||50; const termos=consulta(q,I); if(!termos.length||!I.n) return {lista:[],tot:0,exato:0,termos};
+    const req=termos.filter(t=>!t.gen), nreq=req.length||termos.length; const N=I.docs.length; const cov=new Uint8Array(N), pts=new Float32Array(N), gen=new Float32Array(N), tmp=new Float32Array(N); const cand=[];
+    termos.forEach(t=>{ const tocados=[]; t.m.forEach((p,w)=>{ const pl=I.post.get(w); if(!pl) return; for(let k=0;k<pl.length;k++){ const id=pl[k]; if(tmp[id]===0) tocados.push(id); if(tmp[id]<p) tmp[id]=p; } });
+      for(let k=0;k<tocados.length;k++){ const id=tocados[k]; if(cov[id]===0&&gen[id]===0&&pts[id]===0) cand.push(id); if(t.gen) gen[id]+=0.2*tmp[id]; else { cov[id]++; pts[id]+=tmp[id]; } tmp[id]=0; } });
+    const minCov=nreq<=1?1:0.5; const out=[]; let exato=0; const nq=norm(q).trim(); const r0=req[0];
+    for(const id of cand){ const d=I.docs[id]; if(opts.filtro&&!opts.filtro(d.o)) continue; const c=cov[id]; if(req.length){ if(c===0||c/nreq<minCov) continue; } const full=req.length?c===nreq:true; if(full) exato++;
+      let s=(full?1000:0)+c*100+pts[id]*10+gen[id]*10; if(d.n.startsWith(nq)) s+=40; if(r0&&d.t[0]&&((r0.m.get(d.t[0])||0)>=1.4||(r0.m.get(d.st[0])||0)>=1.4)) s+=35; if(opts.boost) s+=opts.boost(d.o)||0; s-=Math.min(d.t.length,40)*0.15; out.push({o:d.o,s,full}); }
+    out.sort((a,b)=>b.s-a.s); const top=out.slice(0,max); return {lista:top.map(x=>x.o),scores:top.map(x=>x.s),fulls:top.map(x=>x.full),tot:out.length,exato,termos}; }
+  return {norm,tokens,stem,doc,indice,indiceLotes,adicionar,consulta,buscar,dist,SIN,GRUPOS};
+})();
+// ══ PEÇAS POR NORMA (catálogo gerado por regras) ═══════════════════════════════════════════════════════════════════
+// Cada combinação é montada a partir de tabelas de norma (tipo × ligação × classe × material × acabamento × diâmetro).
+// Peças que já existem no banco (mesma chave) não são repetidas. A peça só é gravada no catálogo quando você a usa.
+const PECAS=(function(){
+  const NT={0.125:'1/8',0.25:'1/4',0.375:'3/8',0.5:'1/2',0.75:'3/4',1.25:'1.1/4',1.5:'1.1/2',2.5:'2.1/2'};
+  const nt=n=>(NT[n]||String(n))+'"', nk=n=>String(n);
+  const NPS_F=[0.25,0.375,0.5,0.75,1,1.25,1.5,2,2.5,3,4];                            // ASME B16.11 / roscadas
+  const NPS_M=[0.5,0.75,1,1.25,1.5,2,2.5,3,4,6];                                     // ferro maleável / bronze / inox fundido
+  const NPS_FL=[0.5,0.75,1,1.25,1.5,2,2.5,3,4,6,8,10,12];                            // flanges e peças de solda de topo
+  const NPS_FL2=[14,16,18,20,24];
+  const DN={0.5:15,0.75:20,1:25,1.25:32,1.5:40,2:50,2.5:65,3:80,4:100,6:150,8:200,10:250,12:300,14:350,16:400,18:450,20:500,24:600};
+  // materiais: n=nome padronizado · f=forjado/flange · c=fundido · p=conexão de solda de topo · t=tubo
+  const MAT={
+    CS:{n:'aço carbono',f:'ASTM A105',c:'ASTM A216 WCB',p:'ASTM A234 WPB',nf:'ASTM A106 Gr.B'},
+    LTCS:{n:'aço carbono baixa temperatura',f:'ASTM A350 LF2',c:'ASTM A352 LCC',p:'ASTM A420 WPL6'},
+    P22:{n:'aço liga P22 (2.1/4Cr-1Mo)',f:'ASTM A182 F22',c:'ASTM A217 WC9',p:'ASTM A234 WP22'},
+    P91:{n:'aço liga P91 (9Cr-1Mo-V)',f:'ASTM A182 F91',c:'ASTM A217 C12A',p:'ASTM A234 WP91'},
+    INOX304:{n:'inox 304L',f:'ASTM A182 F304L',c:'ASTM A351 CF3 (304L)',p:'ASTM A403 WP304L'},
+    INOX316:{n:'inox 316L',f:'ASTM A182 F316L',c:'ASTM A351 CF3M (316L)',p:'ASTM A403 WP316L'},
+    INOX321:{n:'inox 321',f:'ASTM A182 F321',c:'ASTM A351 CF8C',p:'ASTM A403 WP321'},
+    DUP2205:{n:'duplex 2205',f:'ASTM A182 F51',c:'ASTM A995 4A (CD3MN)',p:'ASTM A815 WPS32205'},
+    SDUP2507:{n:'super duplex 2507',f:'ASTM A182 F53',c:'ASTM A995 5A (CE3MN)',p:'ASTM A815 WPS32750'},
+    ALLOY20:{n:'liga 20',f:'ASTM B462 UNS N08020',c:'ASTM A351 CN7M',p:'ASTM B366 (liga 20)'},
+    MONEL400:{n:'Monel 400',f:'ASTM B564 UNS N04400',c:'ASTM A494 M35-1',p:'ASTM B366 (Monel 400)'},
+    INC625:{n:'Inconel 625',f:'ASTM B564 UNS N06625',c:'ASTM A494 CW-6MC',p:'ASTM B366 (Inconel 625)'},
+    HAST276:{n:'Hastelloy C-276',f:'ASTM B564 UNS N10276',c:'ASTM A494 CW-12MW',p:'ASTM B366 (Hastelloy C-276)'},
+    TI2:{n:'titânio grau 2',f:'ASTM B381 Gr.2',c:'ASTM B367 C-2',p:'ASTM B363 WPT2'}};
+  const INOXLIKE=['INOX304','INOX316','INOX321','DUP2205','SDUP2507','ALLOY20','MONEL400','INC625','HAST276','TI2'];
+  const ACAB={PT:'',GALV:' galvanizado a fogo'};
+  const LIGN={SW:'solda de encaixe (SW)',NPT:'roscada (NPT)',BSP:'roscada (BSP)',BW:'BW',FL:'flangeada'};
+  const out=[]; const add=(chave,cat,desc,esp,at)=>{ out.push({id:'v:'+chave,chave,disciplina:'MECANICA',categoria:cat,descricao:desc,especificacao:esp,unidade:'un',comprimento_barra_m:null,perda_pct:0,atributos:Object.assign({virtual:1},at),ativo:true,preco_unitario:null,virtual:true}); };
+  const pares=(lista,passos)=>{ const r=[]; lista.forEach((a,i)=>{ for(let j=Math.max(0,i-passos);j<i;j++) r.push([a,lista[j]]); }); return r; };
+  const PAR_F=pares(NPS_F,3), PAR_M=pares(NPS_M,3);
+  // ── 1) forjadas ASME B16.11 — SW (3000/6000/9000) e roscadas NPT/BSP (2000/3000/6000) ─────────────────────────────
+  const FOR_TIPOS=[['JOELHO90','Joelho 90°',['SW','NPT','BSP']],['JOELHO45','Joelho 45°',['SW','NPT','BSP']],['JOELHO90R','Joelho 90° macho-fêmea (rua)',['NPT','BSP']],['TE','Tê',['SW','NPT','BSP']],['CRUZETA','Cruzeta',['SW','NPT','BSP']],
+    ['LUVA','Luva',['SW','NPT','BSP']],['MEIALUVA','Meia luva',['SW','NPT','BSP']],['CAP','Cap',['SW','NPT','BSP']],['BUJAOQ','Bujão cabeça quadrada',['NPT','BSP']],['BUJAOS','Bujão cabeça sextavada',['NPT','BSP']],['BUJAOR','Bujão cabeça redonda',['NPT','BSP']],
+    ['UNIAO','União',['SW','NPT','BSP']],['TEREDUCAO','Tê de redução',['SW','NPT','BSP'],1],['BUCHAS','Bucha sextavada de redução',['NPT','BSP'],1],['BUCHAR','Bucha rebaixada (flush)',['NPT','BSP'],1]];
+  const FOR_MATS=[['CS',['PT','GALV'],1,['SW','NPT','BSP'],[3000,6000,9000,2000]],['LTCS',['PT'],1,['SW','NPT','BSP'],[3000,6000,9000,2000]],['INOX304',['PT'],1,['SW','NPT','BSP'],[3000,6000,9000,2000]],['INOX316',['PT'],1,['SW','NPT','BSP'],[3000,6000,9000,2000]],
+    ['INOX321',['PT'],0,['SW','NPT'],[3000,6000]],['DUP2205',['PT'],0,['SW','NPT'],[3000,6000]],['SDUP2507',['PT'],0,['SW','NPT'],[3000,6000]],['P22',['PT'],0,['SW','NPT'],[3000,6000]],
+    ['ALLOY20',['PT'],0,['SW','NPT'],[3000,6000]],['MONEL400',['PT'],0,['SW','NPT'],[3000,6000]],['INC625',['PT'],0,['SW','NPT'],[3000,6000]],['HAST276',['PT'],0,['SW','NPT'],[3000,6000]],['TI2',['PT'],0,['SW','NPT'],[3000,6000]]];
+  const CORE=new Set(['JOELHO90','JOELHO45','TE','CRUZETA','LUVA','MEIALUVA','CAP','BUJAOS','UNIAO']);
+  function gFOR(){ FOR_MATS.forEach(([mat,acabs,completo,ligs,cls])=>{ acabs.forEach(ac=>{ FOR_TIPOS.forEach(([cod,nome,ligT,par])=>{ if(!completo&&!CORE.has(cod)) return;
+      ligs.filter(l=>ligT.includes(l)).forEach(lig=>{ cls.forEach(c=>{ if(lig==='SW'&&c===2000) return; if(lig!=='SW'&&c===9000) return; if(cod==='UNIAO'&&c!==3000&&c!==6000) return;
+        const lista=par?(c===9000?PAR_F.filter(p=>p[0]<=2):PAR_F):(c===9000?NPS_F.filter(n=>n>=0.5&&n<=2):NPS_F);
+        lista.forEach(sz=>{ const a=Array.isArray(sz)?sz[0]:sz, b=Array.isArray(sz)?sz[1]:null; if(!mat||(!b&&c===9000&&(a<0.5||a>2))) return;
+          const sk=b?nk(a)+'x'+nk(b):nk(a), st=b?nt(a)+' × '+nt(b):nt(a); const M=MAT[mat];
+          add(`FOR.${cod}.${lig}.${c}.${mat}${ac==='GALV'?'G':''}.${sk}`,'CONEXAO',`${nome} forjada ${c}# ${st} ${LIGN[lig]} — ${M.n}${ACAB[ac]}`,`ASME B16.11 / ${M.f}${ac==='GALV'?' + galvanização a fogo (ASTM A153)':''}`,{tipo:'FORJADA_'+cod,ligacao:lig,classe:String(c),material:mat,acabamento:ac,nps:a,nps2:b||undefined,norma:'ASME B16.11'}); }); }); }); }); }); }); }
+  // ── 2) roscadas fundidas: ferro maleável (B16.3 / NBR 6943), inox fundido (MSS SP-114), bronze/latão (B16.15) ─────────
+  const FUN_TIPOS=[['COTOVELO90','Cotovelo 90°'],['COTOVELO45','Cotovelo 45°'],['COTOVELO90R','Cotovelo 90° macho-fêmea (rua)'],['TE','Tê'],['CRUZETA','Cruzeta'],['LUVA','Luva'],['UNIAO','União (assento plano)'],['TAMPAO','Tampão (plug)'],['CAP','Cap'],['NIPLE','Niple duplo'],['CONTRAPORCA','Contraporca'],['TEREDUCAO','Tê de redução',1],['LUVARED','Luva de redução',1],['BUCHA','Bucha de redução',1]];
+  function gFUN(fam,matCod,matNome,norma,classes,acabs,roscas,tipos){ acabs.forEach(ac=>{ roscas.forEach(r=>{ classes.forEach(c=>{ tipos.forEach(([cod,nome,par])=>{ (par?PAR_M:NPS_M).forEach(sz=>{ const a=Array.isArray(sz)?sz[0]:sz, b=Array.isArray(sz)?sz[1]:null; const sk=b?nk(a)+'x'+nk(b):nk(a), st=b?nt(a)+' × '+nt(b):nt(a);
+      add(`${fam}.${cod}.${r}.${c}.${matCod}${ac==='GALV'?'G':''}.${sk}`,'CONEXAO',`${nome} ${st} ${LIGN[r]} classe ${c}# — ${matNome}${ACAB[ac]}`,norma,{tipo:fam+'_'+cod,ligacao:r,classe:String(c),material:matCod,acabamento:ac,nps:a,nps2:b||undefined,norma:norma.split(' / ')[0]}); }); }); }); }); }); }
+  function gMAL(){ gFUN('MAL','FM','ferro maleável','ASME B16.3 / ASTM A197 (conforme ABNT NBR 6943)',[150,300],['PT','GALV'],['NPT','BSP'],FUN_TIPOS); }
+  function gINOXF(){ [['INOX304','inox fundido CF8 (304)','CF8'],['INOX316','inox fundido CF8M (316)','CF8M']].forEach(([m,n,g])=>gFUN('INF',m,n,'MSS SP-114 / ASTM A351 '+g,[150,1000],['PT'],['NPT','BSP'],FUN_TIPOS.filter(t=>t[0]!=='CONTRAPORCA'))); }
+  function gBRONZE(){ gFUN('BRZ','BRONZE','bronze / latão','ASME B16.15 / ASTM B62',[125,250],['PT'],['NPT','BSP'],FUN_TIPOS.filter(t=>!['CONTRAPORCA','CRUZETA'].includes(t[0]))); }
+  // ── 3) flanges ASME B16.5 (150 a 2500) ────────────────────────────────────────────────────────────────────────────
+  // validade por tipo/classe — conferir com sua cópia da B16.5 (tabelas 1A–1C e de dimensões)
+  const FL_TIPOS={WN:'Flange WN',BL:'Flange cego',SO:'Flange SO',LJ:'Flange livre (lap joint)',SW:'Flange SW (encaixe p/ solda)',TH:'Flange rosqueado (NPT)'};
+  const FL_VALID=(t,c,n)=>{ if(t==='WN'||t==='BL') return c<=2500&&(c===2500?n<=12:true); if(t==='SO'||t==='LJ') return c<=600; if(t==='SW'||t==='TH') return c<=1500&&n<=(c>=900?2.5:2); return false; };
+  const FL_MATS=['CS','LTCS','INOX304','INOX316','INOX321','DUP2205','SDUP2507','P22','P91','ALLOY20','MONEL400','INC625','HAST276','TI2'];
+  function gFLG(){ FL_MATS.forEach(mat=>{ const M=MAT[mat]; Object.keys(FL_TIPOS).forEach(t=>{ [150,300,400,600,900,1500,2500].forEach(c=>{ const tam=(c<=300&&['WN','BL','SO','LJ'].includes(t))?NPS_FL.concat(NPS_FL2):NPS_FL; if(c===400&&!['WN','BL'].includes(t)) return; if(['P22','P91'].includes(mat)&&['SO','LJ','SW','TH'].includes(t)) return;
+        tam.forEach(n=>{ if(!FL_VALID(t,c,n)) return; if(['ALLOY20','MONEL400','INC625','HAST276','TI2'].includes(mat)&&(n>6||!['WN','BL'].includes(t))) return;
+          add(`FLG.${t}${c}.${mat}.${nk(n)}`,'FLANGE',`${FL_TIPOS[t]} ${c}# ${c>=600?'RF':'RF'} ${nt(n)} — ${M.n}`,`ASME B16.5 / ${M.f}, classe ${c}#`,{tipo:t+c,ligacao:'FL',classe:String(c),material:mat,nps:n,norma:'ASME B16.5'}); }); }); }); }); }
+  function gFLGRTJ(){ ['CS','INOX316','LTCS'].forEach(mat=>{ const M=MAT[mat]; ['WN','BL'].forEach(t=>{ [300,600,900,1500,2500].forEach(c=>{ NPS_FL.forEach(n=>{ if(!FL_VALID(t,c,n)) return; add(`FLG.${t}${c}RTJ.${mat}.${nk(n)}`,'FLANGE',`${FL_TIPOS[t]} ${c}# RTJ ${nt(n)} — ${M.n}`,`ASME B16.5 / ${M.f}, classe ${c}#, face RTJ (anel conforme B16.20)`,{tipo:t+c+'RTJ',ligacao:'FL',classe:String(c),material:mat,nps:n,face:'RTJ',norma:'ASME B16.5'}); }); }); }); }); }
+  // ── 4) flanges EN 1092-1 (PN 6, 25, 40, 63, 100) ───────────────────────────────────────────────────────────────────
+  function gFLGPN(){ const mats=[['CS','aço carbono','ASTM A105 / EN P250GH'],['INOX304','inox 304L','ASTM A182 F304L / EN 1.4307'],['INOX316','inox 316L','ASTM A182 F316L / EN 1.4404'],['DUP2205','duplex 2205','ASTM A182 F51 / EN 1.4462']];
+    const tipos=[['WN','Flange WN','tipo 11'],['PLANO','Flange plano p/ solda','tipo 01'],['BL','Flange cego','tipo 05'],['LIVRE','Flange livre (p/ pestana)','']];
+    [[6,['PLANO','BL','LIVRE']],[25,['WN','PLANO','BL','LIVRE']],[40,['WN','PLANO','BL','LIVRE']],[63,['WN','BL']],[100,['WN','BL']]].forEach(([pn,ts])=>{ mats.forEach(([mat,nome,norma])=>{ tipos.filter(t=>ts.includes(t[0])).forEach(([t,tn,ti])=>{ NPS_FL.concat(NPS_FL2).forEach(n=>{ if(pn>=63&&n>12) return;
+      add(`FLG.${t==='BL'?'CEGO':t}PN${pn}.${mat}.${nk(n)}`,'FLANGE',`${tn} PN${pn} DN${DN[n]} (${nt(n)}) — ${nome}`,`EN 1092-1${ti?' '+ti:''}; ${norma}`,{tipo:t+'PN'+pn,ligacao:'FL',classe:'PN'+pn,material:mat,nps:n,dn:DN[n],norma:'EN 1092-1'}); }); }); }); }); }
+  // ── 5) conexões flangeadas: aço (B16.5), ferro fundido (B16.1), ferro dúctil (B16.42 / EN 1092-2) ─────────────────────────
+  function gFFL(){ const tp=[['JOELHO90','Joelho 90° flangeado'],['JOELHO45','Joelho 45° flangeado'],['TE','Tê flangeado'],['CRUZETA','Cruzeta flangeada'],['REDCONC','Redução concêntrica flangeada',1],['TEREDUCAO','Tê de redução flangeado',1]];
+    const P1=pares(NPS_FL.filter(n=>n>=1),2); const tam=NPS_FL.filter(n=>n>=1&&n<=12);
+    const fam=(cod,mn,norma,classes,mats)=>{ mats.forEach(([mat,nome,esp])=>{ classes.forEach(c=>{ tp.forEach(([t,tn,par])=>{ (par?P1:tam).forEach(sz=>{ const a=Array.isArray(sz)?sz[0]:sz,b=Array.isArray(sz)?sz[1]:null; const sk=b?nk(a)+'x'+nk(b):nk(a), st=b?nt(a)+' × '+nt(b):nt(a);
+      add(`FFL.${t}.${c}.${mat}.${sk}`,'CONEXAO',`${tn} ${typeof c==='number'?c+'#':c} ${st} — ${nome}`,`${norma} / ${esp}`,{tipo:'FLANGEADA_'+t,ligacao:'FL',classe:String(c),material:mat,nps:a,nps2:b||undefined,norma:norma.split(' / ')[0]}); }); }); }); }); };
+    fam('A','aço','ASME B16.5',[150,300],[['CS','aço carbono','ASTM A216 WCB'],['INOX304','inox 304 fundido','ASTM A351 CF8'],['INOX316','inox 316 fundido','ASTM A351 CF8M']]);
+    fam('B','FF','ASME B16.1',[125,250],[['FOFO','ferro fundido cinzento','ASTM A126 Cl.B']]);
+    fam('C','FD','ASME B16.42',[150,300],[['FD','ferro dúctil','ASTM A536 65-45-12']]);
+    fam('D','FD-PN','EN 1092-2',['PN10','PN16','PN25'],[['FD','ferro dúctil','EN-GJS-400-15']]); }
+  // ── 6) niples (ASTM A733 / ASME B36.10M-B36.19M) ───────────────────────────────────────────────────────────────────
+  function gNIPLE(){ const comp=[['CLOSE','rosca total (close)'],['50','50 mm'],['75','75 mm'],['100','100 mm'],['150','150 mm'],['200','200 mm'],['300','300 mm']]; const mats=[['CS','aço carbono','ASTM A106 Gr.B / A53',['40','80','160'],['PT','GALV']],['INOX304','inox 304L','ASTM A312 TP304L',['40S','80S'],['PT']],['INOX316','inox 316L','ASTM A312 TP316L',['40S','80S'],['PT']]];
+    mats.forEach(([mat,nome,norma,schs,acabs])=>{ acabs.forEach(ac=>{ schs.forEach(sc=>{ ['NPT','BSP'].forEach(r=>{ comp.forEach(([cp,ct])=>{ [0.25,0.375,0.5,0.75,1,1.25,1.5,2,2.5,3,4].forEach(n=>{ if(cp==='CLOSE'&&sc!==schs[0]&&false) return;
+      add(`NIP.${r}.${mat}${ac==='GALV'?'G':''}.${sc}.${cp}.${nk(n)}`,'CONEXAO',`Niple duplo ${nt(n)} Sch ${sc} ${ct} ${LIGN[r]} — ${nome}${ACAB[ac]}`,`ASTM A733 / ${norma}`,{tipo:'NIPLE',ligacao:r,material:mat,acabamento:ac,nps:n,sch:sc,comprimento_mm:cp==='CLOSE'?0:Number(cp),norma:'ASTM A733'}); }); }); }); }); }); }); }
+  // ── 7) conexões de solda de topo por schedule (ASME B16.9 / B16.28) — os demais schedules além do cadastrado ──────────────
+  function gBWF(E){ if(!E||!E.schValidos) return; const RED=[[0.75,[0.5]],[1,[0.75,0.5]],[1.25,[1,0.75,0.5]],[1.5,[1.25,1,0.75,0.5]],[2,[1.5,1.25,1,0.75]],[2.5,[2,1.5,1.25,1]],[3,[2.5,2,1.5,1.25]],[4,[3,2.5,2,1.5]],[6,[4,3,2.5]],[8,[6,4]],[10,[8,6,4]],[12,[10,8,6]]];
+    const TEE=[[0.75,[0.5]],[1,[0.5,0.75]],[1.25,[0.5,0.75,1]],[1.5,[0.5,0.75,1,1.25]],[2,[0.75,1,1.25,1.5]],[2.5,[1,1.25,1.5,2]],[3,[1.25,1.5,2,2.5]],[4,[1.5,2,2.5,3]],[6,[2.5,3,4]],[8,[4,6]],[10,[4,6,8]],[12,[6,8,10]]];
+    const pr=L=>L.flatMap(([a,bs])=>bs.map(b=>[a,b]));
+    const simples=[['CURVA90LR','Curva 90° raio longo'],['CURVA90SR','Curva 90° raio curto'],['CURVA45LR','Curva 45° raio longo'],['TE','Tê igual'],['CAP','Cap'],['CRUZETA','Cruzeta']];
+    const dupl=[['REDCONC','Redução concêntrica',pr(RED)],['REDEXC','Redução excêntrica',pr(RED)],['TERED','Tê de redução',pr(TEE)]];
+    const grupos=[[['CS','LTCS','P22','P91'],['80','160','XXS','STD','XS','20','30','60','100','120','140','10'],'cs'],[['INOX304','INOX316','INOX321','DUP2205','SDUP2507'],['5S','80S'],'ox']];
+    grupos.forEach(([mats,schs])=>{ mats.forEach(mat=>{ const M=MAT[mat]; schs.forEach(sc=>{
+      simples.forEach(([cod,nome])=>{ NPS_FL.forEach(n=>{ if(E.schValidos(mat,n).indexOf(sc)<0) return; if(cod==='CRUZETA'&&n>6) return; add(`BWF.${cod}.${mat}.${sc}.${nk(n)}`,'CONEXAO',`${nome} ${nt(n)} Sch ${sc} — ${M.n} BW`,`ASME B16.9 / ${M.p}, Sch ${sc}`,{tipo:'BW_'+cod,ligacao:'BW',material:mat,nps:n,sch:sc,norma:'ASME B16.9'}); }); });
+      if(['80','160','XXS','80S','5S','XS'].includes(sc)) dupl.forEach(([cod,nome,ps])=>{ ps.forEach(([a,b])=>{ if(E.schValidos(mat,a).indexOf(sc)<0) return; add(`BWF.${cod}.${mat}.${sc}.${nk(a)}x${nk(b)}`,'CONEXAO',`${nome} ${nt(a)} × ${nt(b)} Sch ${sc} — ${M.n} BW`,`ASME B16.9 / ${M.p}, Sch ${sc}`,{tipo:'BW_'+cod,ligacao:'BW',material:mat,nps:a,nps2:b,sch:sc,norma:'ASME B16.9'}); }); }); }); }); }); }
+  function gerar(E){ out.length=0; gFOR(); gMAL(); gINOXF(); gBRONZE(); gFLG(); gFLGRTJ(); gFLGPN(); gFFL(); gNIPLE(); gBWF(E); return out.slice(); }
+  return {gerar,MAT,DN,NT,nt};
+})();
 // ══ CATÁLOGO DE ATIVIDADES — ficha completa (escopo, inclui, não inclui, medição, normas, dados a levantar) ══════════
 // Arquivo catalogo_atividades.json (carregado só quando o Orçamento abre). Cada atividade escolhida grava uma FOTO da ficha
 // na própria linha (params.ativ_sn): se o catálogo mudar depois, orçamentos já feitos continuam com o texto de quando foram feitos.
 const ATIV={ok:false,carregando:false,erro:false,v:'',lista:[],disc:[],sub:[],t:{},porCod:new Map()};
 const ATIV_URL='catalogo_atividades.json?v=v5b-2026-10';
-const ORC_VERSAO='v2026.10.29-orc-montar';
+const ORC_VERSAO='v2026.10.30-orc-busca';
 async function carregarAtividades(forcar){ if(ATIV.carregando) return; if(ATIV.ok&&!forcar) return; ATIV.carregando=true; ATIV.erro=false; ATIV.msgErro='';
   let url=ATIV_URL; try{ url=new URL(ATIV_URL,window.location.href).href; }catch(e){} if(forcar) url+='&t='+Date.now(); ATIV.url=url;
   try{ const r=await fetch(url); if(!r.ok) throw new Error('o arquivo não foi encontrado (HTTP '+r.status+')'); let j; try{ j=await r.json(); }catch(e){ throw new Error('o endereço devolveu uma página em vez do arquivo (provavelmente fora da raiz do site)'); }
@@ -18018,16 +18236,12 @@ async function carregarAtividades(forcar){ if(ATIV.carregando) return; if(ATIV.o
     ATIV.disc=j.d||[]; ATIV.sub=j.s||[]; ATIV.v=j.v||''; ATIV.t=j.t||{};
     ATIV.lista=j.a.map(a=>({c:a[0],d:a[1],s:a[2],g:a[3],t:a[4],u:a[5],f:a[6],cr:a[7],inc:a[8],exc:a[9],pr:a[10],nm:a[11]}));
     ATIV.porCod=new Map(ATIV.lista.map(a=>[a.c,a])); ATIV.ok=true;
-    let i=0; const passo=()=>{ const fim=Math.min(i+700,ATIV.lista.length); for(;i<fim;i++) tokA(ATIV.lista[i]); if(i<ATIV.lista.length) setTimeout(passo,12); }; setTimeout(passo,250);
+    indexarAtividades();
     if(est.tela==='editor'&&est.orc) renderCorpo();
   }catch(e){ ATIV.erro=true; ATIV.ok=false; ATIV.msgErro=String((e&&e.message)||e); console.warn('orçamento: atividades indisponíveis',e); if(est.tela==='editor'&&est.orc) renderCorpo(); }
   ATIV.carregando=false; }
-const TKA=new WeakMap();
-function tokA(a){ let t=TKA.get(a); if(!t){ t={e:toks(a.t+' '+a.c+' '+(ATIV.sub[a.s]||'')+' '+((ATIV.t.g||[])[a.g]||'')),d:toks(a.t),n:nrm(a.t)}; TKA.set(a,t); } return t; }
-function buscaAtiv(q,disc,max){ const qt=toks(q); if(!qt.length||!ATIV.ok) return []; const nq=nrm(q), out=[];
-  for(const a of ATIV.lista){ const t=tokA(a); let pts=0; let ht=0; for(const k of qt){ const p=ptsTok(t.e,k); if(!p){ pts=-1; break; } pts+=p; if(ptsTok(t.d,k)) ht++; }
-    if(pts<0) continue; const dOrc=(ATIV.disc[a.d]||[])[1]; out.push({a,s:pts*10+ht*45+(disc&&dOrc===disc?60:0)+(t.n.startsWith(nq)?15:0)}); }
-  out.sort((x,y)=>y.s-x.s); return out.slice(0,max||12).map(x=>x.a); }
+function indexarAtividades(){ IDX.ativ=BQ.indiceLotes(ATIV.lista,a=>a.t+' '+(ATIV.sub[a.s]||'')+' '+((ATIV.t.g||[])[a.g]||'')+' '+((ATIV.disc[a.d]||[])[0]||''),600); }
+function buscaAtiv(q,disc,max,filtro){ if(!ATIV.ok||!IDX.ativ) return []; return BQ.buscar(IDX.ativ,q,{max:max||12,filtro,boost:a=>(disc&&areaDe(a)===disc?60:0)}).lista; }
 const UN_ATIV={'m':'m','m²':'m²','m³':'m³','un':'un','kg':'kg','t':'t','junta':'junta','h':'h','diária':'dia','dia':'dia','jogo':'jogo','lote':'vb','sistema':'vb','mês':'vb','verba':'vb','vb':'vb','pç':'pç','peça':'pç'};
 const unIdx=u=>UN_ATIV[String(u||'').toLowerCase()]||'un';
 // "Premissas e dados necessários" → lista de dados a levantar (ex.: "Informar altura, carga e prazo" → Altura / Carga / Prazo)
@@ -18037,7 +18251,7 @@ function levItens(p){ let s=String(p||'').trim().replace(/[.\s]+$/,''); s=s.repl
   if(!partes.length||partes.length>14||partes.some(x=>x.length>80)) return [s.length>90?s.slice(0,87)+'…':s];
   return partes.map(x=>x.charAt(0).toUpperCase()+x.slice(1)); }
 function snapAtiv(a){ const T=ATIV.t; const pr=(T.p||[])[a.pr]||''; return {n:a.t,fr:(T.f||[])[a.f]||'',cr:(T.c||[])[a.cr]||'',inc:(T.i||[])[a.inc]||'',exc:(T.e||[])[a.exc]||'',prem:pr,nrm:(T.n||[])[a.nm]||'',sub:ATIV.sub[a.s]||'',disc:(ATIV.disc[a.d]||[])[0]||'',lv:levItens(pr)}; }
-function preencherAtividade(it,a){ it.descricao=a.t; it.params=(it.params&&typeof it.params==='object')?it.params:{};
+function preencherAtividade(it,a){ if(it.modelo!=='GENERICO'&&it.descricao&&!it.local&&it.descricao!==a.t) it.local=it.descricao; it.descricao=a.t; it.params=(it.params&&typeof it.params==='object')?it.params:{};
   Object.keys(it.params).filter(k=>/^lev_\d+$/.test(k)).forEach(k=>delete it.params[k]);
   it.params.ativ_cod=a.c; it.params.ativ_un=a.u; it.params.ativ_sn=snapAtiv(a);
   if(it.tipo==='SERVICO'&&it.modelo==='GENERICO'&&!it.indice_codigo) it.unidade=unIdx(a.u); }
@@ -18051,7 +18265,7 @@ function sugerirIndices(it){ if(it.indice_codigo||!it.descricao) return []; cons
   est.indices.forEach(i=>{ if(i.ativo===false||i.disciplina!==it.disciplina) return; const t=tokI(i); let c=0; q.forEach(w=>{ if(t.some(x=>x===w||(w.length>=5&&x.length>=5&&(x.startsWith(w.slice(0,5))||w.startsWith(x.slice(0,5)))))) c++; });
     if(c<2) return; const sc=c/Math.sqrt(q.length*t.length); if(sc>=0.3) out.push({i,sc}); });
   out.sort((a,b)=>b.sc-a.sc); return out.slice(0,3).map(x=>x.i); }
-const CLASSES_OPC=['150#','300#','600#','900#','1500#','PN10','PN16','PN25','PN40'];
+const CLASSES_OPC=['150#','300#','400#','600#','900#','1500#','2500#','2000#','3000#','6000#','9000#','PN6','PN10','PN16','PN25','PN40'];
 function matOpcoes(){ const e=espCfg(); const sel=(e&&Array.isArray(e.materiais)&&e.materiais.length)?e.materiais:Object.keys(MATNOME); return [['','—']].concat(sel.filter(k=>MATNOME[k]).map(k=>[k,MATNOME[k]])); }
 function npsOpcoes(atual){ const e=espCfg(); const mx=e?Number(e.nps_max)||0:0; return E.NPS.slice().sort((x,y)=>x-y).filter(n=>!mx||n<=mx||String(n)===String(atual)).map(n=>[String(n),n+'"']); }
 function fichaHTML(it){ const cod=P(it,'ativ_cod',''); if(!cod) return '';
@@ -18060,7 +18274,7 @@ function fichaHTML(it){ const cod=P(it,'ativ_cod',''); if(!cod) return '';
   const aberta=est.abertos.has(it.id+':f'), lv=f.lv||[], sug=sugerirIndices(it);
   const mat=P(it,'a_mat',''), nps=P(it,'a_nps',''), cls=P(it,'a_cls','');
   const cabec=`<div class="orc-ficha-h"><span class="orc-cod">${esc(cod)}</span><span>${esc(f.disc)} › ${esc(f.sub)}</span><span>Unidade: <b>${esc(P(it,'ativ_un',''))}</b></span><button type="button" class="orc-mini" data-orc="ficha" data-id="${it.id}" data-livre="1">${aberta?'ocultar escopo':'ver escopo completo'}</button></div>`;
-  const dados=`<div class="orc-fields">${fl('Local / área',iT(it,'local',it.local,'ex.: pipe-rack, casa de bombas'))}${fl('Material',iS(it,'p.a_mat',matOpcoes(),mat))}${fl('Diâmetro (NPS)',iS(it,'p.a_nps',[['','—']].concat(npsOpcoes(nps)),String(nps)))}${fl('Classe / pressão',iS(it,'p.a_cls',[['','—']].concat(CLASSES_OPC.map(c=>[c,c])),cls))}</div>`;
+  const dados=it.modelo==='GENERICO'?`<div class="orc-fields">${fl('Local / área',iT(it,'local',it.local,'ex.: pipe-rack, casa de bombas'))}${fl('Material',iS(it,'p.a_mat',matOpcoes(),mat))}${fl('Diâmetro (NPS)',iS(it,'p.a_nps',[['','—']].concat(npsOpcoes(nps)),String(nps)))}${fl('Classe / pressão',iS(it,'p.a_cls',[['','—']].concat(CLASSES_OPC.map(c=>[c,c])),cls))}</div>`:`<div class="orc-fields">${fl('Local / área',iT(it,'local',it.local,'ex.: pipe-rack, casa de bombas'),'w2')}</div>`;
   const lev=lv.length?`<div class="orc-lev-t">📝 Dados a levantar para esta atividade</div><div class="orc-fields">${lv.map((rot,i)=>fl(esc(rot),iT(it,'p.lev_'+i,P(it,'lev_'+i,''),''))).join('')}</div>`:'';
   const sg=sug.length?`<div class="orc-sug">💡 Índice de HH parecido: ${sug.map(i=>`<button type="button" class="orc-mini" data-orc="usar-indice" data-id="${it.id}" data-cod="${esc(i.codigo)}">${esc(i.descricao)} (${esc(i.unidade)})</button>`).join(' ')}</div>`:'';
   const corpo=`<div class="orc-ficha-corpo${aberta?' on':''}"><p><b>Escopo:</b> ${esc(f.n)}. ${esc(f.fr)}</p><p><b>Inclui:</b> ${esc(f.inc)}</p><p><b>Não inclui:</b> ${esc(f.exc)}</p><p><b>Critério de medição:</b> ${esc(f.cr)}</p><p><b>Normas:</b> ${esc(f.nrm)}</p><p><b>Dados necessários:</b> ${esc(f.prem)}</p></div>`;
@@ -18115,7 +18329,7 @@ function matDe(m){ const a=m.atributos||{}; if(a.material) return a.material; if
 function passaEsp(m){ const e=espCfg(); if(!e) return true; const a=m.atributos||{}; const mat=matDe(m);
   if(Array.isArray(e.materiais)&&e.materiais.length&&mat){ if(!e.materiais.some(c=>(EQ_MAT[c]||[c]).includes(mat))) return false; }
   const mx=Number(e.nps_max)||0; if(mx>0){ if(Number(a.nps)>mx) return false; if(Number(a.nps2)>mx) return false; }
-  if(Array.isArray(e.classes)&&e.classes.length){ const d=String(m.descricao||''), tk=[]; (d.match(/\b(150|300)#/g)||[]).forEach(s=>tk.push(s)); const pn=d.match(/\bPN\s?(\d+)(?:\/(\d+))?/); if(pn){ tk.push('PN'+pn[1]); if(pn[2]) tk.push('PN'+pn[2]); } if(tk.length&&!tk.some(x=>e.classes.includes(x))) return false; }
+  if(Array.isArray(e.classes)&&e.classes.length){ const cl=attrsDe(m).classe; if(cl&&!e.classes.some(c=>String(c).replace('#','')===cl)) return false; }
   return true; }
 function aplicarFornEsp(it,m){ const e=espCfg(); if(!e||it.tipo!=='MATERIAL') return; const k=CAT_FORN[m.categoria]; const f=(k&&e.cat_forn&&e.cat_forn[k])||e.fornecimento||''; if(['MASTER','CLIENTE','FAT_DIRETO'].includes(f)) it.fornecimento=f; }
 function matPadraoPiping(){ const e=espCfg(); const l=(e&&Array.isArray(e.materiais))?e.materiais.filter(k=>MATERIAIS[k]):[]; return l.length?l[0]:'CS'; }
@@ -18129,7 +18343,8 @@ function secEspecificacao(c){ const e=c.especificacao||{}; const sel=new Set(e.m
   <div class="orc-nota">Marque os materiais, o diâmetro máximo e as classes do projeto. Com o filtro ligado: a busca de materiais mostra só o que combina; a <b>tubulação</b> oferece só estes materiais e diâmetros; e cada material já vem com <b>quem fornece</b> (Master, cliente ou faturamento direto). Itens sem material, diâmetro ou classe no cadastro (perfis, suportes…) aparecem sempre.</div>
   <label class="orc-ck"><input type="checkbox" data-fo="cfg.especificacao.ativa"${e.ativa?' checked':''}> Usar esta especificação nas caixas e buscas deste orçamento</label>
   <div class="orc-f"><span>Materiais da tubulação e acessórios</span><div class="orc-chips">${mats.map(k=>chip('esp-mat',k,MATNOME[k],sel.has(k))).join('')}</div></div>
-  <div class="orc-f"><span>Classes de pressão (flanges, juntas, estojos, válvulas)</span><div class="orc-chips">${['150#','300#','PN10','PN16'].map(k=>chip('esp-classe',k,k,cls.has(k))).join('')}</div></div>
+  <div class="orc-f"><span>Classes de pressão — flanges, juntas, estojos, válvulas (ASME B16.5 e EN 1092)</span><div class="orc-chips">${['150','300','400','600','900','1500','2500','PN6','PN10','PN16','PN25','PN40'].map(k=>chip('esp-classe',k,k.startsWith('PN')?k:k+'#',cls.has(k)||cls.has(k+'#'))).join('')}</div></div>
+  <div class="orc-f"><span>Classes das conexões forjadas e roscadas (ASME B16.11, B16.3, MSS SP-114)</span><div class="orc-chips">${['2000','3000','6000','9000','125','250','1000'].map(k=>chip('esp-classe',k,k+'#',cls.has(k)||cls.has(k+'#'))).join('')}</div></div>
   <div class="orc-grid">${fo('Diâmetro máximo (NPS)',seO('cfg.especificacao.nps_max',npsOpc,e.nps_max==null?'':String(e.nps_max)))}
   ${fo('Quem fornece os materiais (padrão do orçamento)',seO('cfg.especificacao.fornecimento',[['','Master (padrão do sistema)']].concat(FORN_OPC),e.fornecimento||''))}</div>
   <details class="orc-det"><summary>Quem fornece, por tipo de material (opcional)</summary><div class="orc-grid">${CAT_FORN_NOME.map(([k,n])=>fo(n,seO('cfg.especificacao.cat_forn.'+k,[['','Igual ao padrão']].concat(FORN_OPC),cf[k]||''))).join('')}</div></details></div>`; }
@@ -18161,7 +18376,7 @@ function abaMontar(){ const o=est.orc, r=est.res; const serv=est.itens.filter(i=
   ${passo(1,'🏷️','Dados do orçamento','Cliente, obra, título, prazo e validade','aba','data-aba="dados"',dadosOk)}
   ${passo(2,'🎯','Especificação','Materiais, diâmetro máximo, classes e quem fornece','aba','data-aba="espec"',espOk)}
   ${passo(3,'📋','Adicionar ATIVIDADES do escopo','Busque entre as '+nA+' atividades industriais (inclui, não inclui, medição, normas)','pk-ativ','',ativs.length>0,ativs.length+' no orçamento')}
-  ${passo(4,'🧱','Adicionar MATERIAIS','Busque entre os '+nM+' materiais: tubos, conexões SW/BW/NPT, flanges, juntas, válvulas, perfis…','pk-mat','',mats.length>0,mats.length+' no orçamento')}
+  ${passo(4,'🧱','Adicionar MATERIAIS','Busque entre os '+nM+' materiais cadastrados e as peças por norma (SW, NPT, BSP, BW, flangeadas, todas as classes)','pk-mat','',mats.length>0,mats.length+' no orçamento')}
   ${passo(5,'🧰','Aplicar KIT','Ex.: junta flangeada = 2 flanges + junta + estojos','pk-kit','',false,(est.kits||[]).length+' kits')}
   ${passo(6,'🔧','Tubulação (HH por junta)','Material, união, diâmetro e schedule — o HH sai sozinho','aba','data-aba="MECANICA"',false)}
   ${passo(7,'💰','Preço e margem','Taxa de venda ou BDI, tributos','aba','data-aba="comercial"',false)}
@@ -18173,16 +18388,16 @@ function abaMontar(){ const o=est.orc, r=est.res; const serv=est.itens.filter(i=
 // ── buscador de ATIVIDADES (lista com busca, filtros e seleção múltipla) ──────────────────────────────────────
 const PA={q:'',d:'',s:'',alvo:'',pref:'',sel:new Map(),info:new Set()};
 const areaDe=a=>{ const x=(ATIV.disc[a.d]||[])[1]||'MECANICA'; return x==='GERAL'?'MECANICA':x; };
-function pkAtivLista(){ const qt=toks(PA.q); let L=ATIV.lista; if(PA.d!=='') L=L.filter(a=>String(a.d)===PA.d); if(PA.s!=='') L=L.filter(a=>String(a.s)===PA.s);
-  if(qt.length){ const nq=nrm(PA.q), out=[]; for(const a of L){ const t=tokA(a); let pts=0,ht=0; for(const k of qt){ const p=ptsTok(t.e,k); if(!p){ pts=-1; break; } pts+=p; if(ptsTok(t.d,k)) ht++; } if(pts<0) continue; out.push({a,s:pts*10+ht*45+(PA.pref&&areaDe(a)===PA.pref?60:0)+(t.n.startsWith(nq)?15:0)}); } out.sort((x,y)=>y.s-x.s); return {tot:out.length,lista:out.slice(0,80).map(x=>x.a)}; }
-  if(PA.d!==''||PA.s!==''){ return {tot:L.length,lista:L.slice(0,80)}; } return {tot:0,lista:[],inicio:true}; }
+function pkAtivLista(){ if(!ATIV.ok||!IDX.ativ) return {tot:0,lista:[],inicio:true}; const filtro=a=>(PA.d===''||String(a.d)===PA.d)&&(PA.s===''||String(a.s)===PA.s);
+  if(PA.q.trim()){ const r=BQ.buscar(IDX.ativ,PA.q,{max:80,filtro,boost:a=>(PA.pref&&areaDe(a)===PA.pref?60:0)}); return {tot:r.tot,lista:r.lista,exato:r.exato}; }
+  if(PA.d!==''||PA.s!==''){ const L=ATIV.lista.filter(filtro); return {tot:L.length,lista:L.slice(0,80)}; } return {tot:0,lista:[],inicio:true}; }
 function pkAtivDiscOpts(){ const cnt={}; ATIV.lista.forEach(a=>{ cnt[a.d]=(cnt[a.d]||0)+1; }); const grupos={}; ATIV.disc.forEach((d,i)=>{ (grupos[d[1]]=grupos[d[1]]||[]).push([i,d[0],cnt[i]||0]); });
   return '<option value="">Todas as disciplinas</option>'+Object.keys(grupos).map(g=>`<optgroup label="${esc(nomeArea(g))}">${grupos[g].map(([i,n,c])=>`<option value="${i}"${PA.d===String(i)?' selected':''}>${esc(n)} (${c})</option>`).join('')}</optgroup>`).join(''); }
 function pkAtivSubOpts(){ if(PA.d==='') return '<option value="">—</option>'; const cnt={}; ATIV.lista.forEach(a=>{ if(String(a.d)===PA.d) cnt[a.s]=(cnt[a.s]||0)+1; }); return '<option value="">Todas as subdisciplinas</option>'+Object.keys(cnt).map(Number).sort((a,b)=>String(ATIV.sub[a]).localeCompare(String(ATIV.sub[b]),'pt')).map(i=>`<option value="${i}"${PA.s===String(i)?' selected':''}>${esc(ATIV.sub[i])} (${cnt[i]})</option>`).join(''); }
 function pkAtivResHTML(){ if(!ATIV.ok) return bannerAtiv(); const R=pkAtivLista();
   if(R.inicio) return `<div class="orc-nota">Digite acima para buscar, ou escolha uma disciplina:</div><div class="orc-chips">${ATIV.disc.map((d,i)=>`<button type="button" class="orc-esp-chip" data-pk="a-dsel" data-v="${i}">${esc(d[0])}</button>`).join('')}</div>`;
   if(!R.lista.length) return '<div class="orc-vazio">Nenhuma atividade encontrada. Tente menos palavras (ex.: “válvula troca”).</div>';
-  return (R.tot>R.lista.length?`<div class="orc-nota">Mostrando ${R.lista.length} de ${R.tot.toLocaleString('pt-BR')} — acrescente palavras ou escolha a disciplina para refinar.</div>`:`<div class="orc-nota">${R.tot} atividade(s)</div>`)+R.lista.map(a=>{ const sn=PA.info.has(a.c)?snapAtiv(a):null;
+  return (R.exato===0&&PA.q.trim()?'<div class="orc-nota">Nenhuma com todas as palavras — mostrando as mais parecidas.</div>':'')+(R.tot>R.lista.length?`<div class="orc-nota">Mostrando ${R.lista.length} de ${R.tot.toLocaleString('pt-BR')} — acrescente palavras ou escolha a disciplina para refinar.</div>`:`<div class="orc-nota">${R.tot} atividade(s)</div>`)+R.lista.map(a=>{ const sn=PA.info.has(a.c)?snapAtiv(a):null;
     return `<div class="pk-it"><label><input type="checkbox" data-pk="a-sel" data-c="${esc(a.c)}"${PA.sel.has(a.c)?' checked':''}></label><div class="pk-t"><b>${esc(a.t)}</b><small>📋 ${esc(a.c)} · ${esc((ATIV.disc[a.d]||[])[0]||'')} › ${esc(ATIV.sub[a.s]||'')} · unidade ${esc(a.u||'')}</small>${sn?`<div class="pk-info"><p><b>Inclui:</b> ${esc(sn.inc)}</p><p><b>Não inclui:</b> ${esc(sn.exc)}</p><p><b>Medição:</b> ${esc(sn.cr)}</p><p><b>Dados a levantar:</b> ${esc(sn.prem)}</p></div>`:''}</div><button type="button" class="orc-mini" data-pk="a-info" data-c="${esc(a.c)}">${sn?'ocultar':'ver escopo'}</button></div>`; }).join(''); }
 function pkAtivSelHTML(){ const n=PA.sel.size; return n?`<b>${n} selecionada(s):</b> ${[...PA.sel.values()].slice(0,6).map(a=>esc(a.c)).join(', ')}${n>6?' …':''} <button type="button" class="orc-mini" data-pk="a-limpar">limpar</button>`:'Marque as atividades que quer levar para o orçamento.'; }
 function abrirPkAtiv(disc){ if(!editavel()){ aviso('Este orçamento não está em modo de edição.'); return; } if(!ATIV.ok&&!ATIV.carregando) carregarAtividades(); PA.alvo=disc||''; PA.pref=disc||''; PA.q=''; PA.d=''; PA.s=''; PA.sel=new Map(); PA.info=new Set(); pkAtivRender(); }
@@ -18194,72 +18409,158 @@ function pkAtivRender(){ dlg(`<div class="orc-dh">📋 Atividades do escopo indu
 const pkRefreshAtiv=()=>{ const r=$('pk-res'); if(r) r.innerHTML=pkAtivResHTML(); const s=$('pk-sel'); if(s) s.innerHTML=pkAtivSelHTML(); const b=$('pk-sub'); if(b) b.innerHTML=ATIV.ok?pkAtivSubOpts():''; };
 function pkAtivAdicionar(){ if(!editavel()) return; if(!PA.sel.size){ aviso('Marque pelo menos uma atividade na lista.'); return; } let n=0, primeira=null; const por={};
   PA.sel.forEach(a=>{ const disc=PA.alvo||areaDe(a); const sec=(SECOES[disc]||[]).find(s=>s.id==='ATIV'); if(!sec) return; const it=novoItem(disc,sec); est.itens.push(it); preencherAtividade(it,a); n++; por[disc]=(por[disc]||0)+1; if(!primeira) primeira=disc; });
-  fecharDlg(); PA.sel=new Map(); marcarSujo(); recalcular(); if(primeira) est.aba=primeira; renderTopo(); renderCorpo(); atualizarCalculados();
+  fecharDlg(); PA.sel=new Map(); marcarSujo(); recalcular(); if(primeira) irAba(primeira); renderTopo(); renderCorpo(); atualizarCalculados();
   toast('✓ '+n+' atividade(s) adicionada(s) em '+Object.keys(por).map(d=>nomeArea(d)+' ('+por[d]+')').join(', ')+'. Informe quantidade e dados do levantamento.'); }
 
-// ── buscador de MATERIAIS (lista com busca, filtros, peças SW/BW/NPT, seleção múltipla com quantidade) ─────────────
-const PM={q:'',disc:'MECANICA',cat:'',mat:'',nps:'',uni:'',esp:true,somar:true,sel:new Map()};
-function uniaoOk(m,u){ const d=String(m.descricao||''), c=String(m.chave||''); if(!u) return true; if(m.categoria==='TUBO'&&['BW','SW','NPT'].includes(u)) return true;
-  if(u==='SW') return /\bSW\b|encaixe/i.test(d)||c.includes('.SW.'); if(u==='NPT') return /NPT|roscad/i.test(d)||c.includes('.NPT.'); if(u==='BW') return /\bBW\b/.test(d)||c.startsWith('CON.');
-  if(u==='FLG') return m.categoria==='FLANGE'||m.categoria==='JUNTA'||/estojo/i.test(d); return true; }
-function pkMatLista(){ const qt=toks(PM.q), out=[]; const nps=PM.nps===''?null:Number(PM.nps), eqs=PM.mat?(EQ_MAT[PM.mat]||[PM.mat]):null; const usaEsp=PM.esp&&!!espCfg();
-  for(const m of est.catalogo){ if(m.ativo===false) continue; if(PM.disc&&m.disciplina!==PM.disc) continue; if(PM.cat&&m.categoria!==PM.cat) continue; if(usaEsp&&!passaEsp(m)) continue;
-    if(eqs&&!eqs.includes(matDe(m))) continue; if(nps!=null){ const a=m.atributos||{}; if(Number(a.nps)!==nps&&Number(a.nps2)!==nps) continue; } if(PM.uni&&!uniaoOk(m,PM.uni)) continue;
-    let pts=0; if(qt.length){ const t=tokCat(m); for(const k of qt){ const p=ptsTok(t.e,k); if(!p){ pts=-1; break; } pts+=p; } if(pts<0) continue; } out.push({m,s:pts*10}); }
-  if(qt.length) out.sort((a,b)=>b.s-a.s); return {tot:out.length,lista:out.slice(0,80).map(x=>x.m)}; }
-function pkMatCats(){ const c={}; est.catalogo.forEach(m=>{ if(m.ativo!==false&&(!PM.disc||m.disciplina===PM.disc)) c[m.categoria]=(c[m.categoria]||0)+1; }); return Object.keys(c).sort((a,b)=>(CATNOME[a]||a).localeCompare(CATNOME[b]||b,'pt')).map(k=>[k,(CATNOME[k]||k)+' ('+c[k]+')']); }
-const ATALHOS_MAT=[['Tubos','tubo'],['Curvas','curva'],['Tês','tê'],['Reduções','redução'],['Caps','cap'],['Flanges','flange'],['Juntas','junta'],['Estojos','estojo'],['Parafusos','parafuso'],['Válvulas','válvula'],['União SW','sw'],['União NPT','npt'],['Perfis','perfil'],['Chapas','chapa'],['Chumbadores','chumbador']];
-function pkMatResHTML(){ const R=pkMatLista(); if(!R.lista.length) return '<div class="orc-vazio">Nenhum material com estes filtros. Limpe a busca ou desmarque “só a especificação”.</div>';
-  return `<div class="orc-nota">${R.tot>R.lista.length?'Mostrando '+R.lista.length+' de '+R.tot.toLocaleString('pt-BR')+' — refine a busca ou os filtros.':R.tot+' material(is)'}</div>`+R.lista.map(m=>`<div class="pk-it"><label><input type="checkbox" data-pk="m-sel" data-id="${m.id}"${PM.sel.has(m.id)?' checked':''}></label><div class="pk-t"><b>${esc(m.descricao)}</b><small>${esc(m.especificacao||'')} · ${esc(m.unidade)} · ${m.preco_unitario!=null?fm(m.preco_unitario):'<i>sem preço</i>'}</small></div></div>`).join(''); }
-function pkMatSelHTML(){ const n=PM.sel.size; if(!n) return 'Marque os materiais que quer levar e informe a quantidade aqui.'; return `<b>${n} selecionado(s):</b> <button type="button" class="orc-mini" data-pk="m-limpar">limpar</button>`+[...PM.sel.values()].map(x=>`<div class="pk-selrow"><span>${esc(x.m.descricao)} <small>(${esc(x.m.unidade)})</small></span><input class="orc-in" inputmode="decimal" data-pk="m-qtd" data-id="${x.m.id}" value="${esc(nv(x.qtd))}" placeholder="qtd"><button type="button" class="orc-mini" data-pk="m-rem" data-id="${x.m.id}">✕</button></div>`).join(''); }
-function abrirPkMat(disc,pre){ if(!editavel()){ aviso('Este orçamento não está em modo de edição.'); return; } Object.assign(PM,{q:'',disc:disc||'MECANICA',cat:'',mat:'',nps:'',uni:'',esp:true,sel:new Map()},pre||{}); pkMatRender(); }
-function pkMatRender(){ const pres=new Set(); est.catalogo.forEach(m=>{ const a=m.atributos; if(a&&a.material) pres.add(a.material); }); const mats=Object.keys(MATNOME).filter(k=>pres.has(k)||(EQ_MAT[k]||[]).some(x=>pres.has(x)));
-  const nps=[0.5,0.75,1,1.25,1.5,2,2.5,3,4,6,8,10,12,14,16,18,20,24];
-  dlg(`<div class="orc-dh">🧱 Materiais do catálogo <small>${est.catalogo.length.toLocaleString('pt-BR')} itens</small></div><div class="orc-dc">
-  <input class="orc-in" data-pk="m-q" data-livre="1" data-foco autocomplete="off" placeholder="🔎 Digite: joelho 90 sw 2, flange wn 300 4, tubo inox 316 10s…" value="${esc(PM.q)}">
+// ── buscador de MATERIAIS (lista com busca, filtros por ligação/classe/acabamento, peças por norma, seleção com quantidade) ──
+const PM={q:'',disc:'MECANICA',cat:'',mat:'',nps:'',lig:'',cls:'',acab:'',esp:true,somar:true,sel:new Map()};
+const CLASSES_ALL=['150','300','400','600','900','1500','2500','125','250','1000','2000','3000','6000','9000','PN6','PN10','PN16','PN25','PN40','PN63','PN100'];
+const pkMatOpts=()=>({disc:PM.disc,cat:PM.cat,mat:PM.mat,nps:PM.nps,lig:PM.lig,cls:PM.cls,acab:PM.acab,esp:PM.esp,max:80});
+function pkMatLista(){ iniciarVirtuais(); const o=pkMatOpts(); if(PM.q.trim()){ const r=buscaMatBQ(PM.q,o); return {tot:r.tot,lista:r.lista,exato:r.exato}; } return listarMat(o,80); }
+function pkMatCats(){ const c={}; const cnt=m=>{ if(m.ativo!==false&&(!PM.disc||m.disciplina===PM.disc)) c[m.categoria]=(c[m.categoria]||0)+1; }; est.catalogo.forEach(cnt); if(IDX.virt) IDX.virtList.forEach(m=>{ if(!IDX.chaves.has(m.chave)) cnt(m); }); return Object.keys(c).sort((a,b)=>(CATNOME[a]||a).localeCompare(CATNOME[b]||b,'pt')).map(k=>[k,(CATNOME[k]||k)+' ('+c[k].toLocaleString('pt-BR')+')']); }
+const ATALHOS_MAT=[['Tubos','tubo'],['Curvas/joelhos','joelho'],['Tês','tê'],['Cruzetas','cruzeta'],['Luvas','luva'],['Reduções','redução'],['Buchas','bucha'],['Niples','niple'],['Uniões','união'],['Caps','cap'],['Tampões','tampão'],['Flanges','flange'],['Juntas','junta'],['Estojos','estojo'],['Válvulas','válvula'],['Perfis','perfil'],['Chapas','chapa'],['Chumbadores','chumbador']];
+function pkMatResHTML(){ const R=pkMatLista(); if(!R.lista.length) return '<div class="orc-vazio">Nenhum material com estes filtros. Limpe a busca ou os filtros'+(espCfg()&&PM.esp?', ou desmarque “só a especificação”':'')+'.</div>';
+  const aviso=(PM.q.trim()&&R.exato===0)?'<div class="orc-nota">Nenhum com todas as palavras — mostrando os mais parecidos.</div>':''; const virt=IDX.virt&&!IDX.virt.pronto?' <small>(carregando as peças por norma…)</small>':'';
+  return aviso+`<div class="orc-nota">${R.tot>R.lista.length?'Mostrando '+R.lista.length+' de '+R.tot.toLocaleString('pt-BR')+' — refine a busca ou os filtros.':R.tot+' material(is)'}${virt}</div>`+R.lista.map(m=>{ const t=attrsDe(m); const tags=[t.lig&&t.lig!=='ROSCA'?t.lig:(t.lig==='ROSCA'?'rosca':''),t.classe?(/^PN/.test(t.classe)?t.classe:t.classe+'#'):'',t.acab==='GALV'?'galvanizado':''].filter(Boolean).join(' · ');
+    return `<div class="pk-it"><label><input type="checkbox" data-pk="m-sel" data-key="${esc(m.chave||m.id)}"${PM.sel.has(m.chave||m.id)?' checked':''}></label><div class="pk-t"><b>${esc(m.descricao)}</b><small>${esc(m.especificacao||'')} · ${esc(m.unidade)} · ${m.virtual?'<i>peça por norma — criada ao adicionar</i>':(m.preco_unitario!=null?fm(m.preco_unitario):'<i>sem preço</i>')}${tags?' · '+esc(tags):''}</small></div></div>`; }).join(''); }
+function pkMatSelHTML(){ const n=PM.sel.size; if(!n) return 'Marque os materiais que quer levar e informe a quantidade aqui.'; return `<b>${n} selecionado(s):</b> <button type="button" class="orc-mini" data-pk="m-limpar">limpar</button>`+[...PM.sel.entries()].map(([k,x])=>`<div class="pk-selrow"><span>${esc(x.m.descricao)} <small>(${esc(x.m.unidade)})</small></span><input class="orc-in" inputmode="decimal" data-pk="m-qtd" data-key="${esc(k)}" value="${esc(nv(x.qtd))}" placeholder="qtd"><button type="button" class="orc-mini" data-pk="m-rem" data-key="${esc(k)}">✕</button></div>`).join(''); }
+function abrirPkMat(disc,pre){ if(!editavel()){ aviso('Este orçamento não está em modo de edição.'); return; } iniciarVirtuais(); Object.assign(PM,{q:'',disc:disc||'MECANICA',cat:'',mat:'',nps:'',lig:'',cls:'',acab:'',esp:true,sel:new Map()},pre||{}); pkMatRender(); }
+function pkMatRender(){ const pres=new Set(); est.catalogo.forEach(m=>{ const a=m.atributos; if(a&&a.material) pres.add(a.material); }); const mats=Object.keys(MATNOME).filter(k=>pres.has(k)||(EQ_MAT[k]||[]).some(x=>pres.has(x))||PECAS.MAT[k]);
+  const nps=[0.25,0.375,0.5,0.75,1,1.25,1.5,2,2.5,3,4,6,8,10,12,14,16,18,20,24]; const op=(v,t,sel)=>`<option value="${esc(v)}"${sel?' selected':''}>${esc(t)}</option>`;
+  dlg(`<div class="orc-dh">🧱 Materiais do catálogo <small>${est.catalogo.length.toLocaleString('pt-BR')} cadastrados + peças por norma (ASME, MSS, EN)</small></div><div class="orc-dc">
+  <input class="orc-in" data-pk="m-q" data-livre="1" data-foco autocomplete="off" placeholder="🔎 Digite qualquer palavra ou sigla: joelho ai sw 2, ac npt 3000, flange wn 600 316…" value="${esc(PM.q)}">
   <div class="orc-chips pk-atalhos">${ATALHOS_MAT.map(([r,t])=>`<button type="button" class="orc-esp-chip" data-pk="m-atalho" data-v="${esc(t)}">${esc(r)}</button>`).join('')}</div>
-  <div class="orc-grid">${fo('Disciplina',`<select class="orc-in" data-pk="m-disc" data-livre="1"><option value="">Todas</option>${E.DISCIPLINAS.map(d=>`<option value="${d.codigo}"${PM.disc===d.codigo?' selected':''}>${esc(d.nome)}</option>`).join('')}</select>`)}
-  ${fo('Tipo de material',`<select class="orc-in" data-pk="m-cat" data-livre="1" id="pk-cat"><option value="">Todos os tipos</option>${pkMatCats().map(([k,n])=>`<option value="${esc(k)}"${PM.cat===k?' selected':''}>${esc(n)}</option>`).join('')}</select>`,'w2')}
-  ${fo('Material (liga)',`<select class="orc-in" data-pk="m-mat" data-livre="1"><option value="">Todos</option>${mats.map(k=>`<option value="${k}"${PM.mat===k?' selected':''}>${esc(MATNOME[k])}</option>`).join('')}</select>`)}
-  ${fo('Diâmetro (NPS)',`<select class="orc-in" data-pk="m-nps" data-livre="1"><option value="">Todos</option>${nps.map(n=>`<option value="${n}"${PM.nps===String(n)?' selected':''}>${n}"</option>`).join('')}</select>`)}
-  ${fo('União / tipo de ligação',`<select class="orc-in" data-pk="m-uni" data-livre="1"><option value="">Todas</option><option value="BW"${PM.uni==='BW'?' selected':''}>Solda de topo (BW)</option><option value="SW"${PM.uni==='SW'?' selected':''}>Encaixe e solda (SW)</option><option value="NPT"${PM.uni==='NPT'?' selected':''}>Roscada (NPT)</option><option value="FLG"${PM.uni==='FLG'?' selected':''}>Flangeada (flange, junta, estojo)</option></select>`,'w2')}</div>
+  <div class="orc-grid">${fo('Disciplina',`<select class="orc-in" data-pk="m-disc" data-livre="1"><option value="">Todas</option>${E.DISCIPLINAS.map(d=>op(d.codigo,d.nome,PM.disc===d.codigo)).join('')}</select>`)}
+  ${fo('Tipo de material',`<select class="orc-in" data-pk="m-cat" data-livre="1" id="pk-cat"><option value="">Todos os tipos</option>${pkMatCats().map(([k,n])=>op(k,n,PM.cat===k)).join('')}</select>`,'w2')}
+  ${fo('Ligação',`<select class="orc-in" data-pk="m-lig" data-livre="1">${op('','Todas',!PM.lig)}${op('BW','Solda de topo (BW)',PM.lig==='BW')}${op('SW','Encaixe e solda (SW)',PM.lig==='SW')}${op('NPT','Roscada NPT',PM.lig==='NPT')}${op('BSP','Roscada BSP',PM.lig==='BSP')}${op('FL','Flangeada',PM.lig==='FL')}</select>`)}
+  ${fo('Classe / pressão (#)',`<select class="orc-in" data-pk="m-cls" data-livre="1">${op('','Todas',!PM.cls)}${CLASSES_ALL.map(k=>op(k,/^PN/.test(k)?k:k+'#',PM.cls===k)).join('')}</select>`)}
+  ${fo('Material (liga)',`<select class="orc-in" data-pk="m-mat" data-livre="1">${op('','Todos',!PM.mat)}${mats.map(k=>op(k,MATNOME[k]||PECAS.MAT[k].n,PM.mat===k)).join('')}</select>`)}
+  ${fo('Acabamento',`<select class="orc-in" data-pk="m-acab" data-livre="1">${op('','Todos',!PM.acab)}${op('PT','Preto / sem galvanizar',PM.acab==='PT')}${op('GALV','Galvanizado a fogo',PM.acab==='GALV')}</select>`)}
+  ${fo('Diâmetro (NPS)',`<select class="orc-in" data-pk="m-nps" data-livre="1">${op('','Todos',!PM.nps)}${nps.map(n=>op(String(n),(PECAS.NT[n]||n)+'"',PM.nps===String(n))).join('')}</select>`)}</div>
   ${espCfg()?`<label class="orc-ck"><input type="checkbox" data-pk="m-esp" data-livre="1"${PM.esp?' checked':''}> Só o que combina com a especificação deste orçamento</label>`:''}
   <div id="pk-res" class="pk-res">${pkMatResHTML()}</div><div id="pk-sel" class="pk-sel">${pkMatSelHTML()}</div></div>
   <div class="orc-dbtn"><button type="button" class="orc-btn sec" data-orc="dlg-fechar">Fechar</button><button type="button" class="orc-btn ok" data-orc="pk-mat-add">Adicionar ao orçamento</button></div>`); }
 const pkRefreshMat=()=>{ const r=$('pk-res'); if(r) r.innerHTML=pkMatResHTML(); const s=$('pk-sel'); if(s) s.innerHTML=pkMatSelHTML(); const c=$('pk-cat'); if(c){ const v=PM.cat; c.innerHTML='<option value="">Todos os tipos</option>'+pkMatCats().map(([k,n])=>`<option value="${esc(k)}"${v===k?' selected':''}>${esc(n)}</option>`).join(''); } };
-function pkMatAdicionar(){ if(!editavel()) return; if(!PM.sel.size){ aviso('Marque pelo menos um material na lista.'); return; } let nNovo=0,nSoma=0, primeira=null;
-  PM.sel.forEach(x=>{ const m=x.m, disc=m.disciplina; const sec=(SECOES[disc]||[]).find(s=>s.tipo==='MATERIAL'); if(!sec) return; const qtd=(x.qtd!=null&&x.qtd>=0)?x.qtd:null; if(!primeira) primeira=disc;
+async function pkMatAdicionar(){ if(!editavel()) return; if(!PM.sel.size){ aviso('Marque pelo menos um material na lista.'); return; } const lista=[...PM.sel.values()]; const virt=lista.map(x=>x.m).filter(m=>m.virtual);
+  if(virt.length){ try{ toast('Criando '+virt.length+' peça(s) por norma no catálogo…'); await materializar(virt); }catch(e){ aviso('Não foi possível criar as peças no catálogo ('+((e&&e.message)||e)+'). Confira a conexão e tente de novo.'); return; } }
+  let nNovo=0,nSoma=0, primeira=null;
+  lista.forEach(x=>{ const m=(x.m.virtual?est.catalogo.find(c=>c.chave===x.m.chave):est.catalogo.find(c=>c.id===x.m.id))||x.m; const disc=m.disciplina; const sec=(SECOES[disc]||[]).find(s=>s.tipo==='MATERIAL'); if(!sec) return; const qtd=(x.qtd!=null&&x.qtd>=0)?x.qtd:null; if(!primeira) primeira=disc;
     const probe={tipo:'MATERIAL',fornecimento:'MASTER'}; aplicarFornEsp(probe,m); const forn=probe.fornecimento||'MASTER';
     if(PM.somar){ const ex=est.itens.find(e=>e.tipo==='MATERIAL'&&e.disciplina===disc&&e.material_id===m.id&&(e.fornecimento||'MASTER')===forn); if(ex){ ex.qtd=(Number(ex.qtd)||0)+(qtd||0); nSoma++; return; } }
     const it=novoItem(disc,sec); it.material_id=m.id; it.descricao=m.descricao; it.unidade=m.unidade; it.qtd=qtd==null?0:qtd; it.fornecimento=forn; est.itens.push(it); nNovo++; });
-  fecharDlg(); PM.sel=new Map(); marcarSujo(); recalcular(); if(primeira) est.aba=primeira; renderTopo(); renderCorpo(); atualizarCalculados();
-  toast('✓ '+nNovo+' material(is) adicionado(s)'+(nSoma?' e '+nSoma+' somado(s) a linhas existentes':'')+'. Confira as quantidades e os preços.'); }
-const UNI_DE={BW:'BW',SW:'SW',ROSCA:'NPT',COLA:'',FLANGEADA:'FLG'};
-function pkMatDaLinha(it){ const mat=P(it,'material','CS'); const u=UNI_DE[P(it,'uniao','BW')]; abrirPkMat('MECANICA',{mat:(MATNOME[mat]?mat:''),nps:String(P(it,'nps',4)),uni:u||'',cat:'',esp:false}); }
+  fecharDlg(); PM.sel=new Map(); marcarSujo(); recalcular(); if(primeira) irAba(primeira); renderTopo(); renderCorpo(); atualizarCalculados();
+  toast('✓ '+nNovo+' material(is) adicionado(s)'+(nSoma?' e '+nSoma+' somado(s) a linhas existentes':'')+(virt.length?' · '+virt.length+' peça(s) por norma gravada(s) no catálogo':'')+'. Confira as quantidades e os preços.'); }
+const UNI_DE={BW:'BW',SW:'SW',ROSCA:'NPT',COLA:'',FLANGEADA:'FL'};
+function pkMatDaLinha(it){ const mat=P(it,'material','CS'); const u=UNI_DE[P(it,'uniao','BW')]; abrirPkMat('MECANICA',{mat:(MATNOME[mat]?mat:''),nps:String(P(it,'nps',4)),lig:u||'',esp:false}); }
 
 // ── eventos dos buscadores ─────────────────────────────────────────────────────────────────────────────────
 let _tPk=null; const pkDeb=f=>{ clearTimeout(_tPk); _tPk=setTimeout(f,130); };
 document.addEventListener('input',e=>{ const t=e.target; if(!t||!t.getAttribute||!t.closest||!t.closest('#orc-dlg')) return; const k=t.getAttribute('data-pk'); if(!k) return;
   if(k==='a-q'){ PA.q=t.value; pkDeb(pkRefreshAtiv); } else if(k==='m-q'){ PM.q=t.value; pkDeb(pkRefreshMat); }
-  else if(k==='m-qtd'){ const x=PM.sel.get(t.getAttribute('data-id')); if(x){ const v=E.num(t.value); x.qtd=v; } }
-  else if(k==='kitq'){ const A=est.kitAp; const sel=t.parentNode&&t.parentNode.querySelector('select[data-ka="kit"]'); if(!sel||!A) return; const q=toks(t.value); const ks=est.kits.filter(x=>!q.length||q.every(w=>toks(x.nome).some(y=>y.startsWith(w)||y===w))); const lista=ks.slice(0,300); if(!lista.find(x=>x.id===A.id)){ const a=est.kits.find(x=>x.id===A.id); if(a) lista.unshift(a); } sel.innerHTML=lista.map(x=>`<option value="${x.id}"${x.id===A.id?' selected':''}>${esc(x.nome)}</option>`).join(''); } });
+  else if(k==='m-qtd'){ const x=PM.sel.get(t.getAttribute('data-key')); if(x){ x.qtd=E.num(t.value); } }
+  else if(k==='kitq'){ const A=est.kitAp; const sel=t.parentNode&&t.parentNode.querySelector('select[data-ka="kit"]'); if(!sel||!A) return; const q=BQ.tokens(t.value); const ks=est.kits.filter(x=>{ if(!q.length) return true; const nt=BQ.tokens(x.nome).join(' '); return q.every(w=>nt.includes(w)); }); const lista=ks.slice(0,300); if(!lista.find(x=>x.id===A.id)){ const a=est.kits.find(x=>x.id===A.id); if(a) lista.unshift(a); } sel.innerHTML=lista.map(x=>`<option value="${x.id}"${x.id===A.id?' selected':''}>${esc(x.nome)}</option>`).join(''); } });
 document.addEventListener('change',e=>{ const t=e.target; if(!t||!t.getAttribute||!t.closest||!t.closest('#orc-dlg')) return; const k=t.getAttribute('data-pk'); if(!k) return;
   if(k==='a-d'){ PA.d=t.value; PA.s=''; pkRefreshAtiv(); } else if(k==='a-s'){ PA.s=t.value; pkRefreshAtiv(); } else if(k==='a-alvo'){ PA.alvo=t.value; }
   else if(k==='a-sel'){ const a=ATIV.porCod.get(t.getAttribute('data-c')); if(!a) return; if(t.checked) PA.sel.set(a.c,a); else PA.sel.delete(a.c); const s=$('pk-sel'); if(s) s.innerHTML=pkAtivSelHTML(); }
-  else if(k==='m-disc'){ PM.disc=t.value; PM.cat=''; pkRefreshMat(); } else if(k==='m-cat'){ PM.cat=t.value; pkRefreshMat(); } else if(k==='m-mat'){ PM.mat=t.value; pkRefreshMat(); } else if(k==='m-nps'){ PM.nps=t.value; pkRefreshMat(); } else if(k==='m-uni'){ PM.uni=t.value; pkRefreshMat(); } else if(k==='m-esp'){ PM.esp=t.checked; pkRefreshMat(); }
-  else if(k==='m-sel'){ const m=est.catalogo.find(x=>x.id===t.getAttribute('data-id')); if(!m) return; if(t.checked) PM.sel.set(m.id,{m,qtd:1}); else PM.sel.delete(m.id); const s=$('pk-sel'); if(s) s.innerHTML=pkMatSelHTML(); } });
+  else if(k==='m-disc'){ PM.disc=t.value; PM.cat=''; pkRefreshMat(); } else if(k==='m-cat'){ PM.cat=t.value; pkRefreshMat(); } else if(k==='m-mat'){ PM.mat=t.value; pkRefreshMat(); } else if(k==='m-nps'){ PM.nps=t.value; pkRefreshMat(); }
+  else if(k==='m-lig'){ PM.lig=t.value; pkRefreshMat(); } else if(k==='m-cls'){ PM.cls=t.value; pkRefreshMat(); } else if(k==='m-acab'){ PM.acab=t.value; pkRefreshMat(); } else if(k==='m-esp'){ PM.esp=t.checked; pkRefreshMat(); }
+  else if(k==='m-sel'){ const key=t.getAttribute('data-key'); const m=est.catalogo.find(x=>(x.chave||x.id)===key)||(IDX.virtList||[]).find(x=>x.chave===key); if(!m) return; if(t.checked) PM.sel.set(key,{m,qtd:1}); else PM.sel.delete(key); const s=$('pk-sel'); if(s) s.innerHTML=pkMatSelHTML(); } });
 document.addEventListener('click',e=>{ const t=e.target&&e.target.closest?e.target.closest('[data-pk]'):null; if(!t||!t.closest('#orc-dlg')) return; const k=t.getAttribute('data-pk');
   if(k==='a-dsel'){ PA.d=t.getAttribute('data-v'); PA.s=''; const sel=document.querySelector('#orc-dlg [data-pk="a-d"]'); if(sel) sel.innerHTML=pkAtivDiscOpts(); pkRefreshAtiv(); }
   else if(k==='a-info'){ const c=t.getAttribute('data-c'); PA.info.has(c)?PA.info.delete(c):PA.info.add(c); pkRefreshAtiv(); } else if(k==='a-limpar'){ PA.sel=new Map(); pkRefreshAtiv(); }
   else if(k==='m-atalho'){ PM.q=t.getAttribute('data-v'); const i=document.querySelector('#orc-dlg [data-pk="m-q"]'); if(i){ i.value=PM.q; i.focus(); } pkRefreshMat(); }
-  else if(k==='m-limpar'){ PM.sel=new Map(); pkRefreshMat(); } else if(k==='m-rem'){ PM.sel.delete(t.getAttribute('data-id')); pkRefreshMat(); } });
+  else if(k==='m-limpar'){ PM.sel=new Map(); pkRefreshMat(); } else if(k==='m-rem'){ PM.sel.delete(t.getAttribute('data-key')); pkRefreshMat(); } });
 Object.assign(window.ORC_ACOES,{
  'pk-ativ':el=>abrirPkAtiv(el&&el.getAttribute?el.getAttribute('data-disc')||'':''),
  'pk-mat':el=>abrirPkMat(el&&el.getAttribute?el.getAttribute('data-disc')||'MECANICA':'MECANICA'),
  'pk-mat-linha':el=>{ const it=est.itens.find(x=>x.id===el.getAttribute('data-id')); if(it) pkMatDaLinha(it); },
  'pk-kit':()=>{ if(!editavel()){ aviso('Este orçamento não está em modo de edição.'); return; } if(!(est.kits||[]).length){ aviso('Nenhum kit cadastrado. Rode o SQL 23i no Supabase ou crie um kit na aba 🧰 Kits.'); return; } dlgAplicarKit(null,'MECANICA'); },
- 'pk-ativ-add':()=>pkAtivAdicionar(),'pk-mat-add':()=>pkMatAdicionar()});
-Object.assign(window.ORC_UI,{abaMontar,faixaStatus,PA,PM,pkAtivLista,pkMatLista,abrirPkAtiv,abrirPkMat,pkAtivAdicionar,pkMatAdicionar,uniaoOk});
+ 'pk-ativ-add':()=>pkAtivAdicionar(),'pk-mat-add':()=>{ pkMatAdicionar(); }});
+Object.assign(window.ORC_UI,{abaMontar,faixaStatus,PA,PM,pkAtivLista,pkMatLista,abrirPkAtiv,abrirPkMat,pkAtivAdicionar,pkMatAdicionar});
+
+// ══ BUSCA UNIFICADA · PEÇAS POR NORMA · GRAVAÇÃO SOB DEMANDA · NAVEGAÇÃO POR ETAPAS · SCHEDULES ═══════════════════════
+const IDX={mat:null,matRef:null,matN:0,virt:null,virtList:[],virtIni:false,chaves:new Set(),ativ:null,idx:null,idxRef:null,idxN:-1};
+const ATR=new WeakMap();
+const MATW={CS:'carbono aco',WCB:'carbono aco',LTCS:'carbono aco baixa temperatura',LCC:'carbono aco baixa temperatura',P22:'liga aco cromo molibdenio',P91:'liga aco cromo molibdenio',INOX304:'inox inoxidavel aco',INOX316:'inox inoxidavel aco',INOX321:'inox inoxidavel aco',INOX904L:'inox inoxidavel aco',CF8:'inox inoxidavel aco',CF8M:'inox inoxidavel aco',DUP2205:'duplex inox inoxidavel aco',SDUP2507:'duplex superduplex inox inoxidavel aco',CD3MN:'duplex inox aco',GALV:'galvanizado zincado',FM:'ferro maleavel',FD:'ferro ductil',BRONZE:'bronze latao',TI2:'titanio',ALLOY20:'liga20',MONEL400:'monel',INC625:'inconel',HAST276:'hastelloy',CUNI9010:'cuproniquel cobre'};
+const LIGT={SW:'sw solda encaixe',NPT:'npt rosca roscado roscada',BSP:'bsp rosca roscado roscada',ROSCA:'rosca roscado roscada npt bsp',BW:'bw solda topo',FL:'flangeado flangeada'};
+const CATW={CONEXAO:'conexao acessorio fitting peca',FLANGE:'flange flangeado flangeada',JUNTA:'junta vedacao gasket',VALVULA:'valvula valve',TUBO:'tubo tubulacao pipe',PERFIL:'perfil estrutura viga',CHAPA:'chapa placa',PARAFUSO:'parafuso fixacao',PORCA:'porca',ARRUELA:'arruela',ANCORAGEM:'chumbador ancoragem fixacao',SUPORTE:'suporte apoio',SELANTE:'selante vedacao',BARRA_ROSCADA:'barra roscada tirante'};
+function attrsDe(m){ let r=ATR.get(m); if(r) return r; const a=m.atributos||{}, c=String(m.chave||''), d=String(m.descricao||''); let lig=a.ligacao||'';
+  if(!lig){ if(/^FOR\./.test(c)) lig=c.split('.')[2]; else if(/^(CON|BWF)\./.test(c)&&!/\.(GALV|PVC|CPVC)\./.test(c)) lig='BW'; else if(m.categoria==='FLANGE') lig='FL'; else if(/\(SW\)|\bSW\b/.test(d)) lig='SW'; else if(/\(BSP\)/.test(d)) lig='BSP'; else if(/\(NPT\)|NPT/.test(d)) lig='NPT'; else if(/roscad/i.test(d)) lig='ROSCA'; }
+  let classe=a.classe||''; if(!classe){ const x=d.match(/\b(\d{3,4})#/)||d.match(/classe (\d{3,4})/); if(x) classe=x[1]; else { const p=d.match(/\bPN\s?(\d+)/); if(p) classe='PN'+p[1]; } } classe=String(classe).replace('#','');
+  const acab=a.acabamento||(/galvaniz/i.test(d)?'GALV':''); r={lig,classe,acab,mat:matDe(m)}; ATR.set(m,r); return r; }
+function textoMat(m){ const t=attrsDe(m); return [m.descricao,m.especificacao,CATW[m.categoria]||'',LIGT[t.lig]||'',t.acab==='GALV'?'galvanizado zincado':'',MATW[t.mat]||'',t.classe?('classe '+t.classe):''].join(' '); }
+function idxMat(){ const L=est.catalogo||[]; if(!IDX.mat||IDX.matRef!==L){ IDX.mat=BQ.indice(L.filter(m=>m.ativo!==false),textoMat); IDX.matRef=L; IDX.matN=L.length; IDX.chaves=new Set(L.map(m=>m.chave)); }
+  else if(L.length>IDX.matN){ for(let i=IDX.matN;i<L.length;i++){ if(L[i].ativo!==false) BQ.adicionar(IDX.mat,L[i],textoMat(L[i])); IDX.chaves.add(L[i].chave); } IDX.matN=L.length; } return IDX.mat; }
+function iniciarVirtuais(){ if(IDX.virtIni||!est.catalogo||!est.catalogo.length) return; IDX.virtIni=true; idxMat();
+  try{ const ds=new Set(est.catalogo.map(m=>String(m.descricao||'').toLowerCase())); const L=PECAS.gerar(E).filter(p=>!IDX.chaves.has(p.chave)&&!ds.has(p.descricao.toLowerCase())); IDX.virtList=L; IDX.virt=BQ.indiceLotes(L,textoMat,500); }catch(e){ console.warn('orçamento: peças por norma indisponíveis',e); IDX.virt=null; IDX.virtList=[]; } }
+function filtroMat(o){ const eqs=o.mat?(EQ_MAT[o.mat]||[o.mat]):null; const nps=(o.nps===''||o.nps==null)?null:Number(o.nps); const usaEsp=o.esp!==false&&!!espCfg();
+  return m=>{ if(m.ativo===false) return false; if(o.disc&&m.disciplina!==o.disc) return false; if(o.cat&&m.categoria!==o.cat) return false; if(usaEsp&&!passaEsp(m)) return false; const t=attrsDe(m);
+    if(eqs&&!eqs.includes(t.mat)) return false; if(nps!=null){ const a=m.atributos||{}; if(Number(a.nps)!==nps&&Number(a.nps2)!==nps) return false; }
+    if(o.lig){ const tubo=m.categoria==='TUBO'&&['BW','SW','NPT','BSP'].includes(o.lig); if(!tubo){ if(o.lig==='NPT'||o.lig==='BSP'){ if(!(t.lig===o.lig||t.lig==='ROSCA')) return false; } else if(t.lig!==o.lig) return false; } }
+    if(o.cls&&t.classe!==String(o.cls)) return false; if(o.acab==='GALV'&&t.acab!=='GALV') return false; if(o.acab==='PT'&&t.acab==='GALV') return false; return true; }; }
+function buscaMatBQ(q,o){ o=o||{}; const max=o.max||40, f=filtroMat(o); const boost=m=>(o.disc&&m.disciplina===o.disc?30:0)+(m.virtual?-3:0);
+  const r1=BQ.buscar(idxMat(),q,{max:max*2,filtro:f,boost}); const L=r1.lista.map((m,i)=>({m,s:r1.scores[i],full:r1.fulls[i]})); let tot=r1.tot, exato=r1.exato;
+  if(o.virt!==false&&IDX.virt&&IDX.virt.n){ const r2=BQ.buscar(IDX.virt,q,{max:max*2,filtro:m=>!IDX.chaves.has(m.chave)&&f(m),boost}); r2.lista.forEach((m,i)=>L.push({m,s:r2.scores[i],full:r2.fulls[i]})); tot+=r2.tot; exato+=r2.exato; }
+  L.sort((a,b)=>(b.full-a.full)||(b.s-a.s)); return {lista:L.slice(0,max).map(x=>x.m),tot,exato}; }
+function listarMat(o,max){ const f=filtroMat(o), out=[]; let tot=0; const add=m=>{ if(f(m)){ tot++; if(out.length<(max||80)*3) out.push(m); } }; (est.catalogo||[]).forEach(add); if(o.virt!==false&&IDX.virt) IDX.virtList.forEach(m=>{ if(!IDX.chaves.has(m.chave)) add(m); });
+  out.sort((a,b)=>(a.virtual?1:0)-(b.virtual?1:0)||String(a.categoria).localeCompare(String(b.categoria))||String(a.descricao).localeCompare(String(b.descricao),'pt',{numeric:true})); return {lista:out.slice(0,max||80),tot,exato:tot}; }
+// grava no catálogo as peças geradas por norma que você escolheu (só o que for usado fica no banco)
+async function materializar(lista){ const c=cli(); if(!c) throw new Error('sem conexão com o banco'); const novos=lista.filter(m=>m.virtual&&!est.catalogo.some(x=>x.chave===m.chave)); if(!novos.length) return;
+  const rows=novos.map(m=>{ const at=Object.assign({},m.atributos); delete at.virtual; return {chave:m.chave,disciplina:m.disciplina,categoria:m.categoria,descricao:m.descricao,especificacao:m.especificacao||'',unidade:m.unidade||'un',comprimento_barra_m:m.comprimento_barra_m,perda_pct:m.perda_pct||0,atributos:at}; });
+  const r=await c.from(TB.cat).upsert(rows,{onConflict:'chave',ignoreDuplicates:true}); if(r.error) throw r.error;
+  const s=await c.from(TB.cat).select(CAT_SELECT).in('chave',novos.map(m=>m.chave)); if(s.error) throw s.error;
+  (s.data||[]).forEach(row=>{ if(!est.catalogo.some(x=>x.id===row.id)) est.catalogo.push(row); IDX.chaves.add(row.chave); }); est.catMaxAt=maxEm(est.catalogo); indexarCatalogo(); salvarCacheBase();
+  if(!novos.every(m=>est.catalogo.some(x=>x.chave===m.chave))) throw new Error('a peça não voltou do banco'); }
+async function garantirPeca(m){ try{ await materializar([m]); return true; }catch(e){ aviso('Não foi possível criar a peça no catálogo ('+((e&&e.message)||e)+'). Confira a conexão e tente de novo.'); return false; } }
+// índices de HH pesquisáveis
+function idxIdx(){ const L=est.indices||[]; if(!IDX.idx||IDX.idxRef!==L||IDX.idxN!==L.length){ IDX.idx=BQ.indice(L.filter(i=>i.ativo!==false),i=>i.descricao+' '+(i.grupo||'')+' '+(i.codigo||'')); IDX.idxRef=L; IDX.idxN=L.length; } return IDX.idx; }
+function buscaIdx(q,disc,grupos,max){ return BQ.buscar(idxIdx(),q,{max:max||12,filtro:i=>i.disciplina===disc,boost:i=>(grupos&&grupos.length&&grupos.includes(i.grupo)?40:0)}).lista; }
+
+// ── NAVEGAÇÃO POR ETAPAS: botão voltar do celular e ESC do computador fecham uma camada por vez ───────────────────────
+const NAV={armado:false,ignorar:0};
+function irAba(a){ if(a===est.aba) return; if(!est.abaHist||!est.abaHist.length) est.abaHist=[est.aba]; est.abaHist.push(a); if(est.abaHist.length>40) est.abaHist.shift(); est.aba=a; }
+function navArmar(){ if(NAV.armado) return; try{ window.history.pushState({orcNav:1},''); NAV.armado=true; }catch(e){} }
+function navDesarmar(){ if(!NAV.armado) return; NAV.armado=false; NAV.ignorar++; try{ window.history.back(); }catch(e){ NAV.ignorar--; } }
+function moduloAberto(){ const m=$('orc-modal'); return !!(m&&m.classList.contains('show')); }
+function voltarEtapa(){ if(!moduloAberto()) return;
+  if(AC.aberto){ acFechar(); return; }                                             // 1) lista de sugestões
+  if(est.dlg){ fecharDlg(); return; }                                              // 2) janela (buscadores, kits, diálogos)
+  if(est.tela==='editor'){                                                         // 3) abas visitadas, depois a lista de orçamentos
+    if(est.abaHist&&est.abaHist.length>1){ est.abaHist.pop(); est.aba=est.abaHist[est.abaHist.length-1]; renderTopo(); renderCorpo(); return; }
+    voltar(); return; }
+  fechar(); }                                                                       // 4) sai do módulo
+window.addEventListener('popstate',()=>{ if(NAV.ignorar>0){ NAV.ignorar--; return; } NAV.armado=false; if(!moduloAberto()) return; voltarEtapa(); if(moduloAberto()) navArmar(); });
+
+// ── SCHEDULES: lista só o que existe para o material e o diâmetro (ASME B36.10M / B36.19M) ─────────────────────────────
+function schOpcoes(mat,nps){ return E.schValidos(mat,nps).map(s=>{ const w=E.schParede(nps,s); return [s,s+(w?' — '+String(w).replace('.',',')+' mm':'')]; }); }
+
+// ── AUTOCOMPLETE: materiais (com peças por norma), atividades, índices de HH e descrições ──────────────────────────────
+function acMostrar(input){ const d=acDiv(); if(!d) return; const tipo=input.getAttribute('data-ac'), q=input.value; let itens=[], aviso='';
+  const dica='Digite 2 letras ou mais — qualquer palavra, sigla (AC, AI, SW, NPT…) ou medida; pode errar a escrita.';
+  if(tipo==='ativ-add'){ const discA=input.getAttribute('data-disc')||''; if(!ATIV.ok&&!ATIV.carregando&&!ATIV.erro) carregarAtividades(); if(q.trim().length<2) aviso=dica; else if(ATIV.erro) aviso='Catálogo de atividades indisponível (arquivo catalogo_atividades.json).'; else if(!ATIV.ok) aviso='Carregando o catálogo de atividades…'; else { const r=buscaAtiv(q,discA,20); itens=r.map(a=>({tipo:'ativ',a,add:discA})); if(!r.length) aviso='Nenhuma atividade encontrada para “'+q+'”. Tente menos palavras.'; else if(r.length>=20) aviso='Mostrando as 20 melhores — acrescente palavras para refinar.'; } }
+  else if(tipo==='mat'){ const disc=input.getAttribute('data-disc')||''; if(q.trim().length<2) aviso=dica; else { iniciarVirtuais(); const r=buscaMatBQ(q,{disc,max:40}); itens=r.lista.map(m=>({tipo:'mat',m,disc})); if(!r.lista.length) aviso='Nenhum material encontrado para “'+q+'”. Tente menos palavras ou use 🔎 Buscar no catálogo.'; else if(!r.exato) aviso='Nenhum com todas as palavras — mostrando os mais parecidos.'; else if(r.tot>40) aviso='Mostrando os 40 melhores de '+r.tot.toLocaleString('pt-BR')+' — acrescente palavras para refinar.'; } if(espCfg()&&q.trim().length>=2) aviso=(aviso?aviso+' · ':'')+'🎯 filtro da especificação ativo'; }
+  else if(tipo==='idx'){ const disc=input.getAttribute('data-disc')||'', grp=(input.getAttribute('data-g')||'').split(',').filter(Boolean);
+    if(q.trim().length<2){ itens=est.indices.filter(i=>i.ativo!==false&&i.disciplina===disc&&(!grp.length||grp.includes(i.grupo))).slice(0,12).map(i=>({tipo:'idx',i})); aviso=itens.length?'Serviços desta seção — ou digite para buscar em todos os índices e atividades:':dica; }
+    else { if(!ATIV.ok&&!ATIV.carregando&&!ATIV.erro) carregarAtividades(); const ri=buscaIdx(q,disc,grp,12), ra=ATIV.ok?buscaAtiv(q,disc,8):[]; itens=ri.map(i=>({tipo:'idx',i})).concat(ra.map(a=>({tipo:'ativ',a}))); if(!itens.length) aviso='Nada encontrado para “'+q+'”. Tente menos palavras.'; else if(ri.length) aviso='⏱ índices de HH (têm cálculo pronto) e 📋 atividades do catálogo'; } }
+  else { const foI=input.getAttribute('data-fo')||''; const idI=(foI.match(/^it\.([^.]+)\.descricao$/)||[])[1]; const itL=idI?est.itens.find(x=>x.id===idI):null; const servico=!!(itL&&itL.tipo==='SERVICO'); let ativs=[];
+    if(servico){ if(!ATIV.ok&&!ATIV.carregando&&!ATIV.erro) carregarAtividades(); if(q.trim().length>=2){ ativs=buscaAtiv(q,itL.disciplina,12); if(ATIV.erro) aviso='Catálogo de atividades indisponível (arquivo catalogo_atividades.json) — pode digitar livremente.'; } else aviso='Digite 2 letras ou mais para buscar atividades do catálogo (ex.: "raqueteamento", "troca de válvula").'; }
+    const sug=sugDescricao(input,q).map(t=>({tipo:'desc',t})); itens=ativs.map(a=>({tipo:'ativ',a})).concat(ativs.length?sug.slice(0,5):sug); if(!itens.length&&q.trim().length>=2&&!aviso) aviso='Sem sugestões — pode digitar livremente.'; }
+  AC.input=input; AC.itens=itens; AC.idx=itens.length?0:-1; AC.aberto=true; if(!itens.length&&!aviso){ acFechar(); return; }
+  const um=a=>`${esc((ATIV.disc[a.d]||[])[0]||'')} › ${esc(ATIV.sub[a.s]||'')} · ${esc(a.u||'')}`;
+  d.innerHTML=(aviso?`<div class="orc-ac-t">${esc(aviso)}</div>`:'')+itens.map((x,i)=>{ const sel=i===0?' sel':'', base=`<div class="orc-ac-i${sel}" data-i="${i}" role="option">`;
+    if(x.tipo==='mat') return `${base}<b>${esc(x.m.descricao)}</b>${x.m.virtual?'<em>peça por norma</em>':(x.disc&&x.m.disciplina!==x.disc?`<em>${esc(nomeDisc(x.m.disciplina))}</em>`:'')}<small>${esc(x.m.especificacao||'')}${x.m.especificacao?' · ':''}${esc(x.m.unidade)}${x.m.virtual?' · criada ao escolher':(precoCat(x.m).p!=null?' · '+fm(precoCat(x.m).p):' · sem preço')}</small></div>`;
+    if(x.tipo==='ativ') return `${base}<b>${esc(x.a.t)}</b><small>📋 ${esc(x.a.c)} · ${um(x.a)}</small></div>`;
+    if(x.tipo==='idx') return `${base}<b>${esc(x.i.descricao)}</b><small>⏱ índice de HH · ${esc(x.i.unidade)} · ${nf(x.i.hh_campo,2)} HH/${esc(x.i.unidade)} · ${esc(x.i.grupo||'')}</small></div>`;
+    return `${base}<b>${esc(x.t)}</b></div>`; }).join('');
+  d.style.display='block'; acPosicionar(); }
+async function acEscolher(i){ const x=AC.itens[i], input=AC.input; if(!x||!input) return; acFechar();
+  if(x.tipo==='mat'){ let m=x.m; if(m.virtual){ if(!(await garantirPeca(m))) return; m=est.catalogo.find(c=>c.chave===m.chave)||m; }
+    const fo=input.getAttribute('data-fo')||''; if(/\.mat_q$/.test(fo)){ const it=est.itens.find(z=>z.id===fo.split('.')[1]); if(it&&editavel()){ if(m.disciplina!==it.disciplina){ it.disciplina=m.disciplina; toast('Linha movida para '+nomeDisc(m.disciplina)+' (disciplina do material).'); } const primeira=!it.material_id; it.material_id=m.id; it.descricao=m.descricao; it.unidade=m.unidade; if(primeira) aplicarFornEsp(it,m); marcarSujo(); recalcular(); renderCorpo(); atualizarCalculados(); } }
+    else { input.value=m.descricao; input.dispatchEvent(new Event('change',{bubbles:true})); } }
+  else if(x.tipo==='ativ'){ if(x.add){ adicionarAtividade(x.add,x.a); return; } const mA=(input.getAttribute('data-fo')||'').match(/^it\.([^.]+)\.descricao$/); const idm=input.getAttribute('data-id'); const itA=est.itens.find(z=>z.id===(mA?mA[1]:idm)); if(itA&&editavel()) aplicarAtividade(itA,x.a); else { input.value=x.a.t; input.dispatchEvent(new Event('change',{bubbles:true})); } }
+  else if(x.tipo==='idx'){ const it=est.itens.find(z=>z.id===input.getAttribute('data-id')); if(it&&editavel()){ aoMudarItem({type:'text',value:''},'it.'+it.id+'.indice_codigo',x.i.codigo,true); toast('Serviço aplicado: '+x.i.descricao); } }
+  else { input.value=x.t; input.dispatchEvent(new Event('input',{bubbles:true})); input.dispatchEvent(new Event('change',{bubbles:true})); } }
+Object.assign(window.ORC_UI,{IDX,attrsDe,buscaMatBQ,listarMat,materializar,iniciarVirtuais,voltarEtapa,irAba,NAV,schOpcoes,buscaIdx,filtroMat,idxMat});
 const INICIOS={PIPING:['Linha 2"-P-101','Linha de vapor','Linha de condensado','Linha de ar comprimido','Linha de água de resfriamento','Linha de processo','Rack de tubulação — área 1','Spool pré-fabricado','Tie-in'],ISOLAMENTO:['Linha de vapor — área 1','Linha fria — área 1','Tanque T-101','Equipamento — área 1','Proteção pessoal — linha quente'],PINTURA:['Estrutura metálica — área 1','Tubulação — área 1','Tanque T-101','Suportes e racks','Retoque geral'],ANDAIME:['Andaime — pipe-rack','Andaime — tanque T-101','Andaime — área 1','Andaime — parada geral'],RIG_MEC:['Munck 20 t','Guindaste 50 t','Plataforma elevatória','Empilhadeira'],GENERICO:['Área 1','Área 2','Pipe-rack','Casa de bombas','Sala elétrica','Tanque T-101']};
 async function carregarSugestoes(){ est.sugDesc=[]; const c=cli(); if(!c) return; try{ const r=await c.from(TB.itm).select('descricao,tipo,atualizado_em').order('atualizado_em',{ascending:false}).limit(1500); if(r.error) return; const vistos=new Set(), out=[]; (r.data||[]).forEach(x=>{ if(x.tipo==='MATERIAL') return; const d=String(x.descricao||'').trim(); if(d.length<3) return; const k=nrm(d); if(vistos.has(k)) return; vistos.add(k); out.push(d); }); est.sugDesc=out.slice(0,500); }catch(e){} }
 function sugDescricao(input,q){ const fo=input.getAttribute('data-fo')||''; const id=(fo.match(/^it\.([^.]+)\./)||[])[1]; const it=est.itens.find(x=>x.id===id); const geral=it&&['INDIRETO','EQUIPAMENTO','TERCEIRO'].includes(it.tipo);
@@ -18273,23 +18574,9 @@ function acPosicionar(){ const d=$('orc-ac'), i=AC.input; if(!d||!i) return; con
   d.style.minWidth=w+'px'; d.style.maxWidth=(window.innerWidth-8)+'px'; d.style.left=Math.max(4,Math.min(r.left,window.innerWidth-w-4))+'px';
   if(abaixo<Math.min(h,200)&&r.top>abaixo){ d.style.top='auto'; d.style.bottom=(window.innerHeight-r.top+2)+'px'; d.style.maxHeight=Math.max(120,Math.min(h,r.top-8))+'px'; } else { d.style.bottom='auto'; d.style.top=(r.bottom+2)+'px'; d.style.maxHeight=Math.max(120,Math.min(h,abaixo-8))+'px'; } }
 function acMarcar(){ const d=$('orc-ac'); if(!d) return; d.querySelectorAll('.orc-ac-i').forEach((e,i)=>{ e.classList.toggle('sel',i===AC.idx); if(i===AC.idx&&e.scrollIntoView) e.scrollIntoView({block:'nearest'}); }); }
-function acMostrar(input){ const d=acDiv(); if(!d) return; const tipo=input.getAttribute('data-ac'), q=input.value; let itens=[], aviso='';
-  if(tipo==='ativ-add'){ const discA=input.getAttribute('data-disc')||''; if(!ATIV.ok&&!ATIV.carregando&&!ATIV.erro) carregarAtividades(); if(q.trim().length<2) aviso='Digite 2 letras ou mais — as palavras podem vir em qualquer ordem (ex.: "valvula esfera troca").'; else if(ATIV.erro) aviso='Catálogo de atividades indisponível (arquivo catalogo_atividades.json).'; else if(!ATIV.ok) aviso='Carregando o catálogo de atividades…'; else { const r=buscaAtiv(q,discA,20); itens=r.map(a=>({tipo:'ativ',a,add:discA})); if(!r.length) aviso='Nenhuma atividade encontrada para “'+q+'”. Tente menos palavras.'; else if(r.length>=20) aviso='Mostrando as 20 melhores — acrescente palavras para refinar.'; } }
-  else if(tipo==='mat'){ const disc=input.getAttribute('data-disc')||''; if(q.trim().length<2) aviso='Digite 2 letras ou mais — as palavras podem vir em qualquer ordem (ex.: "flange 150 4").'; else { let r=buscaMat(q,disc,40); if(!r.length){ r=rankCat(q,null,null,8).filter(x=>x.s>=0.5).map(x=>({m:x.m})); aviso=r.length?'Nenhum resultado exato — parecidos:':'Nenhum material encontrado para “'+q+'”. Cadastre como novo (botão abaixo da linha) ou na aba 📚 Catálogo.'; } else if(r.length>=40) aviso='Mostrando os 40 primeiros — acrescente mais palavras para refinar.'; itens=r.map(x=>({tipo:'mat',m:x.m,disc})); } if(espCfg()&&q.trim().length>=2) aviso=(aviso?aviso+' · ':'')+'🎯 filtro da especificação ativo'; }
-  else { const foI=input.getAttribute('data-fo')||''; const idI=(foI.match(/^it\.([^.]+)\.descricao$/)||[])[1]; const itL=idI?est.itens.find(x=>x.id===idI):null; const servico=!!(itL&&itL.tipo==='SERVICO'&&itL.modelo==='GENERICO'); let ativs=[];
-    if(servico){ if(!ATIV.ok&&!ATIV.carregando&&!ATIV.erro) carregarAtividades(); if(q.trim().length>=2){ ativs=buscaAtiv(q,itL.disciplina,12); if(ATIV.erro) aviso='Catálogo de atividades indisponível (arquivo catalogo_atividades.json) — pode digitar livremente.'; } else aviso='Digite 2 letras ou mais para buscar atividades do catálogo (ex.: "raqueteamento", "troca de válvula").'; }
-    const sug=sugDescricao(input,q).map(t=>({tipo:'desc',t})); itens=ativs.map(a=>({tipo:'ativ',a})).concat(ativs.length?sug.slice(0,5):sug); if(!itens.length&&q.trim().length>=2&&!aviso) aviso='Sem sugestões — pode digitar livremente.'; }
-  AC.input=input; AC.itens=itens; AC.idx=itens.length?0:-1; AC.aberto=true; if(!itens.length&&!aviso){ acFechar(); return; }
-  d.innerHTML=(aviso?`<div class="orc-ac-t">${esc(aviso)}</div>`:'')+itens.map((x,i)=>x.tipo==='mat'?`<div class="orc-ac-i${i===0?' sel':''}" data-i="${i}" role="option"><b>${esc(x.m.descricao)}</b>${x.disc&&x.m.disciplina!==x.disc?`<em>${esc(nomeDisc(x.m.disciplina))}</em>`:''}<small>${esc(x.m.especificacao||'')}${x.m.especificacao?' · ':''}${esc(x.m.unidade)}${precoCat(x.m).p!=null?' · '+fm(precoCat(x.m).p):' · sem preço'}</small></div>`:x.tipo==='ativ'?`<div class="orc-ac-i${i===0?' sel':''}" data-i="${i}" role="option"><b>${esc(x.a.t)}</b><small>📋 ${esc(x.a.c)} · ${esc((ATIV.disc[x.a.d]||[])[0]||'')} › ${esc(ATIV.sub[x.a.s]||'')} · ${esc(x.a.u||'')}</small></div>`:`<div class="orc-ac-i${i===0?' sel':''}" data-i="${i}" role="option"><b>${esc(x.t)}</b></div>`).join('');
-  d.style.display='block'; acPosicionar(); }
-function acEscolher(i){ const x=AC.itens[i], input=AC.input; if(!x||!input) return; acFechar();
-  if(x.tipo==='mat'){ const fo=input.getAttribute('data-fo')||''; if(/\.mat_q$/.test(fo)){ const it=est.itens.find(z=>z.id===fo.split('.')[1]); if(it&&editavel()){ if(x.m.disciplina!==it.disciplina){ it.disciplina=x.m.disciplina; toast('Linha movida para '+nomeDisc(x.m.disciplina)+' (disciplina do material).'); } const primeira=!it.material_id; it.material_id=x.m.id; it.descricao=x.m.descricao; it.unidade=x.m.unidade; if(primeira) aplicarFornEsp(it,x.m); marcarSujo(); recalcular(); renderCorpo(); atualizarCalculados(); } }
-    else { input.value=x.m.descricao; input.dispatchEvent(new Event('change',{bubbles:true})); } }
-  else if(x.tipo==='ativ'){ if(x.add){ adicionarAtividade(x.add,x.a); return; } const mA=(input.getAttribute('data-fo')||'').match(/^it\.([^.]+)\.descricao$/); const itA=mA&&est.itens.find(z=>z.id===mA[1]); if(itA&&editavel()) aplicarAtividade(itA,x.a); else { input.value=x.a.t; input.dispatchEvent(new Event('change',{bubbles:true})); } }
-  else { input.value=x.t; input.dispatchEvent(new Event('input',{bubbles:true})); input.dispatchEvent(new Event('change',{bubbles:true})); } }
 const dentro=t=>t&&t.getAttribute&&t.closest&&t.closest('#orc-modal');
 document.addEventListener('input',e=>{ const t=e.target; if(dentro(t)&&t.getAttribute('data-ac')) acMostrar(t); });
-document.addEventListener('focusin',e=>{ const t=e.target; if(dentro(t)&&t.getAttribute('data-ac')&&!t.disabled&&!t.readOnly&&(t.getAttribute('data-ac')==='desc'||t.value.trim().length>=2)) acMostrar(t); });
+document.addEventListener('focusin',e=>{ const t=e.target; if(dentro(t)&&t.getAttribute('data-ac')&&!t.disabled&&!t.readOnly&&(['desc','idx'].includes(t.getAttribute('data-ac'))||t.value.trim().length>=2)) acMostrar(t); });
 document.addEventListener('keydown',e=>{ if(!AC.aberto||e.target!==AC.input) return; const k=e.key;
   if(k==='ArrowDown'||k==='ArrowUp'){ e.preventDefault(); e.stopPropagation(); if(AC.itens.length){ AC.idx=(AC.idx+(k==='ArrowDown'?1:-1)+AC.itens.length)%AC.itens.length; acMarcar(); } }
   else if(k==='Enter'){ if(AC.idx>=0){ e.preventDefault(); e.stopPropagation(); acEscolher(AC.idx); } else acFechar(); }
