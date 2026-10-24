@@ -1731,7 +1731,7 @@ body.dark #workers-body tr:hover{background-color:rgba(58,110,232,.08)}
      fontes) — os dois sistemas usam a mesma "moldura" de login, só
      o papel de parede muda entre eles. -->
 <div id="login-overlay" style="position:fixed;inset:0;z-index:99999;background:#0b1220 url('login-fundo-rdo.jpg') center center / cover no-repeat;color-scheme:dark">
-  <div style="position:absolute;bottom:6px;right:8px;font-size:9px;color:rgba(255,255,255,.35);font-family:monospace;pointer-events:none">v2026.10.27-indices</div>
+  <div style="position:absolute;bottom:6px;right:8px;font-size:9px;color:rgba(255,255,255,.35);font-family:monospace;pointer-events:none">v2026.10.28-orc-ativ</div>
   <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:calc(100% - 32px);max-width:380px;background:rgb(10,17,32);border:1px solid rgba(255,255,255,.14);border-radius:18px;padding:32px 28px;box-shadow:0 20px 60px rgba(0,0,0,.6);text-transform:none;font-weight:400">
     <h1 style="font-size:20px;margin:0 0 4px;color:#fff;text-align:center;font-weight:700">RDO <span style="color:#3ea6ff">Master Energy</span></h1>
     <p style="margin:0 0 24px;text-align:center;color:#9ca3af;font-size:13px;letter-spacing:.5px;font-weight:600">DIÁRIO DE OBRA PRO</p>
@@ -14391,7 +14391,7 @@ window.addEventListener('beforeinstallprompt',(e)=>{
   };
 });
 </script>
-<div class="no-print" style="position:fixed;bottom:2px;right:4px;font-size:8px;color:rgba(120,120,120,.4);font-family:monospace;pointer-events:none;z-index:5">v2026.10.27-indices</div>
+<div class="no-print" style="position:fixed;bottom:2px;right:4px;font-size:8px;color:rgba(120,120,120,.4);font-family:monospace;pointer-events:none;z-index:5">v2026.10.28-orc-ativ</div>
 
 <!-- MODAL DE ALERTA DE PENDÊNCIAS — substitui o toast/alert escuro de antes. Aparece
      sempre que a validação unificada (validarFormularioRDO) bloqueia uma tentativa de
@@ -16178,7 +16178,7 @@ Pra desativar: remova o botão "Orçamento" do menu e este bloco inteiro.
 .orc-calc .falta{flex-basis:100%;margin:2px 0;padding:5px 8px;font-size:11.5px}
 .orc-flash{animation:orcflash 1s ease-out}@keyframes orcflash{0%{background:rgba(250,204,21,.5)}100%{background:transparent}}
 .orc-ac{position:fixed;z-index:10050;background:var(--surface,#fff);color:var(--text,#111);border:1.5px solid var(--border,#9aa7bf);border-radius:8px;box-shadow:0 10px 30px rgba(0,0,0,.35);overflow:auto;-webkit-overflow-scrolling:touch}
-.orc-ac-i{padding:8px 10px;cursor:pointer;border-bottom:1px solid rgba(100,116,139,.18);font-size:13px;line-height:1.35}.orc-ac-i:last-child{border-bottom:0}.orc-ac-i.sel,.orc-ac-i:hover{background:rgba(59,130,246,.18)}
+.orc-ac-i{padding:8px 10px;cursor:pointer;border-bottom:1px solid rgba(100,116,139,.18);font-size:13px;line-height:1.35}.orc-ac-i:last-child{border-bottom:0}.orc-ac-i.sel,.orc-ac-i:hover{background:rgba(59,130,246,.18)}.orc-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}.orc-esp-chip{padding:6px 11px;border:1px solid rgba(100,116,139,.55);border-radius:16px;background:transparent;color:inherit;font-size:12.5px;cursor:pointer;line-height:1.2}.orc-esp-chip.on{background:#1d4ed8;border-color:#1d4ed8;color:#fff;font-weight:600}
 .orc-ac-i small{display:block;opacity:.72;font-size:11px;font-weight:600}.orc-ac-i em{font-style:normal;font-size:10px;background:rgba(100,116,139,.25);border-radius:8px;padding:1px 6px;margin-left:6px;font-weight:700}.orc-ac-t{padding:7px 10px;font-size:11.5px;opacity:.78;font-weight:600}
 .orc-confbar{display:flex;height:12px;border-radius:6px;overflow:hidden;background:rgba(100,116,139,.25);margin:6px 0}.orc-confbar i{display:block;height:100%}
 .orc-bar [data-ix="q"]{max-width:230px}
@@ -16233,6 +16233,7 @@ E.configPadrao=function(){ return {
   bdi:{impostos_pct:null,custos_fixos_pct:null,ociosidade_pct:null,lucro_pct:null,riscos_pct:0,financeiras_pct:0,bdi_mat_diferente:false,bdi_mat_pct:null},
   isolamento:{transpasse_pct:15,cintas_por_m:4,rebites_por_m2:20,selante_por_m2:0.05,perda_revest_pct:10},
   dias_semana:6,
+  especificacao:{ativa:false,materiais:[],nps_max:null,classes:[],fornecimento:'',cat_forn:{}},
   proposta:{formato:'LUMP_SUM',modo_materiais:'COMPLETA',mostrar_hh:false,validade_dias:30,rateio_base:'INCLUIDAS',disciplinas_incluidas:null,
     empresa:{nome:'Master Energy — Montagem e Manutenção Industrial',cnpj:'',endereco:'',contato:'',responsavel_tecnico:''},
     textos:{escopo_extra:'',premissas:'',exclusoes:'',condicoes_pagamento:'',reajuste:'',garantia:'',normas:''}}
@@ -16608,14 +16609,40 @@ window.ORC_UI={est,E};
 function erroTabela(e){ const m=String((e&&e.message)||e||''); return /42P01|does not exist|PGRST205|schema cache|Could not find the table/i.test(m)||(e&&e.code==='42P01'); }
 async function lerPaginado(montar){ let tudo=[],de=0; for(;;){ const r=await montar().range(de,de+999); if(r.error) throw r.error; const d=r.data||[]; tudo=tudo.concat(d); if(d.length<1000) break; de+=1000; } return tudo; }
 function indexarCatalogo(){ est.mapCat={}; est.catalogo.forEach(m=>{ if(m.ativo!==false) est.mapCat[(m.disciplina+'|'+m.descricao).toLowerCase()]=m; }); }
+// ── CACHE LOCAL DO CATÁLOGO (IndexedDB) + CARGA INCREMENTAL ────────────────────────────────────────
+// Com ~8 mil materiais, baixar tudo a cada abertura pesava ~5 MB. Agora: 1ª vez baixa tudo (só as colunas usadas);
+// nas próximas, baixa só o que mudou desde a última carga. Se a contagem não fechar, refaz tudo (segurança).
+const CAT_SELECT='id,chave,disciplina,categoria,descricao,especificacao,unidade,preco_unitario,preco_data,fornecedor,perda_pct,comprimento_barra_m,atributos,origem,ativo,atualizado_em';
+const IDB_NOME='orc-cache', IDB_LOJA='kv', IDB_CHAVE='base-v2';
+function idbAbrir(){ return new Promise((res,rej)=>{ try{ if(!window.indexedDB) return rej(new Error('sem IndexedDB')); const r=indexedDB.open(IDB_NOME,1); r.onupgradeneeded=()=>{ try{ r.result.createObjectStore(IDB_LOJA); }catch(e){} }; r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error||new Error('idb')); r.onblocked=()=>rej(new Error('idb bloqueado')); }catch(e){ rej(e); } }); }
+async function idbLer(k){ const db=await idbAbrir(); try{ return await new Promise((res,rej)=>{ const q=db.transaction(IDB_LOJA,'readonly').objectStore(IDB_LOJA).get(k); q.onsuccess=()=>res(q.result); q.onerror=()=>rej(q.error); }); } finally{ try{ db.close(); }catch(e){} } }
+async function idbGravar(k,v){ const db=await idbAbrir(); try{ await new Promise((res,rej)=>{ const t=db.transaction(IDB_LOJA,'readwrite'); t.objectStore(IDB_LOJA).put(v,k); t.oncomplete=()=>res(); t.onerror=()=>rej(t.error); t.onabort=()=>rej(t.error||new Error('abort')); }); } finally{ try{ db.close(); }catch(e){} } }
+const maxEm=lista=>lista.reduce((m,x)=>(x&&x.atualizado_em&&(!m||x.atualizado_em>m))?x.atualizado_em:m,null);
+let _tCache=null;
+function salvarCacheBase(){ clearTimeout(_tCache); _tCache=setTimeout(async()=>{ const snap={ts:Date.now(),indices:est.indices,catalogo:est.catalogo,maxAt:est.catMaxAt||null}; try{ await idbGravar(IDB_CHAVE,snap); return; }catch(e){} try{ const s=JSON.stringify(snap); if(s.length<3800000) sessionStorage.setItem(LS_BASE,s); }catch(e){} },500); }
+const ordCat=(a,b)=>String(a.disciplina).localeCompare(String(b.disciplina))||String(a.categoria).localeCompare(String(b.categoria))||String(a.descricao).localeCompare(String(b.descricao),'pt');
+function carregarCatalogoCompleto(c){ return lerPaginado(()=>c.from(TB.cat).select(CAT_SELECT).order('disciplina').order('categoria').order('descricao')); }
+async function atualizarCatalogo(c,cache){
+  let lista=null;
+  if(cache&&Array.isArray(cache.catalogo)&&cache.catalogo.length&&cache.maxAt){
+    try{ const cont=await c.from(TB.cat).select('id',{count:'exact',head:true});
+      if(!cont.error&&cont.count!=null){
+        const mud=await lerPaginado(()=>c.from(TB.cat).select(CAT_SELECT).gte('atualizado_em',cache.maxAt).order('atualizado_em').order('id'));
+        const mp=new Map(cache.catalogo.map(m=>[m.id,m])); mud.forEach(m=>mp.set(m.id,m));
+        if(mp.size===cont.count){ lista=[...mp.values()].sort(ordCat); est.catIncremental=mud.length; } } }catch(e){ lista=null; }
+  }
+  if(!lista){ lista=await carregarCatalogoCompleto(c); est.catIncremental=null; }
+  est.catMaxAt=maxEm(lista); return lista;
+}
 async function carregarBase(){
   try{ localStorage.removeItem(LS_BASE); }catch(e){}   // cópia antiga (versões anteriores) saía da cota compartilhada com o RDO
-  try{ const raw=sessionStorage.getItem(LS_BASE); if(raw){ const b=JSON.parse(raw); est.indices=b.indices||[]; est.catalogo=b.catalogo||[]; indexarCatalogo(); est.baseOk=est.indices.length>0; } }catch(e){}
+  let cache=null; try{ cache=await idbLer(IDB_CHAVE); }catch(e){}
+  if(cache&&Array.isArray(cache.catalogo)&&Array.isArray(cache.indices)&&cache.catalogo.length){ est.indices=cache.indices; est.catalogo=cache.catalogo; est.catMaxAt=cache.maxAt||maxEm(cache.catalogo); indexarCatalogo(); est.baseOk=est.indices.length>0; }
+  else { cache=null; try{ const raw=sessionStorage.getItem(LS_BASE); if(raw){ const b=JSON.parse(raw); est.indices=b.indices||[]; est.catalogo=b.catalogo||[]; est.catMaxAt=b.maxAt||maxEm(est.catalogo); if(est.catalogo.length) cache={catalogo:est.catalogo,maxAt:est.catMaxAt}; indexarCatalogo(); est.baseOk=est.indices.length>0; } }catch(e){} }
   const c=cli(); if(!c||(typeof navigator!=='undefined'&&navigator.onLine===false)) return;
   try{
-    const [ind,cat]=await Promise.all([lerPaginado(()=>c.from(TB.idx).select('*').order('disciplina').order('grupo').order('codigo')),lerPaginado(()=>c.from(TB.cat).select('*').order('disciplina').order('categoria').order('descricao'))]);
-    est.indices=ind; est.catalogo=cat; est.baseOk=true; est.semTabelas=false; indexarCatalogo(); await carregarKits(); await carregarSugestoes();
-    try{ sessionStorage.setItem(LS_BASE,JSON.stringify({ts:Date.now(),indices:ind,catalogo:cat})); }catch(e){}
+    const [ind,cat]=await Promise.all([lerPaginado(()=>c.from(TB.idx).select('*').order('disciplina').order('grupo').order('codigo')),atualizarCatalogo(c,cache)]);
+    est.indices=ind; est.catalogo=cat; est.baseOk=true; est.semTabelas=false; indexarCatalogo(); await carregarKits(); await carregarSugestoes(); salvarCacheBase();
   }catch(e){ if(erroTabela(e)) est.semTabelas=true; else console.warn('orçamento: base indisponível',e); }
 }
 async function listar(){
@@ -16827,6 +16854,7 @@ function abaPremissas(){
   <details class="orc-det"><summary>Composição por função (opcional — calcula o custo médio do HH)</summary>
   <div class="orc-rows">${fn.map((f,i)=>`<div class="orc-row2"><input class="orc-in" type="text" inputmode="text" data-fo="cfg.mao_obra.funcoes.${i}.nome" value="${esc(f.nome||'')}" placeholder="Função"><input class="orc-in" type="text" inputmode="decimal" data-fo="cfg.mao_obra.funcoes.${i}.custo_h" value="${esc(nv(f.custo_h))}" placeholder="R$/h"><input class="orc-in" type="text" inputmode="decimal" data-fo="cfg.mao_obra.funcoes.${i}.pct" value="${esc(nv(f.pct))}" placeholder="% do HH"><button type="button" class="orc-mini" data-orc="fn-del" data-i="${i}" title="Remover">🗑️</button></div>`).join('')||'<div class="orc-vazio">Nenhuma função.</div>'}</div>
   <div class="orc-linha"><button type="button" class="orc-btn sec" data-orc="fn-add">＋ Função</button>${media!=null?`<button type="button" class="orc-btn" data-orc="fn-usar">Usar custo médio calculado (${fm(media)}/h)</button>`:''}</div></details></div>
+  ${secEspecificacao(c)}
   <div class="orc-sec"><div class="orc-sec-h"><b>Materiais e riscos</b></div><div class="orc-grid">
   ${fo('Impostos não recuperáveis na COMPRA do material (%) — deixe 0 se o preço digitado já inclui IPI/ICMS',inO('cfg.impostos_mat_pct',c.impostos_mat_pct))}
   ${fo('Margem sobre materiais e equipamentos — modo Taxa de Venda (%)',inO('cfg.margem_outros_pct',c.margem_outros_pct))}
@@ -16934,7 +16962,7 @@ async function voltar(){ if(est.sujo&&editavel()) await salvar(false); est.tela=
 async function orcAbrir(){
   if(typeof usuarioAtual!=='undefined'&&(!usuarioAtual||usuarioAtual.papel!=='admin_mestre')){ aviso('O módulo Orçamento é só para o administrador.'); return; }
   garantirModal(); est.tela='lista'; est.orc=null; render();
-  await carregarBase(); await listar(); if(est.tela==='lista') render();
+  carregarAtividades(); await carregarBase(); await listar(); if(est.tela==='lista') render();
 }
 window.orcAbrir=orcAbrir;
 Object.assign(window.ORC_UI,{est,E,esc,nf,fm,uid,cli,toast,aviso,nomeDisc,hoje,render,renderCorpo,renderTopo,renderRodape,recalcular,marcarSujo,salvar,abrir,listar,carregarBase,dlg,fecharDlg,lerPaginado,indexarCatalogo,editavel,normOrc,normItem,guardarRascunho,STATUS,EDITAVEL,TB,MATERIAIS,UNIOES,SCHS,OPT,fo,inO,seO,nv,nz,setPath,getPath,atualizarCalculados,chip,voltar,orcAbrir,telaLista,garantirModal,limparRascunho,itemPayload,cabPayload});
@@ -16993,7 +17021,7 @@ function lPiping(it){ const mat=P(it,'material','CS'), un=E.UNIAO_POR_MATERIAL[m
   return `<div class="orc-row" data-id="${it.id}"><div class="orc-fields">${fl('Linha / descrição',iT(it,'descricao',it.descricao,'ex.: Linha 3"-P-101'),'w2')}${fl('Material',iS(it,'p.material',Object.keys(MATERIAIS).map(k=>[k,MATERIAIS[k]]),mat))}${fl('União',iS(it,'p.uniao',un.map(k=>[k,UNIOES[k]]),uni))}${fl('NPS (pol)',iS(it,'p.nps',E.NPS.map(n=>[String(n),n+'"']),String(P(it,'nps',4))))}${fl('Schedule',iS(it,'p.sch',schs.map(s=>[s,s]),E.schNormalizar(mat,P(it,'sch',null))))}${fl('Tubo (m)',iN(it,'p.metros',P(it,'metros',''),'0'))}${fl('Nº de juntas',iN(it,'p.juntas',P(it,'juntas',''),'0'))}${fl('HH (digitar substitui)',iN(it,'hh_manual',it.hh_manual,'calculado'))}</div>
   <div class="orc-calc" data-calc="${it.id}">${htmlCalc(it)}</div>${acoesRow(it)}${avancado(it,inoxBW?`<label class="orc-ck"><input type="checkbox" data-fo="${FN(it,'p.purga')}"${P(it,'purga',true)!==false?' checked':''}> Acrescentar purga (inox, solda de topo)</label>`:'')}</div>`; }
 function lGenerico(it,sec){ const ind=est.indices.find(i=>i.codigo===it.indice_codigo);
-  return `<div class="orc-row" data-id="${it.id}"><div class="orc-fields">${fl('Serviço (índice de HH)',iS(it,'indice_codigo',opcoesIndice(it.disciplina,sec,it.indice_codigo)),'w2')}${fl('Descrição / local',iT(it,'descricao',it.descricao,'ex.: Área 2 — pipe-rack'))}${fl('Quantidade'+(ind?' ('+esc(ind.unidade)+')':''),iN(it,'qtd',it.qtd,'0'))}${fl('HH (digitar substitui)',iN(it,'hh_manual',it.hh_manual,'calculado'))}</div><div class="orc-calc" data-calc="${it.id}">${htmlCalc(it)}</div>${acoesRow(it)}${avancado(it)}</div>`; }
+  return `<div class="orc-row" data-id="${it.id}"><div class="orc-fields">${fl('Serviço (índice de HH)',iS(it,'indice_codigo',opcoesIndice(it.disciplina,sec,it.indice_codigo)),'w2')}${fl('Descrição / local (digite para buscar atividades)',iT(it,'descricao',it.descricao,'ex.: raqueteamento, troca de válvula, Área 2'),'w2')}${fl('Quantidade'+(ind?' ('+esc(ind.unidade)+')':(it.unidade?' ('+esc(it.unidade)+')':'')),iN(it,'qtd',it.qtd,'0'))}${fl('HH (digitar substitui)',iN(it,'hh_manual',it.hh_manual,'calculado'))}</div>${notaAtiv(it)}<div class="orc-calc" data-calc="${it.id}">${htmlCalc(it)}</div>${acoesRow(it)}${avancado(it)}</div>`; }
 function lAndaime(it){ const m=P(it,'metodo','EQUIPE');
   return `<div class="orc-row" data-id="${it.id}"><div class="orc-fields">${fl('Descrição / local',iT(it,'descricao',it.descricao,'ex.: Andaime pipe-rack Área 1'),'w2')}${fl('Método',iS(it,'p.metodo',[['EQUIPE','Equipe × dias'],['VOLUMETRIA','Volumetria (m³)']],m))}
   ${m==='EQUIPE'?fl('Andaimeiros',iN(it,'p.andaimeiros',P(it,'andaimeiros',''),'0'))+fl('Ajudantes',iN(it,'p.ajudantes',P(it,'ajudantes',''),'0'))+fl('Dias de obra',iN(it,'p.dias',P(it,'dias',''),'0'))+fl('Horas/dia',iN(it,'p.h_dia',P(it,'h_dia',''),String(est.orc.config.horas_dia))):fl('Estrutura',iS(it,'p.estrutura',[['TUBULAR','Tubular fachadeiro / quadro'],['ABRACADEIRA','Tubo com abraçadeiras (pipe-rack / confinado)']],P(it,'estrutura','TUBULAR')))+fl('Volume (m³)',iN(it,'p.volume_m3',P(it,'volume_m3',''),'0'))}
@@ -17111,7 +17139,7 @@ function abaCompras(){
   <div class="orc-tbl-w"><table class="orc-tbl"><thead><tr><th>Material</th><th>Disc.</th><th>Qtd projeto</th><th>Perda</th><th>Comprar</th><th>Preço unit. (R$)</th><th>Custo</th><th>Fornece</th></tr></thead><tbody>${lst.map((c,i)=>{ const alvo=alvoPreco(c); return `<tr><td><b>${esc(c.desc)}</b>${c.chave?`<br><small>${esc(c.chave)}</small>`:''}</td><td>${esc(c.disciplinas.map(d=>d.slice(0,4)).join(', '))}</td><td>${nf(c.qtd_bruta,2)} ${esc(c.unidade)}</td><td>${nf(c.perda_pct,0)}%</td><td><b>${c.barras!=null?c.barras+' barras':nf(c.qtd_compra,2)+' '+esc(c.un_compra)}</b>${c.barras!=null?`<br><small>${nf(c.qtd_compra,1)} ${esc(c.unidade)}</small>`:''}</td><td>${alvo?`<input type="text" inputmode="decimal" class="orc-in orc-pr" data-livre="1" data-oc="preco-linha" data-i="${i}" value="${esc(nv(c.preco))}" placeholder="sem preço" title="${alvo.tipo==='catalogo'?'Atualiza o preço do catálogo':'Preço deste item'}">`:esc(nv(c.preco))}</td><td>${c.custo!=null?fm(c.custo):'<span class="orc-warn">—</span>'}</td><td>${forn[c.fornecimento]||''}</td></tr>`; }).join('')||'<tr><td colspan="8" class="orc-vazio">Nada para comprar neste filtro.</td></tr>'}</tbody></table></div>
   <div class="orc-nota">Total do que a Master compra (nesta lista): <b>${fm(tot)}</b> · itens sem preço: <b>${lst.filter(c=>c.preco==null&&c.qtd>0).length}</b></div></div>`; }
 function alvoPreco(c){ if(c.item_id&&est.itens.find(x=>x.id===c.item_id&&x.preco_unit!=null)) return {tipo:'item',id:c.item_id}; const m=est.catalogo.find(x=>(c.material_id&&x.id===c.material_id)||(c.chave&&x.chave===c.chave)); if(m) return {tipo:'catalogo',id:m.id}; if(c.item_id&&est.itens.find(x=>x.id===c.item_id)) return {tipo:'item',id:c.item_id}; return null; }
-async function salvarPrecoCatalogo(id,preco){ const m=est.catalogo.find(x=>x.id===id); if(!m) return; m.preco_unitario=preco; m.preco_data=preco==null?null:hoje(); const c=cli(); if(c){ const r=await c.from(TB.cat).update({preco_unitario:preco,preco_data:m.preco_data}).eq('id',id); if(r.error){ aviso('Não foi possível salvar o preço no catálogo: '+r.error.message); return; } } try{ sessionStorage.setItem(LS_BASE,JSON.stringify({ts:Date.now(),indices:est.indices,catalogo:est.catalogo})); }catch(e){} }
+async function salvarPrecoCatalogo(id,preco){ const m=est.catalogo.find(x=>x.id===id); if(!m) return; m.preco_unitario=preco; m.preco_data=preco==null?null:hoje(); const c=cli(); if(c){ const r=await c.from(TB.cat).update({preco_unitario:preco,preco_data:m.preco_data}).eq('id',id); if(r.error){ aviso('Não foi possível salvar o preço no catálogo: '+r.error.message); return; } } salvarCacheBase(); }
 function aoMudarCatIdx(t){
   const oc=t.getAttribute('data-oc'); const v=t.type==='checkbox'?t.checked:t.value;
   if(oc==='preco-linha'){ const c=comprasFiltradas()[Number(t.getAttribute('data-i'))]; if(!c) return; const alvo=alvoPreco(c); if(!alvo) return; const p=(v===''?null:E.num(v)); if(v!==''&&p==null) return;
@@ -17119,8 +17147,8 @@ function aoMudarCatIdx(t){
     recalcular(); renderRodape(); atualizarCalculados(); return; }
   const id=t.getAttribute('data-id');
   if(oc.startsWith('cat-')){ const m=est.catalogo.find(x=>x.id===id); if(!m) return; const campo={ 'cat-preco':'preco_unitario','cat-un':'unidade','cat-perda':'perda_pct','cat-barra':'comprimento_barra_m','cat-forn':'fornecedor','cat-ativo':'ativo' }[oc]; let val=v;
-    if(['cat-preco','cat-perda','cat-barra'].includes(oc)){ val=(v===''?null:E.num(v)); if(v!==''&&val==null) return; if(oc==='cat-perda'&&val==null) val=0; } const upd={}; upd[campo]=val; if(oc==='cat-preco') upd.preco_data=val==null?null:hoje(); Object.assign(m,upd); const c=cli(); if(c) c.from(TB.cat).update(upd).eq('id',id).then(r=>{ if(r.error) aviso('Não foi possível salvar: '+r.error.message); }); indexarCatalogo(); try{ sessionStorage.setItem(LS_BASE,JSON.stringify({ts:Date.now(),indices:est.indices,catalogo:est.catalogo})); }catch(e){} if(est.orc){ recalcular(); renderRodape(); } if(oc==='cat-ativo') renderCorpo(); return; }
-  if(oc.startsWith('idx-')){ const ix=est.indices.find(x=>x.id===id); if(!ix) return; const val=E.num(v); if(val==null||val<0) return; const campo=oc==='idx-campo'?'hh_campo':'hh_oficina'; ix[campo]=val; const c=cli(); if(c) c.from(TB.idx).update({[campo]:val}).eq('id',id).then(r=>{ if(r.error) aviso('Não foi possível salvar o índice: '+r.error.message); }); try{ sessionStorage.setItem(LS_BASE,JSON.stringify({ts:Date.now(),indices:est.indices,catalogo:est.catalogo})); }catch(e){} if(est.orc){ recalcular(); renderRodape(); } renderCorpo(); }
+    if(['cat-preco','cat-perda','cat-barra'].includes(oc)){ val=(v===''?null:E.num(v)); if(v!==''&&val==null) return; if(oc==='cat-perda'&&val==null) val=0; } const upd={}; upd[campo]=val; if(oc==='cat-preco') upd.preco_data=val==null?null:hoje(); Object.assign(m,upd); const c=cli(); if(c) c.from(TB.cat).update(upd).eq('id',id).then(r=>{ if(r.error) aviso('Não foi possível salvar: '+r.error.message); }); indexarCatalogo(); salvarCacheBase(); if(est.orc){ recalcular(); renderRodape(); } if(oc==='cat-ativo') renderCorpo(); return; }
+  if(oc.startsWith('idx-')){ const ix=est.indices.find(x=>x.id===id); if(!ix) return; const val=E.num(v); if(val==null||val<0) return; const campo=oc==='idx-campo'?'hh_campo':'hh_oficina'; ix[campo]=val; const c=cli(); if(c) c.from(TB.idx).update({[campo]:val}).eq('id',id).then(r=>{ if(r.error) aviso('Não foi possível salvar o índice: '+r.error.message); }); salvarCacheBase(); if(est.orc){ recalcular(); renderRodape(); } renderCorpo(); }
 }
 document.addEventListener('input',e=>{ const t=e.target; if(t&&t.hasAttribute&&t.hasAttribute('data-cf')&&t.closest('#orc-modal')){ const k=t.getAttribute('data-cf'); if(k==='q'){ est.cf.q=t.value; const p=t.selectionStart; renderCorpo(); const n=$('orc-cf-q'); if(n){ n.focus(); try{ n.setSelectionRange(p,p); }catch(x){} } } } });
 document.addEventListener('change',e=>{ const t=e.target; if(t&&t.hasAttribute&&t.hasAttribute('data-cf')&&t.closest('#orc-modal')){ const k=t.getAttribute('data-cf'); if(k!=='q'){ est.cf[k]=(t.type==='checkbox')?t.checked:t.value; renderCorpo(); } } });
@@ -17156,7 +17184,7 @@ window.ORC_ACOES['nm-salvar']=async function(el){
   const disc=v('nm-disc'); const dup=est.catalogo.find(m=>m.disciplina===disc&&m.descricao.toLowerCase()===desc.toLowerCase()); if(dup){ aviso('Já existe um material com essa descrição nesta disciplina.'); return; }
   const novo={id:uid(),chave:'USR.'+uid().slice(0,8),disciplina:disc,categoria:v('nm-cat')||'OUTROS',descricao:desc,especificacao:v('nm-esp'),unidade:v('nm-un'),preco_unitario:preco,preco_data:preco==null?null:hoje(),fornecedor:null,perda_pct:perda,comprimento_barra_m:barra,atributos:{},origem:'USUARIO',ativo:true};
   const c=cli(); if(c){ const r=await c.from(TB.cat).insert(novo); if(r.error){ aviso('Não foi possível cadastrar: '+r.error.message); return; } }
-  est.catalogo.push(novo); indexarCatalogo(); try{ sessionStorage.setItem(LS_BASE,JSON.stringify({ts:Date.now(),indices:est.indices,catalogo:est.catalogo})); }catch(e){}
+  est.catalogo.push(novo); indexarCatalogo(); salvarCacheBase();
   const itemId=el.getAttribute('data-item'); if(itemId){ const it=est.itens.find(x=>x.id===itemId); if(it){ it.material_id=novo.id; it.descricao=novo.descricao; it.unidade=novo.unidade; marcarSujo(); } }
   fecharDlg(); recalcular(); renderCorpo(); renderRodape(); atualizarCalculados(); toast('✓ Material cadastrado'+(preco==null?' (sem preço — preencha quando cotar)':'')+'.'); };
 
@@ -17167,7 +17195,7 @@ function abaIndices(){
   <div class="orc-bar"><select class="orc-in" id="orc-idx-disc" data-livre="1">${E.DISCIPLINAS.map(d=>`<option value="${d.codigo}"${f.disc===d.codigo?' selected':''}>${esc(d.nome)}</option>`).join('')}</select><input type="search" class="orc-in" data-ix="q" data-livre="1" placeholder="buscar serviço…" value="${esc(f.q||'')}"><button type="button" class="orc-btn ok" data-orc="idx-novo" data-livre="1">＋ Novo índice</button></div>
   <div class="orc-linha"><button type="button" class="orc-btn" data-orc="idx-exportar" data-livre="1">⬇️ Exportar índices (Excel)</button><button type="button" class="orc-btn sec" data-orc="idx-modelo" data-livre="1">⬇️ Modelo vazio</button><button type="button" class="orc-btn ok" data-orc="idx-importar" data-livre="1">⬆️ Importar índices…</button><input type="file" accept=".xlsx" id="orc-file-idx" data-orc-file="idx" style="display:none"></div>
   ${Object.keys(g).map(k=>`<div class="orc-sec"><div class="orc-sec-h"><b>${esc(k)}</b></div><div class="orc-tbl-w"><table class="orc-tbl"><thead><tr><th>Serviço</th><th>Unid.</th><th>HH campo</th><th>HH oficina</th><th>Confiança</th><th>Padrão</th><th></th></tr></thead><tbody>${g[k].map(i=>{ const alt=(i.padrao_hh_campo!=null&&Number(i.padrao_hh_campo)!==Number(i.hh_campo))||(i.padrao_hh_oficina!=null&&Number(i.padrao_hh_oficina)!==Number(i.hh_oficina)); return `<tr><td>${esc(i.descricao)}${i.ativo===false?' <span class="orc-chip">inativo</span>':''}${i.origem==='USUARIO'?' <span class="orc-chip az">seu</span>':''}<br><small>${esc(i.codigo)}</small></td><td>${esc(i.unidade)}</td><td><input type="text" inputmode="decimal" class="orc-in orc-pr" data-oc="idx-campo" data-id="${i.id}" data-livre="1" value="${esc(nv(i.hh_campo))}"></td><td><input type="text" inputmode="decimal" class="orc-in orc-pr" data-oc="idx-of" data-id="${i.id}" data-livre="1" value="${esc(nv(i.hh_oficina))}"></td><td>${badgeConf(i)}</td><td><small>${esc(nv(i.padrao_hh_campo))}${Number(i.padrao_hh_oficina)>0?' / '+esc(nv(i.padrao_hh_oficina)):''}</small></td><td><button type="button" class="orc-mini" data-orc="idx-editar" data-id="${i.id}" data-livre="1" title="Editar índice (descrição, unidade, grupo, confiança, fonte)">✏️</button> ${alt?`<span class="orc-chip" style="background:#d97706">alterado</span> <button type="button" class="orc-mini" data-orc="idx-rest" data-id="${i.id}" data-livre="1" title="Voltar ao padrão">↺</button>`:''}</td></tr>`; }).join('')}</tbody></table></div></div>`).join('')||'<div class="orc-vazio">Sem índices (rode o arquivo 18).</div>'}</div>`; }
-window.ORC_ACOES['idx-rest']=function(el){ const i=est.indices.find(x=>x.id===el.getAttribute('data-id')); if(!i) return; i.hh_campo=i.padrao_hh_campo; i.hh_oficina=i.padrao_hh_oficina; const upd={hh_campo:i.hh_campo,hh_oficina:i.hh_oficina}; if('confianca' in i){ i.confianca='ESTIMATIVA'; i.fonte_data=null; i.amostras=null; Object.assign(upd,{confianca:'ESTIMATIVA',fonte_data:null,amostras:null}); } const c=cli(); if(c) c.from(TB.idx).update(upd).eq('id',i.id).then(r=>{ if(r.error) aviso('Não foi possível restaurar: '+r.error.message); }); try{ sessionStorage.setItem(LS_BASE,JSON.stringify({ts:Date.now(),indices:est.indices,catalogo:est.catalogo})); }catch(e){} if(est.orc) recalcular(); renderCorpo(); renderRodape(); };
+window.ORC_ACOES['idx-rest']=function(el){ const i=est.indices.find(x=>x.id===el.getAttribute('data-id')); if(!i) return; i.hh_campo=i.padrao_hh_campo; i.hh_oficina=i.padrao_hh_oficina; const upd={hh_campo:i.hh_campo,hh_oficina:i.hh_oficina}; if('confianca' in i){ i.confianca='ESTIMATIVA'; i.fonte_data=null; i.amostras=null; Object.assign(upd,{confianca:'ESTIMATIVA',fonte_data:null,amostras:null}); } const c=cli(); if(c) c.from(TB.idx).update(upd).eq('id',i.id).then(r=>{ if(r.error) aviso('Não foi possível restaurar: '+r.error.message); }); salvarCacheBase(); if(est.orc) recalcular(); renderCorpo(); renderRodape(); };
 
 // ── RESUMO ───────────────────────────────────────────────────────────────────
 function abaResumo(){
@@ -17299,7 +17327,7 @@ function descItem(it,r){
     if(it.modelo==='ISOLAMENTO'){ const serv={QUENTE:'quente',FRIO:'frio',PROTECAO:'proteção pessoal'}[P(it,'servico','QUENTE')]; return P(it,'alvo','TUBO')==='TUBO'?`Isolamento térmico (${serv}) de tubulação ${P(it,'nps',4)}": ${q(Number(P(it,'metros',0)))} m, espessura ${P(it,'espessura_mm',0)} mm, com revestimento metálico${it.descricao?' — '+it.descricao:''}`:`Isolamento térmico (${serv}) de equipamento/superfície: ${q(Number(P(it,'area_m2',0)))} m², espessura ${P(it,'espessura_mm',0)} mm${it.descricao?' — '+it.descricao:''}`; }
     if(it.modelo==='PINTURA') return `Pintura industrial de ${q(Number(P(it,'area_m2',0)))} m² (preparo de superfície e esquema de tintas especificado)${it.descricao?' — '+it.descricao:''}`;
     if(it.modelo==='RIG_MEC') return `Movimentação de cargas com ${it.descricao||'equipamento'} (${q(Number(it.qtd))} ${P(it,'unidade_equip','dia')==='h'?'h':'diária(s)'})`;
-    const ind=est.indices.find(i=>i.codigo===it.indice_codigo); return ind?`${ind.descricao}: ${q(Number(it.qtd))} ${ind.unidade}${it.descricao?' — '+it.descricao:''}`:null; }
+    const ind=est.indices.find(i=>i.codigo===it.indice_codigo); if(ind) return `${ind.descricao}: ${q(Number(it.qtd))} ${ind.unidade}${it.descricao?' — '+it.descricao:''}`; { const un0=it.unidade||P(it,'ativ_un',''); if(it.descricao&&E.num(it.hh_manual)>0&&E.num(it.qtd)>0) return `${it.descricao}: ${q(Number(it.qtd))}${un0?' '+un0:''}`; } return null; }
   if(it.tipo==='MATERIAL'){ const L=c.materiais[0]; const un=it.unidade||(L&&L.unidade)||'un'; return `Fornecimento de ${it.descricao||(L&&L.desc)||'material'}: ${q(c.qtd_calc)} ${un}`; }
   return null;
 }
@@ -17718,7 +17746,7 @@ async function aplicarLista(){ const L=est.livre; if(!editavel()){ aviso('Este o
     else { it.descricao=l.desc; it.unidade=l.un||'un'; }
     if(l.preco!=null&&!(l.res==='NOVO')) it.preco_unit=l.preco; itens.push(it); });
   if(!itens.length){ aviso('Nenhuma linha para importar.'); return; }
-  if(novos.length){ const c=cli(); if(c){ const r=await c.from(TB.cat).insert(novos); if(r.error){ aviso('Não foi possível criar os materiais no catálogo: '+r.error.message); return; } } est.catalogo.push(...novos); indexarCatalogo(); try{ sessionStorage.setItem(LS_BASE,JSON.stringify({ts:Date.now(),indices:est.indices,catalogo:est.catalogo})); }catch(e){} }
+  if(novos.length){ const c=cli(); if(c){ const r=await c.from(TB.cat).insert(novos); if(r.error){ aviso('Não foi possível criar os materiais no catálogo: '+r.error.message); return; } } est.catalogo.push(...novos); indexarCatalogo(); salvarCacheBase(); }
   itens.forEach(it=>{ it.ordem=est.itens.length; est.itens.push(it); }); fecharDlg(); est.livre=null; marcarSujo(); recalcular(); renderTopo(); renderCorpo(); renderRodape(); atualizarCalculados();
   toast('✓ '+itens.length+' material(is) importado(s): '+nCat+' do catálogo, '+(novos.length?novos.length+' criado(s) no catálogo, ':'')+nLivre+' linha(s) livre(s).'); }
 async function carregarListaLivre(file){ const L=est.livre||(est.livre={disc:discPadrao(),forn:'MASTER',criar:false}); if(typeof ExcelJS==='undefined'&&/\.xlsx?$/i.test(file.name||'')){ aviso('Biblioteca de Excel não carregada. Atualize a página.'); return; }
@@ -17839,7 +17867,7 @@ async function aplicarCotacao(){ const C0=est.cot; if(!C0) return; const soVal=!
   if(c){ let r=await c.rpc('orc_atualizar_precos',{p_itens:dados});
     if(r.error&&/PGRST202|42883|orc_atualizar_precos/.test((r.error.code||'')+(r.error.message||''))){ for(const d of dados){ const upd={preco_unitario:d.preco,preco_data:d.data}; if(d.fornecedor) upd.fornecedor=d.fornecedor; const u=await c.from(TB.cat).update(upd).eq('id',d.id); if(u.error){ aviso('Não foi possível salvar os preços: '+u.error.message); return; } } }
     else if(r.error){ aviso('Não foi possível salvar os preços: '+r.error.message); return; } }
-  ok.forEach(l=>{ l.m.preco_unitario=l.preco; l.m.preco_data=l.data; if(l.forn) l.m.fornecedor=l.forn; }); try{ sessionStorage.setItem(LS_BASE,JSON.stringify({ts:Date.now(),indices:est.indices,catalogo:est.catalogo})); }catch(e){}
+  ok.forEach(l=>{ l.m.preco_unitario=l.preco; l.m.preco_data=l.data; if(l.forn) l.m.fornecedor=l.forn; }); salvarCacheBase();
   fecharDlg(); est.cot=null; recalcular(); renderTopo(); renderCorpo(); renderRodape(); atualizarCalculados(); toast('✓ '+ok.length+' preço(s) atualizado(s) no catálogo.'); }
 // ── aba "📥 Planilhas" ─────────────────────────────────────────────────────────
 function abaPlanilhas(){ const ed=editavel(); const dis=ed?'':' disabled title="Orçamento travado: reabra ou crie uma revisão"';
@@ -17924,7 +17952,7 @@ function dlgCatalogoPrevia(p){ est.catPrev=p; const n=p.cont, ordem={ERRO:0,NOVO
    <div class="orc-nota">Orçamentos <b>enviados ou aprovados</b> têm preço congelado e não mudam. Rascunhos passam a usar os novos preços.</div>
    <div class="orc-prev-w"><table class="orc-tbl"><thead><tr><th>Linha</th><th>Situação</th><th>Material</th><th>Detalhe</th></tr></thead><tbody>${rows}</tbody></table></div>${ls.length>MAXV?`<div class="orc-nota">Mostrando ${MAXV} de ${ls.length} (erros primeiro); as demais também serão importadas.</div>`:''}</div>
    <div class="orc-dbtn"><button type="button" class="orc-btn sec" data-orc="dlg-fechar">Cancelar</button><button type="button" class="orc-btn ok" data-orc="cat-prev-conf"${(n.NOVO+n.ALTERADO)?'':' disabled'}>Importar ${n.NOVO+n.ALTERADO} item(ns)</button></div>`); }
-async function recarregarCatalogo(){ const c=cli(); if(!c) return; est.catalogo=await lerPaginado(()=>c.from(TB.cat).select('*').order('disciplina').order('categoria').order('descricao')); indexarCatalogo(); try{ sessionStorage.setItem(LS_BASE,JSON.stringify({ts:Date.now(),indices:est.indices,catalogo:est.catalogo})); }catch(e){} }
+async function recarregarCatalogo(){ const c=cli(); if(!c) return; est.catalogo=await carregarCatalogoCompleto(c); est.catMaxAt=maxEm(est.catalogo); indexarCatalogo(); salvarCacheBase(); }
 async function aplicarCatalogo(){ const p=est.catPrev; if(!p) return; const soVal=!!($('cat-so-validas')&&$('cat-so-validas').checked); if(p.cont.ERRO&&!soVal){ aviso('Há '+p.cont.ERRO+' linha(s) com erro. Corrija a planilha ou marque "importar só as linhas válidas".'); return; }
   const lote=p.linhas.filter(l=>!l.erros.length&&(l.acao==='NOVO'||l.acao==='ALTERADO')).map(l=>l.payload); if(!lote.length) return; const c=cli(); if(!c){ aviso('Sem conexão com o banco.'); return; }
   const r=await c.rpc('orc_salvar_catalogo',{p_itens:lote}); if(r.error){ const m=(r.error.code||'')+' '+(r.error.message||''); aviso(/PGRST202|42883|orc_salvar_catalogo/.test(m)&&!/23514/.test(m)?'Falta rodar o arquivo 21_orcamento_catalogo.sql no Supabase.':'Não foi possível importar o catálogo (nada foi alterado): '+(r.error.message||m)); return; }
@@ -17965,8 +17993,63 @@ const NUMTOK=/^[0-9][0-9.,\/]*$/;
 function ptsTok(alvo,k){ const num=NUMTOK.test(k); let m=0; for(const w of alvo){ if(w===k) return 2; if(!num&&w.startsWith(k)) m=1; } if(!m&&ALIAS[k]) for(const a of ALIAS[k]) if(alvo.includes(a)) m=1.5; return m; }
 function casaBusca(texto,q){ const qt=toks(q); if(!qt.length) return true; const alvo=toks(texto); return qt.every(k=>ptsTok(alvo,k)>0); }
 function buscaMat(q,disc,max){ const qt=toks(q); if(!qt.length) return []; const out=[];
-  est.catalogo.forEach(m=>{ if(m.ativo===false) return; const t=tokCat(m); let pts=0; for(const k of qt){ const p=ptsTok(t.e,k); if(!p){ pts=-1; break; } pts+=p; } if(pts<0) return; out.push({m,s:pts*10+(disc&&m.disciplina===disc?100:0)-t.d.length}); });
+  est.catalogo.forEach(m=>{ if(m.ativo===false) return; if(!passaEsp(m)) return; const t=tokCat(m); let pts=0; for(const k of qt){ const p=ptsTok(t.e,k); if(!p){ pts=-1; break; } pts+=p; } if(pts<0) return; out.push({m,s:pts*10+(disc&&m.disciplina===disc?100:0)-t.d.length}); });
   out.sort((a,b)=>b.s-a.s); return out.slice(0,max||40); }
+// ── CATÁLOGO DE ATIVIDADES (arquivo catalogo_atividades.json — carregado só quando o Orçamento abre) ─────────
+// Aparece como sugestão no campo "Descrição" das linhas de serviço: digite 2+ letras (ex.: "raqueteamento", "troca válvula").
+const ATIV={ok:false,carregando:false,erro:false,v:'',lista:[],disc:[],sub:[]};
+const ATIV_URL='catalogo_atividades.json?v=v5-2026-10';
+async function carregarAtividades(){ if(ATIV.ok||ATIV.carregando) return; ATIV.carregando=true; ATIV.erro=false;
+  try{ const r=await fetch(ATIV_URL); if(!r.ok) throw new Error('HTTP '+r.status); const j=await r.json(); if(!j||!Array.isArray(j.a)) throw new Error('formato inesperado');
+    ATIV.disc=j.d||[]; ATIV.sub=j.s||[]; ATIV.v=j.v||''; ATIV.lista=j.a.map(a=>({c:a[0],d:a[1],s:a[2],t:a[3],u:a[4]})); ATIV.ok=true;
+    let i=0; const passo=()=>{ const fim=Math.min(i+700,ATIV.lista.length); for(;i<fim;i++) tokA(ATIV.lista[i]); if(i<ATIV.lista.length) setTimeout(passo,12); }; setTimeout(passo,250);
+  }catch(e){ ATIV.erro=true; console.warn('orçamento: atividades indisponíveis',e); }
+  ATIV.carregando=false; }
+const TKA=new WeakMap();
+function tokA(a){ let t=TKA.get(a); if(!t){ t={e:toks(a.t+' '+a.c+' '+(ATIV.sub[a.s]||'')),n:nrm(a.t)}; TKA.set(a,t); } return t; }
+function buscaAtiv(q,disc,max){ const qt=toks(q); if(!qt.length||!ATIV.ok) return []; const nq=nrm(q), out=[];
+  for(const a of ATIV.lista){ const t=tokA(a); let pts=0; for(const k of qt){ const p=ptsTok(t.e,k); if(!p){ pts=-1; break; } pts+=p; }
+    if(pts<0) continue; const dOrc=(ATIV.disc[a.d]||[])[1]; out.push({a,s:pts*10+(disc&&dOrc===disc?60:0)+(t.n.startsWith(nq)?15:0)-a.t.length/40}); }
+  out.sort((x,y)=>y.s-x.s); return out.slice(0,max||12).map(x=>x.a); }
+const UN_ATIV={'m':'m','m²':'m²','m³':'m³','un':'un','kg':'kg','t':'t','junta':'junta','h':'h','diária':'dia','dia':'dia','jogo':'jogo','lote':'vb','sistema':'vb','mês':'vb','verba':'vb','vb':'vb','pç':'pç','peça':'pç'};
+const unIdx=u=>UN_ATIV[String(u||'').toLowerCase()]||'un';
+function aplicarAtividade(it,a){ it.descricao=a.t; it.params=(it.params&&typeof it.params==='object')?it.params:{}; it.params.ativ_cod=a.c; it.params.ativ_un=a.u;
+  if(it.tipo==='SERVICO'&&it.modelo==='GENERICO'&&!it.indice_codigo) it.unidade=unIdx(a.u);
+  marcarSujo(); recalcular(); renderCorpo(); atualizarCalculados(); toast('Atividade '+a.c+' aplicada. Informe a quantidade e o HH — ou salve como índice (💾) para reaproveitar.'); }
+const notaAtiv=it=>{ const c=P(it,'ativ_cod',''); return c?`<div class="orc-nota">📋 Atividade do catálogo <b>${esc(c)}</b>${P(it,'ativ_un','')?' · unidade sugerida: <b>'+esc(P(it,'ativ_un',''))+'</b>':''}</div>`:''; };
+
+// ── ESPECIFICAÇÃO DO ORÇAMENTO (materiais, diâmetro máximo, classes e quem fornece) ─────────────────────────
+const MATNOME={CS:'Aço carbono',LTCS:'Aço carbono baixa temp. (A333)',P22:'Aço liga P22',P91:'Aço liga P91',INOX304:'Inox 304L',INOX316:'Inox 316L',INOX321:'Inox 321',INOX904L:'Inox 904L',DUP2205:'Duplex 2205',SDUP2507:'Super duplex 2507',ALLOY20:'Liga 20',MONEL400:'Monel 400',INC625:'Inconel 625',HAST276:'Hastelloy C-276',TI2:'Titânio Gr.2',CUNI9010:'CuNi 90/10',GALV:'Galvanizado',PVC:'PVC-U',CPVC:'CPVC',PRFV:'PRFV',PP:'PP / PEAD'};
+const EQ_MAT={CS:['CS','WCB'],LTCS:['LTCS','LCC'],INOX304:['INOX304','CF8'],INOX316:['INOX316','CF8M'],DUP2205:['DUP2205','CD3MN'],PP:['PP','PEAD']};
+const CAT_FORN={TUBO:'TUBO',CONEXAO:'CONEXAO',FLANGE:'FLANGE',JUNTA:'JUNTA',PARAFUSO:'PARAFUSO',PORCA:'PARAFUSO',ARRUELA:'PARAFUSO',BARRA_ROSCADA:'PARAFUSO',ANCORAGEM:'PARAFUSO',VALVULA:'VALVULA',PERFIL:'PERFIL',CHAPA:'PERFIL',SUPORTE:'SUPORTE'};
+const CAT_FORN_NOME=[['TUBO','Tubos'],['CONEXAO','Conexões'],['FLANGE','Flanges'],['JUNTA','Juntas'],['PARAFUSO','Parafusos, estojos e chumbadores'],['VALVULA','Válvulas'],['PERFIL','Perfis, chapas e barras'],['SUPORTE','Suportes']];
+const FORN_OPC=[['MASTER','Master'],['CLIENTE','Cliente'],['FAT_DIRETO','Faturamento direto']];
+function espCfg(){ const e=est.orc&&est.orc.config&&est.orc.config.especificacao; return (e&&e.ativa)?e:null; }
+const INFER_MAT=[[/super\s*duplex|2507/i,'SDUP2507'],[/duplex|CD3MN/i,'DUP2205'],[/CF8M|inox 316|316L/i,'INOX316'],[/CF8(?!M)\b|inox 304|304L/i,'INOX304'],[/baixa temperatura|LCC|A333/i,'LTCS'],[/WCB|aço carbono/i,'CS']];
+const CAT_COM_MAT=new Set(['TUBO','CONEXAO','FLANGE','VALVULA']);
+function matDe(m){ const a=m.atributos||{}; if(a.material) return a.material; if(!CAT_COM_MAT.has(m.categoria)) return ''; const d=String(m.descricao||''); for(const [re,c] of INFER_MAT) if(re.test(d)) return c; return ''; }
+function passaEsp(m){ const e=espCfg(); if(!e) return true; const a=m.atributos||{}; const mat=matDe(m);
+  if(Array.isArray(e.materiais)&&e.materiais.length&&mat){ if(!e.materiais.some(c=>(EQ_MAT[c]||[c]).includes(mat))) return false; }
+  const mx=Number(e.nps_max)||0; if(mx>0){ if(Number(a.nps)>mx) return false; if(Number(a.nps2)>mx) return false; }
+  if(Array.isArray(e.classes)&&e.classes.length){ const d=String(m.descricao||''), tk=[]; (d.match(/\b(150|300)#/g)||[]).forEach(s=>tk.push(s)); const pn=d.match(/\bPN\s?(\d+)(?:\/(\d+))?/); if(pn){ tk.push('PN'+pn[1]); if(pn[2]) tk.push('PN'+pn[2]); } if(tk.length&&!tk.some(x=>e.classes.includes(x))) return false; }
+  return true; }
+function aplicarFornEsp(it,m){ const e=espCfg(); if(!e||it.tipo!=='MATERIAL') return; const k=CAT_FORN[m.categoria]; const f=(k&&e.cat_forn&&e.cat_forn[k])||e.fornecimento||''; if(['MASTER','CLIENTE','FAT_DIRETO'].includes(f)) it.fornecimento=f; }
+function secEspecificacao(c){ const e=c.especificacao||{}; const sel=new Set(e.materiais||[]), cls=new Set(e.classes||[]); const pres=new Set(); est.catalogo.forEach(m=>{ const a=m.atributos; if(a&&a.material) pres.add(a.material); });
+  const mats=Object.keys(MATNOME).filter(k=>pres.has(k)||(EQ_MAT[k]||[]).some(x=>pres.has(x))||sel.has(k));
+  const chip=(acao,v,txt,on)=>`<button type="button" class="orc-esp-chip${on?' on':''}" data-orc="${acao}" data-v="${esc(v)}">${esc(txt)}</button>`;
+  const npsOpc=[['','Sem limite']].concat([2,4,6,8,10,12,14,16,18,20,24].map(n=>[String(n),'até '+n+'"']));
+  const cf=e.cat_forn||{};
+  return `<div class="orc-sec"><div class="orc-sec-h"><b>Especificação deste orçamento</b></div>
+  <div class="orc-nota">Marque os materiais, o diâmetro máximo e as classes do projeto. Com o filtro ligado, a busca de materiais mostra só o que combina com a especificação e já sugere <b>quem fornece</b> (Master, cliente ou faturamento direto). Itens sem material, diâmetro ou classe no cadastro (perfis, suportes…) aparecem sempre.</div>
+  <label class="orc-ck"><input type="checkbox" data-fo="cfg.especificacao.ativa"${e.ativa?' checked':''}> Filtrar a busca de materiais por esta especificação</label>
+  <div class="orc-f"><span>Materiais da tubulação e acessórios</span><div class="orc-chips">${mats.map(k=>chip('esp-mat',k,MATNOME[k],sel.has(k))).join('')}</div></div>
+  <div class="orc-f"><span>Classes de pressão (flanges, juntas, estojos, válvulas)</span><div class="orc-chips">${['150#','300#','PN10','PN16'].map(k=>chip('esp-classe',k,k,cls.has(k))).join('')}</div></div>
+  <div class="orc-grid">${fo('Diâmetro máximo (NPS)',seO('cfg.especificacao.nps_max',npsOpc,e.nps_max==null?'':String(e.nps_max)))}
+  ${fo('Quem fornece os materiais (padrão do orçamento)',seO('cfg.especificacao.fornecimento',[['','Master (padrão do sistema)']].concat(FORN_OPC),e.fornecimento||''))}</div>
+  <details class="orc-det"><summary>Quem fornece, por tipo de material (opcional)</summary><div class="orc-grid">${CAT_FORN_NOME.map(([k,n])=>fo(n,seO('cfg.especificacao.cat_forn.'+k,[['','Igual ao padrão']].concat(FORN_OPC),cf[k]||''))).join('')}</div></details></div>`; }
+function toggleEsp(k,v){ if(!editavel()) return; const e=est.orc.config.especificacao=(est.orc.config.especificacao&&typeof est.orc.config.especificacao==='object')?est.orc.config.especificacao:{}; const a=Array.isArray(e[k])?e[k].slice():[]; const i=a.indexOf(v); if(i>=0) a.splice(i,1); else a.push(v); e[k]=a; if(a.length&&!e.ativa) e.ativa=true; marcarSujo(); renderCorpo(); }
+Object.assign(window.ORC_ACOES,{'esp-mat':el=>toggleEsp('materiais',el.getAttribute('data-v')),'esp-classe':el=>toggleEsp('classes',el.getAttribute('data-v'))});
+Object.assign(window.ORC_UI,{ATIV,carregarAtividades,buscaAtiv,passaEsp,espCfg});
 const INICIOS={PIPING:['Linha 2"-P-101','Linha de vapor','Linha de condensado','Linha de ar comprimido','Linha de água de resfriamento','Linha de processo','Rack de tubulação — área 1','Spool pré-fabricado','Tie-in'],ISOLAMENTO:['Linha de vapor — área 1','Linha fria — área 1','Tanque T-101','Equipamento — área 1','Proteção pessoal — linha quente'],PINTURA:['Estrutura metálica — área 1','Tubulação — área 1','Tanque T-101','Suportes e racks','Retoque geral'],ANDAIME:['Andaime — pipe-rack','Andaime — tanque T-101','Andaime — área 1','Andaime — parada geral'],RIG_MEC:['Munck 20 t','Guindaste 50 t','Plataforma elevatória','Empilhadeira'],GENERICO:['Área 1','Área 2','Pipe-rack','Casa de bombas','Sala elétrica','Tanque T-101']};
 async function carregarSugestoes(){ est.sugDesc=[]; const c=cli(); if(!c) return; try{ const r=await c.from(TB.itm).select('descricao,tipo,atualizado_em').order('atualizado_em',{ascending:false}).limit(1500); if(r.error) return; const vistos=new Set(), out=[]; (r.data||[]).forEach(x=>{ if(x.tipo==='MATERIAL') return; const d=String(x.descricao||'').trim(); if(d.length<3) return; const k=nrm(d); if(vistos.has(k)) return; vistos.add(k); out.push(d); }); est.sugDesc=out.slice(0,500); }catch(e){} }
 function sugDescricao(input,q){ const fo=input.getAttribute('data-fo')||''; const id=(fo.match(/^it\.([^.]+)\./)||[])[1]; const it=est.itens.find(x=>x.id===id); const geral=it&&['INDIRETO','EQUIPAMENTO','TERCEIRO'].includes(it.tipo);
@@ -17981,14 +18064,17 @@ function acPosicionar(){ const d=$('orc-ac'), i=AC.input; if(!d||!i) return; con
   if(abaixo<Math.min(h,200)&&r.top>abaixo){ d.style.top='auto'; d.style.bottom=(window.innerHeight-r.top+2)+'px'; d.style.maxHeight=Math.max(120,Math.min(h,r.top-8))+'px'; } else { d.style.bottom='auto'; d.style.top=(r.bottom+2)+'px'; d.style.maxHeight=Math.max(120,Math.min(h,abaixo-8))+'px'; } }
 function acMarcar(){ const d=$('orc-ac'); if(!d) return; d.querySelectorAll('.orc-ac-i').forEach((e,i)=>{ e.classList.toggle('sel',i===AC.idx); if(i===AC.idx&&e.scrollIntoView) e.scrollIntoView({block:'nearest'}); }); }
 function acMostrar(input){ const d=acDiv(); if(!d) return; const tipo=input.getAttribute('data-ac'), q=input.value; let itens=[], aviso='';
-  if(tipo==='mat'){ const disc=input.getAttribute('data-disc')||''; if(q.trim().length<2) aviso='Digite 2 letras ou mais — as palavras podem vir em qualquer ordem (ex.: "flange 150 4").'; else { let r=buscaMat(q,disc,40); if(!r.length){ r=rankCat(q,null,null,8).filter(x=>x.s>=0.5).map(x=>({m:x.m})); aviso=r.length?'Nenhum resultado exato — parecidos:':'Nenhum material encontrado para “'+q+'”. Cadastre como novo (botão abaixo da linha) ou na aba 📚 Catálogo.'; } else if(r.length>=40) aviso='Mostrando os 40 primeiros — acrescente mais palavras para refinar.'; itens=r.map(x=>({tipo:'mat',m:x.m,disc})); } }
-  else { itens=sugDescricao(input,q).map(t=>({tipo:'desc',t})); if(!itens.length&&q.trim().length>=2) aviso='Sem sugestões — pode digitar livremente.'; }
+  if(tipo==='mat'){ const disc=input.getAttribute('data-disc')||''; if(q.trim().length<2) aviso='Digite 2 letras ou mais — as palavras podem vir em qualquer ordem (ex.: "flange 150 4").'; else { let r=buscaMat(q,disc,40); if(!r.length){ r=rankCat(q,null,null,8).filter(x=>x.s>=0.5).map(x=>({m:x.m})); aviso=r.length?'Nenhum resultado exato — parecidos:':'Nenhum material encontrado para “'+q+'”. Cadastre como novo (botão abaixo da linha) ou na aba 📚 Catálogo.'; } else if(r.length>=40) aviso='Mostrando os 40 primeiros — acrescente mais palavras para refinar.'; itens=r.map(x=>({tipo:'mat',m:x.m,disc})); } if(espCfg()&&q.trim().length>=2) aviso=(aviso?aviso+' · ':'')+'🎯 filtro da especificação ativo (Premissas)'; }
+  else { const foI=input.getAttribute('data-fo')||''; const idI=(foI.match(/^it\.([^.]+)\.descricao$/)||[])[1]; const itL=idI?est.itens.find(x=>x.id===idI):null; const servico=!!(itL&&itL.tipo==='SERVICO'&&itL.modelo!=='RIG_MEC'); let ativs=[];
+    if(servico){ if(!ATIV.ok&&!ATIV.carregando&&!ATIV.erro) carregarAtividades(); if(q.trim().length>=2){ ativs=buscaAtiv(q,itL.disciplina,12); if(ATIV.erro) aviso='Catálogo de atividades indisponível (arquivo catalogo_atividades.json) — pode digitar livremente.'; } else aviso='Digite 2 letras ou mais para buscar atividades do catálogo (ex.: "raqueteamento", "troca de válvula").'; }
+    const sug=sugDescricao(input,q).map(t=>({tipo:'desc',t})); itens=ativs.map(a=>({tipo:'ativ',a})).concat(ativs.length?sug.slice(0,5):sug); if(!itens.length&&q.trim().length>=2&&!aviso) aviso='Sem sugestões — pode digitar livremente.'; }
   AC.input=input; AC.itens=itens; AC.idx=itens.length?0:-1; AC.aberto=true; if(!itens.length&&!aviso){ acFechar(); return; }
-  d.innerHTML=(aviso?`<div class="orc-ac-t">${esc(aviso)}</div>`:'')+itens.map((x,i)=>x.tipo==='mat'?`<div class="orc-ac-i${i===0?' sel':''}" data-i="${i}" role="option"><b>${esc(x.m.descricao)}</b>${x.disc&&x.m.disciplina!==x.disc?`<em>${esc(nomeDisc(x.m.disciplina))}</em>`:''}<small>${esc(x.m.especificacao||'')}${x.m.especificacao?' · ':''}${esc(x.m.unidade)}${precoCat(x.m).p!=null?' · '+fm(precoCat(x.m).p):' · sem preço'}</small></div>`:`<div class="orc-ac-i${i===0?' sel':''}" data-i="${i}" role="option"><b>${esc(x.t)}</b></div>`).join('');
+  d.innerHTML=(aviso?`<div class="orc-ac-t">${esc(aviso)}</div>`:'')+itens.map((x,i)=>x.tipo==='mat'?`<div class="orc-ac-i${i===0?' sel':''}" data-i="${i}" role="option"><b>${esc(x.m.descricao)}</b>${x.disc&&x.m.disciplina!==x.disc?`<em>${esc(nomeDisc(x.m.disciplina))}</em>`:''}<small>${esc(x.m.especificacao||'')}${x.m.especificacao?' · ':''}${esc(x.m.unidade)}${precoCat(x.m).p!=null?' · '+fm(precoCat(x.m).p):' · sem preço'}</small></div>`:x.tipo==='ativ'?`<div class="orc-ac-i${i===0?' sel':''}" data-i="${i}" role="option"><b>${esc(x.a.t)}</b><small>📋 ${esc(x.a.c)} · ${esc((ATIV.disc[x.a.d]||[])[0]||'')} › ${esc(ATIV.sub[x.a.s]||'')} · ${esc(x.a.u||'')}</small></div>`:`<div class="orc-ac-i${i===0?' sel':''}" data-i="${i}" role="option"><b>${esc(x.t)}</b></div>`).join('');
   d.style.display='block'; acPosicionar(); }
 function acEscolher(i){ const x=AC.itens[i], input=AC.input; if(!x||!input) return; acFechar();
-  if(x.tipo==='mat'){ const fo=input.getAttribute('data-fo')||''; if(/\.mat_q$/.test(fo)){ const it=est.itens.find(z=>z.id===fo.split('.')[1]); if(it&&editavel()){ if(x.m.disciplina!==it.disciplina){ it.disciplina=x.m.disciplina; toast('Linha movida para '+nomeDisc(x.m.disciplina)+' (disciplina do material).'); } it.material_id=x.m.id; it.descricao=x.m.descricao; it.unidade=x.m.unidade; marcarSujo(); recalcular(); renderCorpo(); atualizarCalculados(); } }
+  if(x.tipo==='mat'){ const fo=input.getAttribute('data-fo')||''; if(/\.mat_q$/.test(fo)){ const it=est.itens.find(z=>z.id===fo.split('.')[1]); if(it&&editavel()){ if(x.m.disciplina!==it.disciplina){ it.disciplina=x.m.disciplina; toast('Linha movida para '+nomeDisc(x.m.disciplina)+' (disciplina do material).'); } const primeira=!it.material_id; it.material_id=x.m.id; it.descricao=x.m.descricao; it.unidade=x.m.unidade; if(primeira) aplicarFornEsp(it,x.m); marcarSujo(); recalcular(); renderCorpo(); atualizarCalculados(); } }
     else { input.value=x.m.descricao; input.dispatchEvent(new Event('change',{bubbles:true})); } }
+  else if(x.tipo==='ativ'){ const mA=(input.getAttribute('data-fo')||'').match(/^it\.([^.]+)\.descricao$/); const itA=mA&&est.itens.find(z=>z.id===mA[1]); if(itA&&editavel()) aplicarAtividade(itA,x.a); else { input.value=x.a.t; input.dispatchEvent(new Event('change',{bubbles:true})); } }
   else { input.value=x.t; input.dispatchEvent(new Event('input',{bubbles:true})); input.dispatchEvent(new Event('change',{bubbles:true})); } }
 const dentro=t=>t&&t.getAttribute&&t.closest&&t.closest('#orc-modal');
 document.addEventListener('input',e=>{ const t=e.target; if(dentro(t)&&t.getAttribute('data-ac')) acMostrar(t); });
@@ -18020,7 +18106,7 @@ function blocoConfianca(){ const o=confiancaHH(); if(!(o.tot>0)) return ''; cons
 const PREF_DISC={MECANICA:'MEC',ELETRICA:'ELE',ANDAIME:'AND',INSTRUMENTACAO:'INS',PINTURA:'PIN',CIVIL:'CIV',SSMA:'SSM',ISOLAMENTO:'ISO'};
 function gerarCodigoIdx(disc,desc,usados){ const slug=sa(desc).toUpperCase().replace(/[^A-Z0-9]+/g,'_').replace(/^_+|_+$/g,'').slice(0,28)||'SERVICO'; const base='USR_'+(PREF_DISC[disc]||'GER')+'_'+slug; let c=base, n=2; const em=new Set(est.indices.map(i=>i.codigo).concat([...(usados||[])])); while(em.has(c)) c=base+'_'+(n++); return c; }
 const gruposDe=disc=>[...new Set(est.indices.filter(i=>i.disciplina===disc).map(i=>i.grupo).concat(['OUTROS']))];
-async function recarregarIndices(){ const c=cli(); if(!c) return; est.indices=await lerPaginado(()=>c.from(TB.idx).select('*').order('disciplina').order('grupo').order('descricao')); try{ sessionStorage.setItem(LS_BASE,JSON.stringify({ts:Date.now(),indices:est.indices,catalogo:est.catalogo})); }catch(e){} }
+async function recarregarIndices(){ const c=cli(); if(!c) return; est.indices=await lerPaginado(()=>c.from(TB.idx).select('*').order('disciplina').order('grupo').order('descricao')); salvarCacheBase(); }
 async function salvarIndicesDb(lote){ const c=cli(); if(!c) return {erro:'Sem conexão com o banco.'};
   const r=await c.rpc('orc_salvar_indices',{p_itens:lote});
   if(r.error){ const m=(r.error.code||'')+' '+(r.error.message||''); if(/PGRST202|42883|orc_salvar_indices/.test(m)&&!/23\d\d\d/.test(r.error.code||'')){ est.sem22=true;
