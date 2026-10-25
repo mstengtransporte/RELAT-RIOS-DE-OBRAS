@@ -1731,7 +1731,7 @@ body.dark #workers-body tr:hover{background-color:rgba(58,110,232,.08)}
      fontes) — os dois sistemas usam a mesma "moldura" de login, só
      o papel de parede muda entre eles. -->
 <div id="login-overlay" style="position:fixed;inset:0;z-index:99999;background:#0b1220 url('login-fundo-rdo.jpg') center center / cover no-repeat;color-scheme:dark">
-  <div style="position:absolute;bottom:6px;right:8px;font-size:9px;color:rgba(255,255,255,.35);font-family:monospace;pointer-events:none">v2026.10.34-orc-proposta</div>
+  <div style="position:absolute;bottom:6px;right:8px;font-size:9px;color:rgba(255,255,255,.35);font-family:monospace;pointer-events:none">v2026.10.35-orc-desempenho</div>
   <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:calc(100% - 32px);max-width:380px;background:rgb(10,17,32);border:1px solid rgba(255,255,255,.14);border-radius:18px;padding:32px 28px;box-shadow:0 20px 60px rgba(0,0,0,.6);text-transform:none;font-weight:400">
     <h1 style="font-size:20px;margin:0 0 4px;color:#fff;text-align:center;font-weight:700">RDO <span style="color:#3ea6ff">Master Energy</span></h1>
     <p style="margin:0 0 24px;text-align:center;color:#9ca3af;font-size:13px;letter-spacing:.5px;font-weight:600">DIÁRIO DE OBRA PRO</p>
@@ -14391,7 +14391,7 @@ window.addEventListener('beforeinstallprompt',(e)=>{
   };
 });
 </script>
-<div class="no-print" style="position:fixed;bottom:2px;right:4px;font-size:8px;color:rgba(120,120,120,.4);font-family:monospace;pointer-events:none;z-index:5">v2026.10.34-orc-proposta</div>
+<div class="no-print" style="position:fixed;bottom:2px;right:4px;font-size:8px;color:rgba(120,120,120,.4);font-family:monospace;pointer-events:none;z-index:5">v2026.10.35-orc-desempenho</div>
 
 <!-- MODAL DE ALERTA DE PENDÊNCIAS — substitui o toast/alert escuro de antes. Aparece
      sempre que a validação unificada (validarFormularioRDO) bloqueia uma tentativa de
@@ -16658,7 +16658,7 @@ async function idbGravar(k,v){ const db=await idbAbrir(); try{ await new Promise
 const maxEm=lista=>lista.reduce((m,x)=>(x&&x.atualizado_em&&(!m||x.atualizado_em>m))?x.atualizado_em:m,null);
 let _tCache=null;
 function salvarCacheBase(){ clearTimeout(_tCache); _tCache=setTimeout(async()=>{ const snap={ts:Date.now(),indices:est.indices,catalogo:est.catalogo,maxAt:est.catMaxAt||null}; try{ await idbGravar(IDB_CHAVE,snap); return; }catch(e){} try{ const s=JSON.stringify(snap); if(s.length<3800000) sessionStorage.setItem(LS_BASE,s); }catch(e){} },500); }
-const ordCat=(a,b)=>String(a.disciplina).localeCompare(String(b.disciplina))||String(a.categoria).localeCompare(String(b.categoria))||String(a.descricao).localeCompare(String(b.descricao),'pt');
+const COL_PT=new Intl.Collator('pt'); const ordCat=(a,b)=>COL_PT.compare(String(a.disciplina),String(b.disciplina))||COL_PT.compare(String(a.categoria),String(b.categoria))||COL_PT.compare(String(a.descricao),String(b.descricao));
 function carregarCatalogoCompleto(c){ return lerPaginado(()=>c.from(TB.cat).select(CAT_SELECT).order('disciplina').order('categoria').order('descricao')); }
 async function atualizarCatalogo(c,cache){
   let lista=null;
@@ -16667,7 +16667,7 @@ async function atualizarCatalogo(c,cache){
       if(!cont.error&&cont.count!=null){
         const mud=await lerPaginado(()=>c.from(TB.cat).select(CAT_SELECT).gte('atualizado_em',cache.maxAt).order('atualizado_em').order('id'));
         const mp=new Map(cache.catalogo.map(m=>[m.id,m])); mud.forEach(m=>mp.set(m.id,m));
-        if(mp.size===cont.count){ lista=[...mp.values()].sort(ordCat); est.catIncremental=mud.length; } } }catch(e){ lista=null; }
+        if(mp.size===cont.count){ lista=mud.length?[...mp.values()].sort(ordCat):cache.catalogo; est.catIncremental=mud.length; } } }catch(e){ lista=null; }
   }
   if(!lista){ lista=await carregarCatalogoCompleto(c); est.catIncremental=null; }
   est.catMaxAt=maxEm(lista); return lista;
@@ -16679,8 +16679,9 @@ async function carregarBase(){
   else { cache=null; try{ const raw=sessionStorage.getItem(LS_BASE); if(raw){ const b=JSON.parse(raw); est.indices=b.indices||[]; est.catalogo=b.catalogo||[]; est.catMaxAt=b.maxAt||maxEm(est.catalogo); if(est.catalogo.length) cache={catalogo:est.catalogo,maxAt:est.catMaxAt}; indexarCatalogo(); est.baseOk=est.indices.length>0; } }catch(e){} }
   const c=cli(); if(!c||(typeof navigator!=='undefined'&&navigator.onLine===false)) return;
   try{
+    const assin0=cache?assinBase():null;
     const [ind,cat]=await Promise.all([lerPaginado(()=>c.from(TB.idx).select('*').order('disciplina').order('grupo').order('codigo')),atualizarCatalogo(c,cache)]);
-    est.indices=ind; est.catalogo=cat; est.baseOk=true; est.semTabelas=false; indexarCatalogo(); await carregarKits(); await carregarSugestoes(); salvarCacheBase(); setTimeout(()=>{ try{ iniciarVirtuais(); }catch(e){} },700);
+    est.indices=ind; est.catalogo=cat; est.baseOk=true; est.semTabelas=false; indexarCatalogo(); await Promise.all([carregarKits(),carregarSugestoes()]); if(assinBase()!==assin0) salvarCacheBase(); 
   }catch(e){ if(erroTabela(e)) est.semTabelas=true; else console.warn('orçamento: base indisponível',e); }
 }
 async function listar(){
@@ -16691,7 +16692,7 @@ async function listar(){
 }
 function normItem(it){ it.params=(it.params&&typeof it.params==='object')?it.params:{}; ['qtd','hh_manual','perda_pct','preco_unit'].forEach(k=>{ if(it[k]!=null&&it[k]!=='') it[k]=Number(it[k]); else if(k==='qtd') it[k]=0; else it[k]=null; }); it.descricao=it.descricao||''; it.local=it.local||''; it.obs=it.obs||''; it.unidade=it.unidade||''; it.fornecimento=it.fornecimento||'MASTER'; return it; }
 function normOrc(o){ o.config=E.mergeCfg(E.configPadrao(),o.config||{}); if(o.bdi&&Object.keys(o.bdi).length&&!(o.config.bdi&&o.config.bdi.impostos_pct!=null)) o.config.bdi=Object.assign({},o.config.bdi,o.bdi); ['fator_acesso','sell_rate','validade_dias','prazo_dias'].forEach(k=>{ if(o[k]!=null&&o[k]!=='') o[k]=Number(o[k]); else o[k]=null; }); if(!o.fator_acesso) o.fator_acesso=1; o.historico=Array.isArray(o.historico)?o.historico:[]; aplicarEmpresaPadrao(o); return o; }
-async function abrir(id){
+async function abrirBase(id){
   const c=cli(); if(!c) return; est.ocupado=true; render();
   try{
     const r=await c.from(TB.cab).select('*').eq('id',id).single(); if(r.error) throw r.error;
@@ -17005,7 +17006,7 @@ async function voltar(){ if(est.sujo&&editavel()) await salvar(false); est.abaHi
 async function orcAbrir(){
   if(typeof usuarioAtual!=='undefined'&&(!usuarioAtual||usuarioAtual.papel!=='admin_mestre')){ aviso('O módulo Orçamento é só para o administrador.'); return; }
   garantirModal(); est.tela='lista'; est.orc=null; est.abaHist=[]; render(); navArmar();
-  carregarAtividades(); await carregarBase(); await listar(); if(est.tela==='lista') render();
+  carregarAtividades(); const pLista=listar().then(()=>{ if(est.tela==='lista') render(); }); await carregarBase(); await pLista; if(est.tela==='lista') render();
 }
 window.orcAbrir=orcAbrir;
 Object.assign(window.ORC_UI,{est,E,esc,nf,fm,uid,cli,toast,aviso,nomeDisc,hoje,render,renderCorpo,renderTopo,renderRodape,recalcular,marcarSujo,salvar,abrir,listar,carregarBase,dlg,fecharDlg,lerPaginado,indexarCatalogo,editavel,normOrc,normItem,guardarRascunho,STATUS,EDITAVEL,TB,MATERIAIS,UNIOES,SCHS,OPT,fo,inO,seO,nv,nz,setPath,getPath,atualizarCalculados,chip,voltar,orcAbrir,telaLista,garantirModal,limparRascunho,itemPayload,cabPayload});
@@ -18101,7 +18102,7 @@ const BQ=(function(){
   function addDoc(I,d){ const id=I.docs.length; I.docs.push(d); const vistos=new Set(); for(const w of d.t.concat(d.st)){ if(vistos.has(w)) continue; vistos.add(w); let p=I.post.get(w); if(!p){ p=[]; I.post.set(w,p); } p.push(id); } d.t.forEach(w=>{ if(!/\d/.test(w)) I.vocab.set(w,(I.vocab.get(w)||0)+1); }); I.n=I.docs.length; }
   function adicionar(I,o,texto){ addDoc(I,doc(o,texto)); }
   function indice(lista,textoDe){ const I=novoIdx(); lista.forEach(o=>addDoc(I,doc(o,textoDe(o)))); I.pronto=true; return I; }
-  function indiceLotes(lista,textoDe,passo,aoFim){ const I=novoIdx(); let k=0; const lote=()=>{ const fim=Math.min(k+passo,lista.length); for(;k<fim;k++) addDoc(I,doc(lista[k],textoDe(lista[k]))); if(k<lista.length) setTimeout(lote,6); else { I.pronto=true; if(aoFim) aoFim(I); } }; lote(); return I; }
+  function indiceLotes(lista,textoDe,passo,aoFim){ const I=novoIdx(); let k=0, tm=null; const lote=()=>{ const fim=Math.min(k+passo,lista.length); for(;k<fim;k++) addDoc(I,doc(lista[k],textoDe(lista[k]))); if(k<lista.length) tm=setTimeout(lote,6); else { I.pronto=true; if(aoFim) aoFim(I); } }; I.terminar=()=>{ if(I.pronto) return; clearTimeout(tm); for(;k<lista.length;k++) addDoc(I,doc(lista[k],textoDe(lista[k]))); I.pronto=true; if(aoFim) aoFim(I); }; lote(); return I; }
   // ── consulta: cada palavra → palavras do índice que a satisfazem, com peso ───────────────────────────────────────
   function consulta(q,I){ const raw=tokens(q); const termos=[]; const vocab=I&&I.vocab, post=I&&I.post;
     raw.forEach(w=>{ const alts=new Map(); const add=(x,p)=>{ if(!x) return; if((alts.get(x)||0)<p) alts.set(x,p); };
@@ -18238,14 +18239,16 @@ const PECAS=(function(){
     [150,300].forEach(cl=>[0.5,0.75,1,1.25,1.5,2,2.5,3,4,6,8,10,12].forEach(n=>{ put('FILTRO',cl,'CF8',n); if(n===1.25||n===2.5){ put('FILTRO',cl,'WCB',n); put('FILTRO',cl,'CF8M',n); } }));
     ['FD','WCB','CF8M'].forEach(mat=>put('BORBOLETA',150,mat,2.5)); [2,2.5,3,4,6,8,10,12].forEach(n=>put('BORBOLETA',150,'CF8',n)); [3,4,6,8,10,12].forEach(n=>put('BORBDUPLO',300,'CF8',n)); }
   function gerar(E){ out.length=0; gFOR(); gMAL(); gINOXF(); gBRONZE(); gFLG(); gFLGRTJ(); gFLGPN(); gFFL(); gNIPLE(); gBWF(E); gJUNTAPLANA(); gESTOJOEXTRA(); gPORCAINOX(); gVLVFOR(); gVLVFLEXTRA(); return out.slice(); }
-  return {gerar,MAT,DN,NT,nt};
+  function passos(E){ out.length=0; return [gFOR,gMAL,gINOXF,gBRONZE,gFLG,gFLGRTJ,gFLGPN,gFFL,gNIPLE,()=>gBWF(E),gJUNTAPLANA,gESTOJOEXTRA,gPORCAINOX,gVLVFOR,gVLVFLEXTRA]; }
+  function coletar(){ return out.slice(); }
+  return {gerar,passos,coletar,MAT,DN,NT,nt};
 })();
 // ══ CATÁLOGO DE ATIVIDADES — ficha completa (escopo, inclui, não inclui, medição, normas, dados a levantar) ══════════
 // Arquivo catalogo_atividades.json (carregado só quando o Orçamento abre). Cada atividade escolhida grava uma FOTO da ficha
 // na própria linha (params.ativ_sn): se o catálogo mudar depois, orçamentos já feitos continuam com o texto de quando foram feitos.
 const ATIV={ok:false,carregando:false,erro:false,v:'',lista:[],disc:[],sub:[],t:{},porCod:new Map()};
 const ATIV_URL='catalogo_atividades.json?v=v5b-2026-10';
-const ORC_VERSAO='v2026.10.34-orc-proposta';
+const ORC_VERSAO='v2026.10.35-orc-desempenho';
 async function carregarAtividades(forcar){ if(ATIV.carregando) return; if(ATIV.ok&&!forcar) return; ATIV.carregando=true; ATIV.erro=false; ATIV.msgErro='';
   let url=ATIV_URL; try{ url=new URL(ATIV_URL,window.location.href).href; }catch(e){} if(forcar) url+='&t='+Date.now(); ATIV.url=url;
   try{ const r=await fetch(url); if(!r.ok) throw new Error('o arquivo não foi encontrado (HTTP '+r.status+')'); let j; try{ j=await r.json(); }catch(e){ throw new Error('o endereço devolveu uma página em vez do arquivo (provavelmente fora da raiz do site)'); }
@@ -18253,12 +18256,13 @@ async function carregarAtividades(forcar){ if(ATIV.carregando) return; if(ATIV.o
     ATIV.disc=j.d||[]; ATIV.sub=j.s||[]; ATIV.v=j.v||''; ATIV.t=j.t||{};
     ATIV.lista=j.a.map(a=>({c:a[0],d:a[1],s:a[2],g:a[3],t:a[4],u:a[5],f:a[6],cr:a[7],inc:a[8],exc:a[9],pr:a[10],nm:a[11]}));
     ATIV.porCod=new Map(ATIV.lista.map(a=>[a.c,a])); ATIV.ok=true;
-    indexarAtividades();
     if(est.tela==='editor'&&est.orc) renderCorpo();
   }catch(e){ ATIV.erro=true; ATIV.ok=false; ATIV.msgErro=String((e&&e.message)||e); console.warn('orçamento: atividades indisponíveis',e); if(est.tela==='editor'&&est.orc) renderCorpo(); }
   ATIV.carregando=false; }
-function indexarAtividades(){ IDX.ativ=BQ.indiceLotes(ATIV.lista,a=>a.t+' '+(ATIV.sub[a.s]||'')+' '+((ATIV.t.g||[])[a.g]||'')+' '+((ATIV.disc[a.d]||[])[0]||''),600); }
-function buscaAtiv(q,disc,max,filtro){ if(!ATIV.ok||!IDX.ativ) return []; return BQ.buscar(IDX.ativ,q,{max:max||12,filtro,boost:a=>(disc&&areaDe(a)===disc?60:0)}).lista; }
+function indexarAtividades(){ IDX.ativ=BQ.indiceLotes(ATIV.lista,a=>a.t+' '+(ATIV.sub[a.s]||'')+' '+((ATIV.t.g||[])[a.g]||'')+' '+((ATIV.disc[a.d]||[])[0]||''),120); }
+function ativPreparar(){ if(!IDX.ativ&&ATIV.ok) indexarAtividades(); }
+function ativIdx(){ ativPreparar(); const I=IDX.ativ; if(I&&!I.pronto&&I.terminar) I.terminar(); return I; }   // a busca nunca mostra resultado incompleto: se o preparo não terminou, termina na hora
+function buscaAtiv(q,disc,max,filtro){ if(!ATIV.ok||!ativIdx()) return []; return BQ.buscar(IDX.ativ,q,{max:max||12,filtro,boost:a=>(disc&&areaDe(a)===disc?60:0)}).lista; }
 const UN_ATIV={'m':'m','m²':'m²','m³':'m³','un':'un','kg':'kg','t':'t','junta':'junta','h':'h','diária':'dia','dia':'dia','jogo':'jogo','lote':'vb','sistema':'vb','mês':'vb','verba':'vb','vb':'vb','pç':'pç','peça':'pç'};
 const unIdx=u=>UN_ATIV[String(u||'').toLowerCase()]||'un';
 // "Premissas e dados necessários" → lista de dados a levantar (ex.: "Informar altura, carga e prazo" → Altura / Carga / Prazo)
@@ -18399,7 +18403,7 @@ function abaMontar(){ const o=est.orc, r=est.res; const serv=est.itens.filter(i=
 // ── buscador de ATIVIDADES (lista com busca, filtros e seleção múltipla) ──────────────────────────────────────
 const PA={q:'',d:'',s:'',alvo:'',pref:'',sel:new Map(),info:new Set()};
 const areaDe=a=>{ const x=(ATIV.disc[a.d]||[])[1]||'MECANICA'; return x==='GERAL'?'MECANICA':x; };
-function pkAtivLista(){ if(!ATIV.ok||!IDX.ativ) return {tot:0,lista:[],inicio:true}; const filtro=a=>(PA.d===''||String(a.d)===PA.d)&&(PA.s===''||String(a.s)===PA.s);
+function pkAtivLista(){ if(!ATIV.ok||!ativIdx()) return {tot:0,lista:[],inicio:true}; const filtro=a=>(PA.d===''||String(a.d)===PA.d)&&(PA.s===''||String(a.s)===PA.s);
   if(PA.q.trim()){ const r=BQ.buscar(IDX.ativ,PA.q,{max:80,filtro,boost:a=>(PA.pref&&areaDe(a)===PA.pref?60:0)}); return {tot:r.tot,lista:r.lista,exato:r.exato}; }
   if(PA.d!==''||PA.s!==''){ const L=ATIV.lista.filter(filtro); return {tot:L.length,lista:L.slice(0,80)}; } return {tot:0,lista:[],inicio:true}; }
 function pkAtivDiscOpts(){ const cnt={}; ATIV.lista.forEach(a=>{ cnt[a.d]=(cnt[a.d]||0)+1; }); const grupos={}; ATIV.disc.forEach((d,i)=>{ (grupos[d[1]]=grupos[d[1]]||[]).push([i,d[0],cnt[i]||0]); });
@@ -18506,10 +18510,20 @@ function attrsDe(m){ let r=ATR.get(m); if(r) return r; const a=m.atributos||{}, 
   let classe=a.classe||''; if(!classe){ const x=d.match(/\b(\d{3,4})#/)||d.match(/classe (\d{3,4})/); if(x) classe=x[1]; else { const p=d.match(/\bPN\s?(\d+)/); if(p) classe='PN'+p[1]; } } classe=String(classe).replace('#','');
   const acab=a.acabamento||(/galvaniz/i.test(d)?'GALV':''); r={lig,classe,acab,mat:matDe(m)}; ATR.set(m,r); return r; }
 function textoMat(m){ const t=attrsDe(m); return [m.descricao,m.especificacao,CATW[m.categoria]||'',LIGT[t.lig]||'',t.acab==='GALV'?'galvanizado zincado':'',MATW[t.mat]||'',t.classe?('classe '+t.classe):''].join(' '); }
-function idxMat(){ const L=est.catalogo||[]; if(!IDX.mat||IDX.matRef!==L){ IDX.mat=BQ.indice(L.filter(m=>m.ativo!==false),textoMat); IDX.matRef=L; IDX.matN=L.length; IDX.chaves=new Set(L.map(m=>m.chave)); }
-  else if(L.length>IDX.matN){ for(let i=IDX.matN;i<L.length;i++){ if(L[i].ativo!==false) BQ.adicionar(IDX.mat,L[i],textoMat(L[i])); IDX.chaves.add(L[i].chave); } IDX.matN=L.length; } return IDX.mat; }
-function iniciarVirtuais(){ if(IDX.virtIni||!est.catalogo||!est.catalogo.length) return; IDX.virtIni=true; idxMat();
-  try{ const ds=new Set(est.catalogo.map(m=>String(m.descricao||'').toLowerCase())); const L=PECAS.gerar(E).filter(p=>!IDX.chaves.has(p.chave)&&!ds.has(p.descricao.toLowerCase())); IDX.virtList=L; IDX.virt=BQ.indiceLotes(L,textoMat,500); }catch(e){ console.warn('orçamento: peças por norma indisponíveis',e); IDX.virt=null; IDX.virtList=[]; } }
+function idxMat(){ const L=est.catalogo||[]; if(!IDX.mat||IDX.matRef!==L){ IDX.mat=BQ.indice([],textoMat); IDX.matRef=L; IDX.matN=L.length; IDX.matK=0; IDX.chaves=new Set(L.map(m=>m.chave)); IDX.matSlice=false; }
+  else if(L.length>IDX.matN){ for(let i=IDX.matN;i<L.length;i++) IDX.chaves.add(L[i].chave); IDX.matN=L.length; }
+  while(IDX.matK<IDX.matN){ const m=L[IDX.matK++]; if(m.ativo!==false) BQ.adicionar(IDX.mat,m,textoMat(m)); } return IDX.mat; }    // completa o que faltar na hora, se a busca for pedida antes do preparo
+// prepara o índice do catálogo em fatias de ~9 ms (a tela não trava); se a busca vier antes, idxMat() termina o trabalho na hora
+function prepararBusca(){ const L=est.catalogo||[]; if(!L.length||IDX.matSlice) return; if(!IDX.mat||IDX.matRef!==L){ IDX.mat=BQ.indice([],textoMat); IDX.matRef=L; IDX.matN=L.length; IDX.matK=0; IDX.chaves=new Set(L.map(m=>m.chave)); } IDX.matSlice=true;
+  const passo=()=>{ if(IDX.matRef!==est.catalogo){ IDX.matSlice=false; return; } const t0=performance.now(); while(IDX.matK<IDX.matN&&performance.now()-t0<9){ const m=est.catalogo[IDX.matK++]; if(m.ativo!==false) BQ.adicionar(IDX.mat,m,textoMat(m)); } if(IDX.matK<IDX.matN) setTimeout(passo,0); else IDX.matSlice=false; }; setTimeout(passo,0); }
+// peças por norma: só quando alguém pede (janela de materiais, catálogo, junta flangeada, busca na linha); geradas em passos curtos
+function iniciarVirtuais(){ if(IDX.virtIni||!est.catalogo||!est.catalogo.length) return; IDX.virtIni=true; idxMat(); let ps; try{ ps=PECAS.passos(E); }catch(e){ console.warn('orçamento: peças por norma indisponíveis',e); IDX.virt=null; IDX.virtList=[]; IDX.virtGerada=true; return; } let n=0;
+  const prox=()=>{ try{ if(n<ps.length){ ps[n++](); setTimeout(prox,0); return; }
+      const ds=new Set(est.catalogo.map(m=>String(m.descricao||'').toLowerCase())); const L=PECAS.coletar().filter(p=>!IDX.chaves.has(p.chave)&&!ds.has(p.descricao.toLowerCase())); IDX.virtList=L; IDX.virtGerada=true;
+      IDX.virt=BQ.indiceLotes(L,textoMat,250,()=>virtAviso(true)); virtAviso(false); }catch(e){ console.warn('orçamento: peças por norma indisponíveis',e); IDX.virt=null; IDX.virtList=[]; IDX.virtGerada=true; virtAviso(true); } }; setTimeout(prox,0); }
+function virtAviso(completo){ try{ const ae=document.activeElement, emUso=ae&&ae.closest&&(ae.closest('#pk-res')||ae.closest('#orc-cat-scroll')); if(completo&&!emUso&&document.querySelector('#orc-dlg [data-pk="m-q"]')) pkRefreshMat(); if(completo&&!emUso&&$('orc-cat-conteudo')) catRefresh(); if($('jf-prev')) jfAtualiza(); }catch(e){} if(completo) (IDX.aoPronto||[]).splice(0).forEach(f=>{ try{ f(); }catch(e){} }); }
+function virtPronto(){ return !!(IDX.virtGerada&&(!IDX.virt||IDX.virt.pronto)); }
+function esperarVirtuais(){ return new Promise(res=>{ iniciarVirtuais(); if(virtPronto()) return res(); (IDX.aoPronto=IDX.aoPronto||[]).push(res); }); }
 function filtroMat(o){ const eqs=o.mat?(EQ_MAT[o.mat]||[o.mat]):null; const nps=(o.nps===''||o.nps==null)?null:Number(o.nps); const usaEsp=o.esp!==false&&!!espCfg();
   return m=>{ if(m.ativo===false&&!o.inativos) return false; if(o.disc&&m.disciplina!==o.disc) return false; if(o.cat&&m.categoria!==o.cat) return false; if(usaEsp&&!passaEsp(m)) return false; const t=attrsDe(m);
     if(eqs&&!eqs.includes(t.mat)) return false; if(nps!=null){ const a=m.atributos||{}; if(Number(a.nps)!==nps&&Number(a.nps2)!==nps) return false; }
@@ -18686,7 +18700,8 @@ function catLinha(m){ if(m.virtual) return `<tr class="orc-virt"><td><b>${esc(m.
   return `<tr class="${m.ativo===false?'orc-off':''}"><td><b>${esc(m.descricao)}</b><br><small>${esc(m.categoria)}${m.especificacao?' · '+esc(m.especificacao):''}${m.preco_data?' · cotado em '+new Date(m.preco_data+'T12:00:00').toLocaleDateString('pt-BR'):''}${m.origem==='USUARIO'?' · <i>seu cadastro</i>':''}</small></td><td><select class="orc-in" data-oc="cat-un" data-id="${m.id}" data-livre="1">${CAT_UN.map(u=>`<option${m.unidade===u?' selected':''}>${u}</option>`).join('')}${CAT_UN.includes(m.unidade)?'':`<option selected>${esc(m.unidade)}</option>`}</select></td><td>${catPrecoCelula(m)}</td><td><input type="text" inputmode="decimal" class="orc-in orc-pr" data-oc="cat-perda" data-id="${m.id}" data-livre="1" value="${esc(nv(m.perda_pct))}"></td><td><input type="text" inputmode="decimal" class="orc-in orc-pr" data-oc="cat-barra" data-id="${m.id}" data-livre="1" value="${esc(nv(m.comprimento_barra_m))}"></td><td><input type="text" class="orc-in" data-oc="cat-forn" data-id="${m.id}" data-livre="1" value="${esc(m.fornecedor||'')}" placeholder="opcional"></td><td><label class="orc-ck"><input type="checkbox" data-oc="cat-ativo" data-id="${m.id}" data-livre="1"${m.ativo!==false?' checked':''}> ativo</label></td></tr>`; }
 function catListaHTML(){ const f=est.cat; const lst=catLista(); const pag=Math.max(0,Math.min(f.pag,Math.ceil(lst.length/CAT_PAG)-1)); f.pag=pag; const vis=lst.slice(pag*CAT_PAG,pag*CAT_PAG+CAT_PAG);
   const reais=lst.filter(m=>!m.virtual), semPreco=reais.filter(m=>m.preco_unitario==null).length, virt=lst.length-reais.length;
-  return `<div class="orc-info" id="orc-cat-info">${lst.length.toLocaleString('pt-BR')} itens${f.virt||virt?` (${reais.length.toLocaleString('pt-BR')} no catálogo + ${virt.toLocaleString('pt-BR')} peças por norma)`:''} · ${semPreco.toLocaleString('pt-BR')} sem preço</div>
+  const carr=(f.virt||(f.q||'').trim())&&!IDX.virtGerada?' · <i>carregando as peças por norma…</i>':'';
+  return `<div class="orc-info" id="orc-cat-info">${lst.length.toLocaleString('pt-BR')} itens${f.virt||virt?` (${reais.length.toLocaleString('pt-BR')} no catálogo + ${virt.toLocaleString('pt-BR')} peças por norma)`:''} · ${semPreco.toLocaleString('pt-BR')} sem preço${carr}</div>
   <div class="orc-cat-lista" id="orc-cat-scroll"><table class="orc-tbl"><thead><tr><th>Descrição</th><th>Un.</th><th>Preço</th><th>Perda %</th><th>Barra (m)</th><th>Fornecedor</th><th></th></tr></thead><tbody>${vis.map(catLinha).join('')||'<tr><td colspan="7" class="orc-vazio">Nada encontrado. Tente menos palavras ou limpe os filtros.</td></tr>'}</tbody></table></div>
   <div class="orc-linha orc-cat-pag">${pag>0?`<button type="button" class="orc-btn sec" data-orc="cat-pag" data-d="-1" data-livre="1">← Anterior</button>`:''}<span class="orc-info">página ${pag+1} de ${Math.max(1,Math.ceil(lst.length/CAT_PAG))}</span>${(pag+1)*CAT_PAG<lst.length?`<button type="button" class="orc-btn sec" data-orc="cat-pag" data-d="1" data-livre="1">Próxima →</button>`:''}</div>`; }
 function catRefresh(topo){ const c=$('orc-cat-conteudo'); if(!c){ renderCorpo(); return; } c.innerHTML=catListaHTML(); const sc=$('orc-cat-scroll'); if(sc&&topo) sc.scrollTop=0; catResumoFiltros(); }
@@ -18784,7 +18799,7 @@ function pkQtdHTML(key,x){ const U=unidadesMat(x.m,null); const sel=U.length>1?`
   return `<input class="orc-in pk-q" inputmode="decimal" data-pk="m-qtd" data-key="${esc(key)}" value="${esc(nv(x.qtd))}" placeholder="qtd">${sel}<div class="pk-conv" data-pkc="${esc(key)}">${esc(pkConv(x))}</div>`; }
 function pkConv(x){ if(!(x.qtd>0)) return ''; const q=paraBase(x.m,x.qtd,x.un,null); if(q==null) return x.un==='kg'?'sem peso por metro cadastrado — use metros ou barras':''; return convTexto(x.m,q,x.un,null,E.num(x.m.perda_pct)||0)+(jfTexto(x.m)?' · '+jfTexto(x.m):''); }
 function pkMatResHTML(){ const R=pkMatLista(); if(!R.lista.length) return '<div class="orc-vazio">Nenhum material com estes filtros. Limpe a busca ou os filtros'+(espCfg()&&PM.esp?', ou desmarque “só a especificação”':'')+'.</div>';
-  const aviso=(PM.q.trim()&&R.exato===0)?'<div class="orc-nota">Nenhum com todas as palavras — mostrando os mais parecidos.</div>':''; const virt=IDX.virt&&!IDX.virt.pronto?' <small>(carregando as peças por norma…)</small>':'';
+  const aviso=(PM.q.trim()&&R.exato===0)?'<div class="orc-nota">Nenhum com todas as palavras — mostrando os mais parecidos.</div>':''; const virt=(IDX.virtIni&&!virtPronto())?' <small>(carregando as peças por norma…)</small>':'';
   return aviso+`<div class="orc-nota">${R.tot>R.lista.length?'Mostrando '+R.lista.length+' de '+R.tot.toLocaleString('pt-BR')+' — refine a busca ou os filtros.':R.tot+' material(is)'}${virt}</div>`+R.lista.map(m=>{ const t=attrsDe(m); const key=m.chave||m.id; const x=PM.sel.get(key); const ja=m.virtual?'':pkJaNoOrc(m);
     const tags=[t.lig&&t.lig!=='ROSCA'?t.lig:(t.lig==='ROSCA'?'rosca':''),t.classe?(/^PN/.test(t.classe)?t.classe:t.classe+'#'):'',t.acab==='GALV'?'galvanizado':''].filter(Boolean).join(' · ');
     return `<div class="pk-it${x?' pk-on':''}"><label class="pk-ck"><input type="checkbox" data-pk="m-sel" data-key="${esc(key)}"${x?' checked':''}></label><div class="pk-t"><b>${esc(m.descricao)}</b><small>${esc(m.especificacao||'')} · ${esc(m.unidade)} · ${m.virtual?'<i>peça por norma — criada ao adicionar</i>':(m.preco_unitario!=null?fm(m.preco_unitario):'<i>sem preço</i>')}${tags?' · '+esc(tags):''}</small>${ja?`<small class="pk-ja">${esc(ja)}</small>`:''}</div><div class="pk-qc" data-pkq="${esc(key)}">${x?pkQtdHTML(key,x):''}</div></div>`; }).join(''); }
@@ -18824,7 +18839,8 @@ function jfChaves(S){ const n=String(S.nps), c=S.cls, par=(JF_PARES.find(p=>p[0]
   const grau=S.grau||JF_ESTOJO_PADRAO[S.mat]||'B7'; const est_=(grau==='B7')?(c==='150'?`PAR.ESTOJO150.${n}`:`PAR.ESTOJO300.B7.${n}`):`PAR.ESTOJO${c}.${grau}.${n}`;
   const f1=fl_(par[0]), f2=fl_(par[1]); if(f1===f2) K.push({chave:f1,fator:2,rot:'flanges'}); else { K.push({chave:f1,fator:1,rot:'flange'}); K.push({chave:f2,fator:1,rot:'flange'}); }
   K.push({chave:juntas[S.junta],fator:1,rot:'junta'}); K.push({chave:est_,fator:1,rot:'estojos'}); return K; }
-function jfPreview(){ iniciarVirtuais(); const K=jfChaves(JF), q=Number(JF.qtd)||0; const L=K.map(k=>{ const m=acharPeca(k.chave); return {k,m,qtd:q*k.fator}; }); const falta=L.filter(x=>!x.m);
+function jfPreview(){ const K=jfChaves(JF), q=Number(JF.qtd)||0; const L=K.map(k=>{ const m=acharPeca(k.chave); return {k,m,qtd:q*k.fator}; }); let falta=L.filter(x=>!x.m);
+  if(falta.length&&!IDX.virtGerada){ iniciarVirtuais(); return {L,falta,carregando:true,html:'<div class="orc-nota">Preparando as peças por norma… um instante.</div>'}; }
   return {L,falta,html:L.map(x=>`<div class="jf-l${x.m?'':' jf-x'}"><b>${fmN(x.qtd)} ×</b> ${x.m?esc(x.m.descricao):'não existe no catálogo: '+esc(x.k.chave)}${x.m&&jfInfo(x.m)?`<small>${esc(jfTexto(x.m))}</small>`:''}</div>`).join('')+(JF.cls==='300'&&false?'':'')}; }
 function dlgJF(){ if(!editavel()){ aviso('Este orçamento não está em modo de edição.'); return; } const op=(v,t,s)=>`<option value="${v}"${String(s)===String(v)?' selected':''}>${esc(t)}</option>`;
   dlg(`<div class="orc-dh">🔩 Junta flangeada</div><div class="orc-dc"><div class="orc-nota">Escolha o diâmetro e a classe: o sistema calcula os 2 flanges, a junta e os estojos com porcas (quantidade e bitola pela ASME B16.5). Quantidade = número de juntas flangeadas.</div>
@@ -18836,7 +18852,7 @@ function dlgJF(){ if(!editavel()){ aviso('Este orçamento não está em modo de 
   <div class="orc-h2" style="margin-top:8px">O sistema vai lançar</div><div id="jf-prev" class="jf-prev">${jfPreview().html}</div></div>
   <div class="orc-dbtn"><button type="button" class="orc-btn sec" data-orc="dlg-fechar">Fechar</button><button type="button" class="orc-btn" data-orc="jf-ok" data-cont="1">Adicionar e continuar</button><button type="button" class="orc-btn ok" data-orc="jf-ok">Adicionar ao orçamento</button></div>`); }
 function jfAtualiza(){ const p=$('jf-prev'); if(p) p.innerHTML=jfPreview().html; }
-async function jfOk(continuar){ if(!editavel()) return; if(!(Number(JF.qtd)>0)){ aviso('Informe a quantidade de juntas flangeadas.'); return; } const P_=jfPreview(); if(P_.falta.length){ aviso('Faltam peças no catálogo para esta combinação: '+P_.falta.map(x=>x.k.chave).join(', ')+'. Escolha outra junta ou outro material.'); return; }
+async function jfOk(continuar){ if(!editavel()) return; if(!(Number(JF.qtd)>0)){ aviso('Informe a quantidade de juntas flangeadas.'); return; } const P_=jfPreview(); if(P_.carregando){ aviso('Preparando as peças por norma — aguarde um instante e toque de novo.'); return; } if(P_.falta.length){ aviso('Faltam peças no catálogo para esta combinação: '+P_.falta.map(x=>x.k.chave).join(', ')+'. Escolha outra junta ou outro material.'); return; }
   const g='jf'+Date.now().toString(36); const lista=P_.L.map(x=>({m:x.m,qtd:x.qtd,forn:JF.forn,grupo:g,un:null})); const r=await lancarMateriais(lista,{somar:true}); if(!r) return;
   renderTopo(); renderCorpo(); atualizarCalculados(); if(continuar){ jfAtualiza(); } else { fecharDlg(); irAba('materiais'); }
   toast('✓ Junta flangeada lançada: '+P_.L.map(x=>fmN(x.qtd)+' × '+x.k.rot).join(' + ')+(r.virt?' · '+r.virt+' peça(s) gravada(s) no catálogo':'')+'.'); }
@@ -18848,7 +18864,7 @@ function estojosPanelHTML(){ const A=new Map(); est.itens.forEach(it=>{ if(it.ti
   return `<div class="orc-sec"><div class="orc-sec-h"><b>🔩 Estojos e porcas por bitola e comprimento</b> <span class="orc-sec-t">estimado — conferir</span></div><div class="orc-tbl-w"><table class="orc-tbl"><thead><tr><th>Estojo</th><th>Porcas</th><th>Fornece</th></tr></thead><tbody>${L.map(a=>`<tr><td><b>${fmN(a.n)} un</b> — Estojo ${esc(a.i.grau)} Ø${esc(a.i.bit)}" × ${esc(a.i.len_pol)} (${a.i.len_mm} mm), rosca total</td><td>${fmN(2*a.n)} un</td><td>${esc(FN_[a.f]||a.f)}</td></tr>`).join('')}</tbody></table></div><div class="orc-nota">Calculado dos “jogos de estojos” lançados: quantidade e bitola pela ASME B16.5 (Classes 150 e 300); comprimento estimado para face ressaltada com junta de 1/8". Confira com a sua tabela de estojos antes de comprar.</div></div>`; }
 function abaCompras(){ const b=abaComprasBase(), p=estojosPanelHTML(); if(!p) return b; const i=b.lastIndexOf('</div>'); return b.slice(0,i)+p+b.slice(i); }
 Object.assign(window.ORC_ACOES,{'pk-mat-add-cont':()=>{ pkMatAdicionar(true); },'pk-jf':()=>dlgJF(),'jf-ok':el=>jfOk(el&&el.getAttribute&&el.getAttribute('data-cont')==='1')});
-Object.assign(window.ORC_UI,{barraDeMat,pesoDeMat,unidadesMat,paraBase,deBase,resumoMat,convTexto,jfInfo,jfTexto,JF,JF_TAB,jfChaves,jfPreview,dlgJF,jfOk,lancarMateriais,qtdCampoHTML,precoCampoHTML,precoFator,basesPreco,precoEquiv,estojosPanelHTML,qtdLinhaMudou,precoLinhaMudou,atualizaConvLinha,pkQtdHTML,pkMatSelHTML,pkMatResHTML});
+Object.assign(window.ORC_UI,{ativIdx,esperarVirtuais,virtPronto,prepararBusca,barraDeMat,pesoDeMat,unidadesMat,paraBase,deBase,resumoMat,convTexto,jfInfo,jfTexto,JF,JF_TAB,jfChaves,jfPreview,dlgJF,jfOk,lancarMateriais,qtdCampoHTML,precoCampoHTML,precoFator,basesPreco,precoEquiv,estojosPanelHTML,qtdLinhaMudou,precoLinhaMudou,atualizaConvLinha,pkQtdHTML,pkMatSelHTML,pkMatResHTML});
 
 // ── Catálogo: preço digitado na base da cotação (barra · m · kg · un) ──────────────────────────────────────────────────────
 const catBaseMem={};
@@ -18858,6 +18874,12 @@ document.addEventListener('change',e=>{ const t=e.target; if(!t||!t.getAttribute
   const inp=document.querySelector('[data-cpin="'+id+'"]'), sel=document.querySelector('[data-cpun="'+id+'"]'); const B=basesPreco(m,null), b=sel?sel.value:B[0]; catBaseMem[id]=b; const f=precoFator(m,b,null)||1;
   if(t.hasAttribute('data-cpun')){ const val=m.preco_unitario==null?'':r4_(m.preco_unitario*f); inp.value=nv(val); } else { const v=E.num(inp.value); aoMudarCatIdx({getAttribute:k=>({'data-oc':'cat-preco','data-id':id})[k],value:v==null?'':(v/f).toFixed(6),type:'text'}); }
   const eq=document.querySelector('[data-cpeq="'+id+'"]'); if(eq) eq.textContent=precoEquiv(m,m.preco_unitario!=null?E.num(m.preco_unitario):null,null); });
+
+function assinBase(){ return (est.catalogo||[]).length+'|'+(est.catMaxAt||'')+'|'+(est.indices||[]).length+'|'+maxEm(est.indices||[]); }
+
+// a preparação da busca só começa quando um orçamento é aberto (na lista de orçamentos não gasta nada) e em fatias curtas
+let _tPrep=null; function agendarPreparo(){ clearTimeout(_tPrep); _tPrep=setTimeout(()=>{ try{ prepararBusca(); }catch(e){} setTimeout(()=>{ try{ ativPreparar(); }catch(e){} },900); },700); }
+async function abrir(...a){ const r=await abrirBase(...a); agendarPreparo(); return r; }
 
 // ══ PROPOSTA AO CLIENTE: estrutura corporativa, seções extras, modelos de texto, perfil da empresa, MINUTA ═══════════════════════
 const lsGet=(k,d)=>{ try{ const v=localStorage.getItem(k); return v?JSON.parse(v):d; }catch(e){ return d; } };
