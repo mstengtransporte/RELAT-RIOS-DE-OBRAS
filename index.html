@@ -1731,7 +1731,7 @@ body.dark #workers-body tr:hover{background-color:rgba(58,110,232,.08)}
      fontes) — os dois sistemas usam a mesma "moldura" de login, só
      o papel de parede muda entre eles. -->
 <div id="login-overlay" style="position:fixed;inset:0;z-index:99999;background:#0b1220 url('login-fundo-rdo.jpg') center center / cover no-repeat;color-scheme:dark">
-  <div style="position:absolute;bottom:6px;right:8px;font-size:9px;color:rgba(255,255,255,.35);font-family:monospace;pointer-events:none">v2026.10.42-orc-escopo4b</div>
+  <div style="position:absolute;bottom:6px;right:8px;font-size:9px;color:rgba(255,255,255,.35);font-family:monospace;pointer-events:none">v2026.10.43-orc-secoes</div>
   <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:calc(100% - 32px);max-width:380px;background:rgb(10,17,32);border:1px solid rgba(255,255,255,.14);border-radius:18px;padding:32px 28px;box-shadow:0 20px 60px rgba(0,0,0,.6);text-transform:none;font-weight:400">
     <h1 style="font-size:20px;margin:0 0 4px;color:#fff;text-align:center;font-weight:700">RDO <span style="color:#3ea6ff">Master Energy</span></h1>
     <p style="margin:0 0 24px;text-align:center;color:#9ca3af;font-size:13px;letter-spacing:.5px;font-weight:600">DIÁRIO DE OBRA PRO</p>
@@ -14391,7 +14391,7 @@ window.addEventListener('beforeinstallprompt',(e)=>{
   };
 });
 </script>
-<div class="no-print" style="position:fixed;bottom:2px;right:4px;font-size:8px;color:rgba(120,120,120,.4);font-family:monospace;pointer-events:none;z-index:5">v2026.10.42-orc-escopo4b</div>
+<div class="no-print" style="position:fixed;bottom:2px;right:4px;font-size:8px;color:rgba(120,120,120,.4);font-family:monospace;pointer-events:none;z-index:5">v2026.10.43-orc-secoes</div>
 
 <!-- MODAL DE ALERTA DE PENDÊNCIAS — substitui o toast/alert escuro de antes. Aparece
      sempre que a validação unificada (validarFormularioRDO) bloqueia uma tentativa de
@@ -17025,7 +17025,8 @@ Object.assign(window.ORC_UI,{est,E,esc,nf,fm,uid,cli,toast,aviso,nomeDisc,hoje,r
 const P=(it,k,d)=>{ const v=it.params?it.params[k]:undefined; return (v==null||v==='')?d:v; };
 const SECOES={
  MECANICA:[{id:'PIPING',t:'Tubulação — HH por PD (polegada-diâmetro) ou por junta',modelo:'PIPING',nota:'PD = diâmetro (pol) × nº de juntas. O tubo, a vareta, o gás, o adesivo e a fita são calculados e vão para a aba 🛒 Compras. Escolha o K (acesso) por linha em ⋯.'},
-  {id:'SUPORTES',t:'Suportes (grampo U, patinho, berço) e fixação',g:['SUPORTES','ANCORAGEM']},
+  {id:'SUPORTES',t:'Suportes (grampo U, patinho, berço) e fixação',g:['SUPORTES','ANCORAGEM'],nota:'Ficha de Suportação: informe tipo, largura × comprimento × espessura (mm) — o peso sai sozinho — e os serviços de execução.'},
+   {id:'CALDEIRARIA',t:'Caldeiraria e chaparia — corte, furação, calandragem e reparo com chapa',g:['CALDEIRARIA'],nota:'Ficha de Chaparia: informe largura × comprimento × espessura (mm), método de corte, furação e conformação. O peso teórico sai sozinho; digite o HH da atividade.'},
   {id:'ESTRUTURAS',t:'Perfis estruturais — HH por tonelada (oficina = fabricação · campo = montagem)',g:['ESTRUTURAS']},
   {id:'PLATAFORMAS',t:'Plataformas, grating e guarda-corpos',g:['PLATAFORMAS']},
   {id:'RIGGING',t:'Rigging mecanizado — munck / guindaste (diárias e custo)',modelo:'RIG_MEC',nota:'Informe as diárias (ou horas) do equipamento e o custo. O apoio de rigger/sinaleiro entra como HH. O método padrão (mecanizado ou manual) fica em ⚙️ Premissas.'},
@@ -18258,7 +18259,7 @@ const PECAS=(function(){
 // na própria linha (params.ativ_sn): se o catálogo mudar depois, orçamentos já feitos continuam com o texto de quando foram feitos.
 const ATIV={ok:false,carregando:false,erro:false,v:'',lista:[],disc:[],sub:[],t:{},porCod:new Map()};
 const ATIV_URL='catalogo_atividades.json?v=v5b-2026-10';
-const ORC_VERSAO='v2026.10.42-orc-escopo4b';
+const ORC_VERSAO='v2026.10.43-orc-secoes';
 async function carregarAtividades(forcar){ if(ATIV.carregando) return; if(ATIV.ok&&!forcar) return; ATIV.carregando=true; ATIV.erro=false; ATIV.msgErro='';
   let url=ATIV_URL; try{ url=new URL(ATIV_URL,window.location.href).href; }catch(e){} if(forcar) url+='&t='+Date.now(); ATIV.url=url;
   try{ const r=await fetch(url); if(!r.ok) throw new Error('o arquivo não foi encontrado (HTTP '+r.status+')'); let j; try{ j=await r.json(); }catch(e){ throw new Error('o endereço devolveu uma página em vez do arquivo (provavelmente fora da raiz do site)'); }
@@ -19288,7 +19289,8 @@ Object.assign(window.ORC_ACOES,{'mat-editar':el=>dlgMatEditar(el.getAttribute('d
 Object.assign(window.ORC_UI,{dlgMatEditar,matSalvar,dlgMatExcluir,matDelOk,dlgIdxExcluir,idxDelOk});
 
 // ══ FICHA TÉCNICA DO ESCOPO — MECÂNICA E TUBULAÇÃO · 4 situações: 1 Tubulação (A) · 2 Chaparia (C) · 3 Perfil estrutural (P) · 4 Suportação (B) ═══
-const FT_NAT=[['','Atividade comum (texto padrão)'],['A','1 · Tubulação industrial'],['C','2 · Chaparia e caldeiraria'],['P','3 · Estrutura metálica e perfis'],['B','4 · Suportação de tubulação']];
+const FT_NAT=[['','Automático (pela seção em que a linha está)'],['A','1 · Tubulação industrial'],['C','2 · Chaparia e caldeiraria'],['P','3 · Estrutura metálica e perfis'],['B','4 · Suportação de tubulação'],['N','Atividade comum (texto padrão, sem ficha)']];
+const FT_GRUPO_CASO={SUPORTES:'B',ANCORAGEM:'B',ESTRUTURAS:'P',PLATAFORMAS:'P',CALDEIRARIA:'C'};
 const FT_SERV={A:['Montagem','Pré-fabricação','Manutenção de Linha','Substituição','Modificação'],C:['Fabricação','Corte','Reparo','Furação','Calandragem de Chapa'],P:['Fabricação','Montagem','Reparo de Estrutura'],B:['Fabricação e Instalação','Substituição de Suporte','Ajuste']};
 const FT_EL_B=['Patim de Apoio (Slide)','Grampo U (U-Bolt)','Berço','Suporte de Mola','Guia','Ancoragem','Outro (descrito na atividade)'];
 const FT_PERFIL=['Viga I','Viga H','Viga U','Cantoneira L','Metalon','Vergalhão','Grade de Piso'];
@@ -19303,12 +19305,13 @@ const FT_UNIAO_NOME={BW:'Solda de Topo',SW:'Socket Weld',ROSCA:'Roscada',COLA:'C
 // norma / grau preenchidos automaticamente pela família do material (o campo "Norma / grau" só precisa ser preenchido para trocar)
 const FT_NORMA_TUBO={CS:'ASTM A106 Gr. B',GALV:'ASTM A53 Gr. B (galvanizado)',INOX304:'ASTM A312 TP304L',INOX316:'ASTM A312 TP316L',INOX321:'ASTM A312 TP321',INOX904L:'ASTM A312 TP904L',LTCS:'ASTM A333 Gr. 6',P22:'ASTM A335 P22',P91:'ASTM A335 P91',DUP2205:'ASTM A790 UNS S32205',SDUP2507:'ASTM A790 UNS S32750',ALLOY20:'ASTM B729 UNS N08020',MONEL400:'ASTM B165 UNS N04400',INC625:'ASTM B444 UNS N06625',HAST276:'ASTM B622 UNS N10276',TI2:'ASTM B338 Gr. 2',CUNI9010:'ASTM B466 UNS C70600',PVC:'ASTM D1785',CPVC:'ASTM F441',PRFV:'ASTM D2996',PP:'ASTM D4101'};
 const FT_NORMA_CHAPA={ACO:'ASTM A36',INOX304:'ASTM A240 304L',INOX316:'ASTM A240 316L',DUPLEX:'ASTM A240 UNS S32205',ALU:'ASTM B209 6061-T6',COBRE:'ASTM B152',LATAO:'ASTM B36',FOFO:'ASTM A48',TITANIO:'ASTM B265 Gr. 2'};
-function ftCaso(it){ if(!it||it.tipo!=='SERVICO'||it.disciplina!=='MECANICA') return null; if(it.modelo==='PIPING') return 'A'; if(it.modelo==='GENERICO'){ const n=P(it,'tx_natureza',''); return ['A','B','C','P'].includes(n)?n:null; } return null; }
+function ftCaso(it){ if(!it||it.tipo!=='SERVICO'||it.disciplina!=='MECANICA') return null; if(it.modelo==='PIPING') return 'A'; if(it.modelo==='GENERICO'){ const n=P(it,'tx_natureza',''); if(n==='N') return null; if(['A','B','C','P'].includes(n)) return n; return FT_GRUPO_CASO[it.grupo]||null; } return null; }
 function naturezaAuto(txt){ const s=String(txt||'').toLowerCase(); if(/andaime/.test(s)) return ''; if(/suporte|patim|grampo|ber[çc]o|orelha|mola\b|ancoragem de tubul/.test(s)) return 'B'; if(/tubula|piping|spool|flange|v[áa]lvula|conex[ãa]o|junta soldada|linha de|trecho/.test(s)) return 'A'; if(/viga|cantoneira|metalon|vergalh|grade de piso|perfil|estrutura met|estrutural/.test(s)) return 'P'; if(/caldeir|chapa|plataforma|escada|reparo com chapa/.test(s)) return 'C'; return ''; }
 const ftOpt=(a)=>a.map(x=>[x,x||'—']);
 const ftTitulo=s=>String(s||'').split(' ').map(w=>/^(de|da|do|e|com|para|\/)$/i.test(w)?w.toLowerCase():w.charAt(0).toUpperCase()+w.slice(1)).join(' ');
 const ftCb=(it,k,rot)=>`<label class="orc-ck orc-ftcb"><input type="checkbox" data-fo="${FN(it,'p.'+k)}"${P(it,k,false)===true?' checked':''}> ${rot}</label>`;
 const ftN=(it,k)=>E.num(P(it,k,null));
+const ftUn=(it)=>{ const u=String(it.unidade||P(it,'ativ_un','')||'').trim(); return (u&&u.toLowerCase()!=='un')?u:''; };
 function ftDens(it){ const k=P(it,'tx_mat_base','ACO'); return (PESO.METAIS[k]||PESO.METAIS.ACO); }
 function ftFam(it,caso){ if(caso==='A'){ const k=it.modelo==='PIPING'?P(it,'material','CS'):P(it,'a_mat','CS'); return ftTitulo((typeof MATERIAIS!=='undefined'&&MATERIAIS[k])||k); } return ftTitulo(ftDens(it).n.replace(/\s*\(.*$/,'')); }
 function ftNorma(it,caso){ const man=String(P(it,'tx_espec_mat','')).trim(); if(man) return man; if(caso==='A'){ const k=it.modelo==='PIPING'?P(it,'material','CS'):P(it,'a_mat','CS'); return FT_NORMA_TUBO[k]||''; } return FT_NORMA_CHAPA[P(it,'tx_mat_base','ACO')]||''; }
@@ -19325,8 +19328,8 @@ function ftPerfil(it){ const t=P(it,'tx_perfil','Cantoneira L'), rho=ftDens(it).
   if(t==='Grade de Piso'){ const kg2=v('pf_kgm2'), lg=v('pf_larg'); if(kg2>0&&lg>0&&comp>0){ kg=kg2*(lg/1000)*(comp/1000); via='tab'; if(!nominal) nominal='Grade de piso '+PESO.fN(lg,0)+' x '+PESO.fN(comp,0)+' mm'; } }
   else if(kgm>0&&comp>0) kg=kgm*comp/1000;
   return {t,kgm,kg_un:kg,nominal,via}; }
-function ftPesoTxt(it){ const caso=ftCaso(it); if(caso==='P'){ const p=ftPerfil(it); if(p.kg_un==null) return 'Informe as medidas do perfil e o comprimento — o peso teórico (kg) é calculado sozinho. Vigas laminadas e grades: informe o peso por metro / por m² da tabela.'; const n=Number(it.qtd)||0; return '⚖️ Peso teórico: '+PESO.fN(p.kg_un,p.kg_un<10?3:2)+' kg por peça'+(p.kgm>0?' ('+PESO.fN(p.kgm,3)+' kg/m)':'')+(n>1?' · '+PESO.fN(p.kg_un*n,1)+' kg no total ('+PESO.fN(n,2)+' peças)':'')+' — '+(p.via==='tab'?'peso da tabela informado':(p.via==='est'?'estimado (seção com raios)':'fórmula exata')); }
-  const p=ftPlaca(it); if(!p) return 'Informe largura, comprimento e espessura — o peso teórico (kg) é calculado sozinho.'; const n=Number(it.qtd)||0, kg=p.kg_un; return '⚖️ Peso teórico: '+PESO.fN(kg,kg<10?3:2)+' kg por peça'+(n>1?' · '+PESO.fN(kg*n,1)+' kg no total ('+PESO.fN(n,2)+' peças)':'')+' — '+ftDens(it).n.replace(/\s*\(.*$/,'').toLowerCase(); }
+function ftPesoTxt(it){ const caso=ftCaso(it); const nQ=ftUn(it)?0:(Number(it.qtd)||0); if(caso==='P'){ const p=ftPerfil(it); if(p.kg_un==null) return 'Informe as medidas do perfil e o comprimento — o peso teórico (kg) é calculado sozinho. Vigas laminadas e grades: informe o peso por metro / por m² da tabela.'; const n=nQ; return '⚖️ Peso teórico: '+PESO.fN(p.kg_un,p.kg_un<10?3:2)+' kg por peça'+(p.kgm>0?' ('+PESO.fN(p.kgm,3)+' kg/m)':'')+(n>1?' · '+PESO.fN(p.kg_un*n,1)+' kg no total ('+PESO.fN(n,2)+' peças)':'')+' — '+(p.via==='tab'?'peso da tabela informado':(p.via==='est'?'estimado (seção com raios)':'fórmula exata')); }
+  const p=ftPlaca(it); if(!p) return 'Informe largura, comprimento e espessura — o peso teórico (kg) é calculado sozinho.'; const n=nQ, kg=p.kg_un; return '⚖️ Peso teórico: '+PESO.fN(kg,kg<10?3:2)+' kg por peça'+(n>1?' · '+PESO.fN(kg*n,1)+' kg no total ('+PESO.fN(n,2)+' peças)':'')+' — '+ftDens(it).n.replace(/\s*\(.*$/,'').toLowerCase(); }
 function ftPesoUn(it){ const c=ftCaso(it); if(c==='P') return ftPerfil(it).kg_un; if(c==='B'||c==='C'){ const p=ftPlaca(it); return p?p.kg_un:null; } return null; }
 // ── campos da ficha ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 function ftCampos(it){ if(it.tipo!=='SERVICO'||it.disciplina!=='MECANICA'||!['PIPING','GENERICO'].includes(it.modelo)) return ''; const caso=ftCaso(it); let h=''; const grid=(x)=>`<div class="orc-fields orc-ft">${x}</div>`; const tx=(k,rot,ph,cls)=>fl(rot,iT(it,'p.'+k,P(it,k,''),ph),cls); const nu=(k,rot,ph,cls)=>fl(rot,iN(it,'p.'+k,P(it,k,''),ph||'0'),cls); const se=(k,rot,list,def)=>fl(rot,iS(it,'p.'+k,ftOpt(list),P(it,k,def||'')));
@@ -19360,7 +19363,7 @@ const ftNum=(v,d)=>PESO.fN(v,d==null?2:d);
 function ftLocal(it,tipo){ const eq=String(P(it,'equip','')).trim(), ar=String(it.local||'').trim(), lc=String(P(it,'tx_local_exato','')).trim(), es=String(P(it,'tx_estrutura','')).trim(); const j=a=>a.filter(Boolean).join(' | ');
   if(tipo==='A') return j([eq&&'TAG: '+eq,ar&&'Área: '+ar,lc&&'Local: '+lc]); if(tipo==='C') return [eq,ar,lc].filter(Boolean).join(' - '); if(tipo==='P') return j([[eq,ar,lc].filter(Boolean).join(' - '),es&&'Estrutura de Destino: '+es]); return j([eq&&'TAG da Linha/Equipamento: '+eq,ar&&'Área: '+ar,lc&&'Local: '+lc]); }
 function escopoTecnico(it,r,caso){ const desc=String(it.descricao||'').trim(), L=[]; const add=(l,v)=>{ if(v!==''&&v!=null&&v!==false) L.push(l+': '+v); }; const sub=(l,v)=>{ if(v!==''&&v!=null&&v!==false) L.push('  - '+l+': '+v); };
-  const fam=ftFam(it,caso), norma=ftNorma(it,caso), n=Number(it.qtd)||0; const pecas=(v)=>ftNum(v,v%1?2:0)+' peça'+(v>1?'s':''); const serv=P(it,'tx_serv_'+caso.toLowerCase(),FT_SERV[caso][0])+(desc?' — '+desc:'');
+  const fam=ftFam(it,caso), norma=ftNorma(it,caso), un0=ftUn(it), n=un0?0:(Number(it.qtd)||0); const pecas=(v)=>ftNum(v,v%1?2:0)+' peça'+(v>1?'s':''); const qOut=()=>{ if(un0){ const q=Number(it.qtd)||0; if(q>0) add('Quantidade',ftNum(q,q%1?2:0)+' '+un0); } else if(n>0) add('Quantidade',pecas(n)); }; const serv=P(it,'tx_serv_'+caso.toLowerCase(),FT_SERV[caso][0])+(desc?' — '+desc:'');
   const dimPlaca=(rotKg)=>{ const l=ftN(it,'b_larg'), c=ftN(it,'b_comp'), e=ftN(it,'b_esp'), pl=ftPlaca(it); const med=[l>0&&'Largura: '+ftNum(l)+' mm',c>0&&'Comprimento: '+ftNum(c)+' mm',e>0&&'Espessura: '+ftNum(e)+' mm'].filter(Boolean).join(' | '); if(med) sub(med.split(': ')[0],med.split(': ').slice(1).join(': ')); if(pl){ const kg=pl.kg_un; sub(rotKg,ftNum(kg,kg<10?3:2)+' kg'+(n>1?' por peça — '+ftNum(kg*n,1)+' kg no total ('+pecas(n)+')':'')); } return !!(med||pl); };
   if(caso==='A'){ const pip=it.modelo==='PIPING'; add('Serviço Principal',serv); add('Rastreabilidade',ftLocal(it,'A'));
     const cls=pip?'':String(P(it,'a_cls','')).trim(); add('Material e Norma',(fam+(norma?' '+norma:'')).trim()+(cls?' | Classe: '+cls:''));
@@ -19379,15 +19382,15 @@ function escopoTecnico(it,r,caso){ const desc=String(it.descricao||'').trim(), L
     const l=ftN(it,'b_larg'), c=ftN(it,'b_comp'), e=ftN(it,'b_esp'), pl=ftPlaca(it); if(l>0||c>0||e>0||pl){ L.push('Dimensões e Geometria da Chapa:'); dimPlaca('Peso Teórico Calculado'); }
     const fn=ftN(it,'furo_n'), fd=ftN(it,'furo_d'); const conf=[]; if(P(it,'conf_cal',false)===true){ const d=ftN(it,'conf_cal_d'); conf.push('Calandragem em virola'+(d>0?' Ø '+ftNum(d,1)+' mm':'')); } if(P(it,'conf_dobra',false)===true) conf.push('Dobra'); if(P(it,'conf_chanfro',false)===true) conf.push('Chanfro em V para solda');
     const ops=[]; if(P(it,'tx_corte','')) ops.push(['Método de Corte',P(it,'tx_corte','')]); if(fd>0||fn>0) ops.push(['Furação','Execução de '+(fn>0?ftNum(fn,0)+' furos passantes':'furos passantes')+(fd>0?' com diâmetro Ø '+ftNum(fd,1)+' mm':'')+'.']); if(conf.length) ops.push(['Conformação e Bordas',conf.join(' / ')]); if(P(it,'tx_uniao_m','')) ops.push(['União e Montagem',P(it,'tx_uniao_m','')]);
-    if(ops.length){ L.push('Operações e Acabamentos Executados:'); ops.forEach(([a,b])=>sub(a,b)); } const exx=String(P(it,'tx_ops_extra','')).trim(); if(exx) add('Outras Operações',exx); if(n>0) add('Quantidade',pecas(n)); }
+    if(ops.length){ L.push('Operações e Acabamentos Executados:'); ops.forEach(([a,b])=>sub(a,b)); } const exx=String(P(it,'tx_ops_extra','')).trim(); if(exx) add('Outras Operações',exx); qOut(); }
   else if(caso==='P'){ const pf=ftPerfil(it); add('Serviço Principal',serv); add('Tag / Área',ftLocal(it,'P')); add('Especificação do Material',fam+(norma?' - Norma: '+norma:''));
     L.push('Tipo de Perfil e Dimensões:'); sub('Perfil',pf.t); sub('Bitola / Seção',pf.nominal); const cmp=ftN(it,'pf_comp'); if(cmp>0) sub('Comprimento',ftNum(cmp,cmp%1?1:0)+' mm'+(n>1?' cada — total '+ftNum(cmp*n,0)+' mm ('+pecas(n)+')':'')); if(pf.kg_un!=null) sub('Peso Teórico Calculado',ftNum(pf.kg_un,pf.kg_un<10?3:2)+' kg'+(n>1?' por peça — '+ftNum(pf.kg_un*n,1)+' kg no total':'')+(pf.kgm>0?' ('+ftNum(pf.kgm,3)+' kg/m)':''));
     const fn=ftN(it,'furo_n'), fd=ftN(it,'furo_d'); const ops=[]; if(P(it,'tx_fixacao','')) ops.push(['Conexão',P(it,'tx_fixacao','')]); if(P(it,'tx_recorte','')) ops.push(['Recortes / Miter',P(it,'tx_recorte','')]); if(fd>0||fn>0) ops.push(['Furação para Ligação',(fn>0?ftNum(fn,0)+' furos':'Furos')+(fd>0?' Ø '+ftNum(fd,1)+' mm':'')]);
-    if(ops.length){ L.push('Método de Ligação e Fixação:'); ops.forEach(([a,b])=>sub(a,b)); } const exx=String(P(it,'tx_ops_extra','')).trim(); if(exx) add('Outras Operações',exx); if(n>0) add('Quantidade',pecas(n)); }
+    if(ops.length){ L.push('Método de Ligação e Fixação:'); ops.forEach(([a,b])=>sub(a,b)); } const exx=String(P(it,'tx_ops_extra','')).trim(); if(exx) add('Outras Operações',exx); qOut(); }
   else { add('Serviço Principal',serv); add('Referência',ftLocal(it,'B')); add('Tipo de Suporte',P(it,'tx_tipo_el',FT_EL_B[0])); add('Especificação do Material',(fam+(norma?' '+norma:'')).trim());
     const l=ftN(it,'b_larg'), c=ftN(it,'b_comp'), e=ftN(it,'b_esp'), pl=ftPlaca(it); if(l>0||c>0||e>0||pl){ L.push('Dimensões dos Componentes (em mm):'); dimPlaca('Peso Teórico'); }
     const fn=ftN(it,'furo_n'), fd=ftN(it,'furo_d'); const pr=[]; FT_OPS_B.forEach(([k,t])=>{ if(P(it,'ops_'+k,false)!==true) return; if(k==='furo') pr.push('furação'+(fd>0?' Ø '+ftNum(fd,1)+' mm':'')+(fn>0?' ('+ftNum(fn,0)+' furos por peça)':'')); else pr.push(t.charAt(0).toLowerCase()+t.slice(1)); }); const exx=String(P(it,'tx_ops_extra','')).trim(); if(exx) pr.push(exx);
-    if(pr.length){ const s=pr.join(', ').replace(/, ([^,]*)$/,' e $1'); add('Escopo de Execução',s.charAt(0).toUpperCase()+s.slice(1)+'.'); } if(n>0) add('Quantidade',pecas(n)); }
+    if(pr.length){ const s=pr.join(', ').replace(/, ([^,]*)$/,' e $1'); add('Escopo de Execução',s.charAt(0).toUpperCase()+s.slice(1)+'.'); } qOut(); }
   const fin=String(P(it,'finalidade','')).trim(); if(fin) add('Finalidade',fin); return L.join('\n'); }
 // atualiza o peso na tela assim que as medidas mudam
 document.addEventListener('change',e=>{ const t=e.target, f=t&&t.getAttribute&&t.getAttribute('data-fo'); const m=f&&/^it\.([^.]+)\.(p\.(b_larg|b_comp|b_esp|tx_mat_base|pf_[a-z0-9]+|tx_dim_nominal)|qtd)$/.exec(f); if(!m) return; setTimeout(()=>{ const it=est.itens.find(x=>x.id===m[1]); const el=document.querySelector('[data-ftpeso="'+m[1]+'"]'); if(it&&el) el.textContent=ftPesoTxt(it); },0); });
