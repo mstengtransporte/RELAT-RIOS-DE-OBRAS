@@ -1744,6 +1744,61 @@ body.dark #workers-body tr:hover{background-color:rgba(58,110,232,.08)}
   }
 }
 </style>
+<style id="prev-rel-css">
+/* ═══ PRÉ-VISUALIZAÇÃO dos relatórios Absenteísmo e Folha de Ponto (v72) — só leitura; não altera os Excel ═══ */
+#prev-rel-modal{position:fixed;inset:0;z-index:10000;display:none;flex-direction:column;background:var(--surface,#fff);color:var(--text,#111);font-family:inherit}
+#prev-rel-modal.show{display:flex}
+@media print{#prev-rel-modal{display:none!important}}
+#absenteismo-periodo-modal .multipdf-footer button,#folha-ponto-modal .multipdf-footer button{min-width:30%}
+.prel-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 16px;color:#fff;font-weight:900;font-size:14px;border-bottom:2px solid #000;flex-shrink:0}
+.prel-head button{background:none;border:none;color:#fff;font-size:20px;cursor:pointer;line-height:1}
+.prel-sub{padding:8px 16px;font-size:12px;font-weight:700;color:var(--text2,#444);background:var(--surface2,#f4f4f4);border-bottom:1px solid var(--border,#d6d6d6);flex-shrink:0}
+.prel-chips{display:flex;flex-wrap:wrap;gap:6px;padding:8px 16px 0;flex-shrink:0}
+.prel-chip{border:2px solid #000;background:var(--surface2,#f4f4f4);color:var(--text,#111);padding:5px 10px;font-size:11.5px;font-weight:900;cursor:default;border-radius:3px}
+button.prel-chip{cursor:pointer}
+.prel-chip.on{outline:3px solid #1457c8}
+.prel-chip.f{background:#fecaca;color:#991b1b}.prel-chip.sc{background:#fed7aa;color:#9a3412}.prel-chip.t{background:#e9d5ff;color:#6b21a8}.prel-chip.c{background:#fef3c7;color:#92400e}.prel-chip.tr{background:#dcfce7;color:#166534}.prel-chip.sr{background:#f3f4f6;color:#6b7280}
+.prel-tools{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:8px 16px;flex-shrink:0}
+.prel-tools input[type=search],.prel-tools input[type=text],.prel-tools select{padding:7px 9px;border:2px solid #000;background:var(--surface2,#f4f4f4);color:var(--text,#111);font-size:12px;font-weight:700;min-width:0;flex:1 1 150px;max-width:340px}
+.prel-tools button,.prel-aba{padding:7px 12px;border:2px solid #000;background:var(--surface2,#f4f4f4);color:var(--text,#111);font-size:12px;font-weight:900;cursor:pointer}
+.prel-aba.on{background:#1457c8;color:#fff}
+.prel-aviso{margin:0 16px 6px;padding:6px 10px;font-size:11.5px;font-weight:700;background:#fef3c7;color:#92400e;border:1.5px solid #f59e0b;flex-shrink:0}
+.prel-corpo{flex:1 1 auto;min-height:0;overflow:auto;padding:0 16px 14px;-webkit-overflow-scrolling:touch}
+.prel-vazio{padding:30px 10px;text-align:center;font-weight:800;color:var(--text3,#777);font-size:13px}
+.prel-foot{display:flex;gap:8px;padding:10px 16px;border-top:2px solid #000;flex-shrink:0;background:var(--surface,#fff);flex-wrap:wrap}
+.prel-foot button{flex:1 1 140px;padding:11px;border:2px solid #000;font-size:12.5px;font-weight:900;cursor:pointer}
+.prel-foot .sec{background:var(--surface2,#f4f4f4);color:var(--text2,#444)}.prel-foot .ok{background:#16a34a;color:#fff}.prel-foot button:disabled{opacity:.4;cursor:not-allowed}
+.prel-tab{width:100%;border-collapse:collapse;font-size:12px}
+.prel-tab th{position:sticky;top:0;z-index:2;background:#0d1b3e;color:#fff;padding:7px 8px;font-size:10.5px;letter-spacing:.3px;text-align:left;border:1px solid #1e293b;white-space:nowrap}
+.prel-tab td{padding:6px 8px;border:1px solid var(--border,#d6d6d6);vertical-align:top}
+.prel-tab tbody tr:nth-child(even) td{background:var(--surface2,#f4f4f4)}
+.prel-tab td.n,.prel-tab th.n{text-align:center}
+.prel-tab td.bad{font-weight:900;color:#b91c1c}
+.prel-st{display:inline-block;padding:2px 7px;font-weight:900;font-size:11px;border-radius:3px;white-space:nowrap}
+.prel-st.FALTA{background:#fecaca;color:#991b1b}.prel-st.SAIU{background:#fed7aa;color:#9a3412}.prel-st.TRANSFERIDO{background:#bfdbfe;color:#1e40af}.prel-st.PRESENTE{background:#dcfce7;color:#166534}
+.prel-tot{margin-top:8px;padding:9px 12px;background:#0d1b3e;color:#fff;font-weight:900;font-size:12.5px}
+.prel-cards{display:none;flex-direction:column;gap:6px}
+.prel-card{border:2px solid #000;padding:8px 10px;background:var(--surface2,#f4f4f4);font-size:12px}
+.prel-card b{font-size:12.5px}.prel-card small{display:block;color:var(--text2,#555);font-weight:600;margin-top:2px}
+@media(max-width:700px){.prel-tab.abs{display:none}.prel-cards{display:flex}}
+.prel-mais{display:block;margin:10px auto 0;padding:8px 18px;border:2px solid #000;background:var(--surface2,#f4f4f4);font-weight:900;cursor:pointer;font-size:12px}
+/* grade por dia */
+.prel-grade{border-collapse:separate;border-spacing:0;font-size:11px}
+.prel-grade th{position:sticky;top:0;z-index:2;background:#0d1b3e;color:#fff;padding:3px 2px;min-width:38px;font-size:10px;border:1px solid #1e293b}
+.prel-grade th.fds{background:#475569}
+.prel-grade th.nm,.prel-grade td.nm{position:sticky;left:0;z-index:3;min-width:150px;max-width:190px;text-align:left;padding:4px 7px;background:var(--surface,#fff);border:1px solid var(--border,#d6d6d6);font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.prel-grade th.nm{background:#0d1b3e;color:#fff;z-index:4}
+.prel-grade td{padding:0;border:1px solid var(--border,#d6d6d6);text-align:center}
+.prel-grade td button{display:block;width:100%;min-height:30px;border:0;cursor:pointer;font-size:10.5px;font-weight:900;padding:2px;font-family:inherit}
+.prel-c-tr{background:#dceefb;color:#1e40af}.prel-c-sc{background:#fed7aa;color:#9a3412}.prel-c-f,.prel-c-inc{background:#fecaca;color:#991b1b}.prel-c-t{background:#e9d5ff;color:#6b21a8}.prel-c-sr{background:#f3f4f6;color:#9ca3af}.prel-c-c{background:#fef3c7;color:#92400e;outline:2px solid #92400e;outline-offset:-2px}
+.prel-leg{display:flex;flex-wrap:wrap;gap:6px 12px;padding:6px 16px;font-size:11px;font-weight:700;flex-shrink:0}
+.prel-leg i{display:inline-block;width:12px;height:12px;border:1px solid #64748b;vertical-align:-2px;margin-right:4px}
+#prev-rel-det{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.55);z-index:20;padding:14px}
+#prev-rel-det.show{display:flex}
+.prel-detbox{background:var(--surface,#fff);color:var(--text,#111);border:2.5px solid #000;max-width:520px;width:100%;max-height:88vh;overflow:auto;padding:14px 16px;box-shadow:6px 6px 0 #000}
+.prel-detbox h4{margin:0 0 6px;font-size:14px}.prel-detbox .lin{padding:6px 8px;margin:4px 0;border:1.5px solid var(--border,#ccc);font-size:12px;background:var(--surface2,#f4f4f4)}
+.prel-detbox button{margin-top:10px;padding:9px 16px;border:2px solid #000;background:var(--surface2,#f4f4f4);font-weight:900;cursor:pointer}
+</style>
 </head>
 <body>
 
@@ -1756,7 +1811,7 @@ body.dark #workers-body tr:hover{background-color:rgba(58,110,232,.08)}
      fontes) — os dois sistemas usam a mesma "moldura" de login, só
      o papel de parede muda entre eles. -->
 <div id="login-overlay" style="position:fixed;inset:0;z-index:99999;background:#0b1220 url('login-fundo-rdo.jpg') center center / cover no-repeat;color-scheme:dark">
-  <div style="position:absolute;bottom:6px;right:8px;font-size:9px;color:rgba(255,255,255,.35);font-family:monospace;pointer-events:none">v2026.10.71-tela-cheia</div>
+  <div style="position:absolute;bottom:6px;right:8px;font-size:9px;color:rgba(255,255,255,.35);font-family:monospace;pointer-events:none">v2026.10.72-previa-relatorios</div>
   <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:calc(100% - 32px);max-width:380px;background:rgb(10,17,32);border:1px solid rgba(255,255,255,.14);border-radius:18px;padding:32px 28px;box-shadow:0 20px 60px rgba(0,0,0,.6);text-transform:none;font-weight:400">
     <h1 style="font-size:20px;margin:0 0 4px;color:#fff;text-align:center;font-weight:700">RDO <span style="color:#3ea6ff">Master Energy</span></h1>
     <p style="margin:0 0 24px;text-align:center;color:#9ca3af;font-size:13px;letter-spacing:.5px;font-weight:600">DIÁRIO DE OBRA PRO</p>
@@ -2152,7 +2207,8 @@ body.dark #workers-body tr:hover{background-color:rgba(58,110,232,.08)}
     </div>
     <div class="multipdf-footer">
       <button class="multipdf-cancel" onclick="document.getElementById('absenteismo-periodo-modal').classList.remove('show')">Cancelar</button>
-      <button class="multipdf-gerar" onclick="exportarRelatorioAbsenteismo()" style="background:#b91c1c">📥 Gerar Excel</button>
+      <button type="button" class="multipdf-gerar" style="background:#1457c8" onclick="visualizarAbsenteismo()">👁 Visualizar</button>
+    <button class="multipdf-gerar" onclick="exportarRelatorioAbsenteismo()" style="background:#b91c1c">📥 Gerar Excel</button>
     </div>
   </div>
 </div>
@@ -2180,7 +2236,8 @@ body.dark #workers-body tr:hover{background-color:rgba(58,110,232,.08)}
     </div>
     <div class="multipdf-footer">
       <button class="multipdf-cancel" onclick="document.getElementById('folha-ponto-modal').classList.remove('show')">Cancelar</button>
-      <button class="multipdf-gerar" style="background:linear-gradient(180deg,#94a3b8 0%,#475569 100%)" onclick="exportarFolhaPontoExcel()">📥 Gerar Excel</button>
+      <button type="button" class="multipdf-gerar" style="background:#1457c8" onclick="visualizarFolhaPonto()">👁 Visualizar</button>
+    <button class="multipdf-gerar" style="background:linear-gradient(180deg,#94a3b8 0%,#475569 100%)" onclick="exportarFolhaPontoExcel()">📥 Gerar Excel</button>
     </div>
   </div>
 </div>
@@ -14416,7 +14473,7 @@ window.addEventListener('beforeinstallprompt',(e)=>{
   };
 });
 </script>
-<div class="no-print" style="position:fixed;bottom:2px;right:4px;font-size:8px;color:rgba(120,120,120,.4);font-family:monospace;pointer-events:none;z-index:5">v2026.10.71-tela-cheia</div>
+<div class="no-print" style="position:fixed;bottom:2px;right:4px;font-size:8px;color:rgba(120,120,120,.4);font-family:monospace;pointer-events:none;z-index:5">v2026.10.72-previa-relatorios</div>
 
 <!-- MODAL DE ALERTA DE PENDÊNCIAS — substitui o toast/alert escuro de antes. Aparece
      sempre que a validação unificada (validarFormularioRDO) bloqueia uma tentativa de
@@ -18298,7 +18355,7 @@ const PECAS=(function(){
 // na própria linha (params.ativ_sn): se o catálogo mudar depois, orçamentos já feitos continuam com o texto de quando foram feitos.
 const ATIV={ok:false,carregando:false,erro:false,v:'',lista:[],disc:[],sub:[],t:{},porCod:new Map()};
 const ATIV_URL='catalogo_atividades.json?v=v5b-2026-10';
-const ORC_VERSAO='v2026.10.71-tela-cheia';
+const ORC_VERSAO='v2026.10.72-previa-relatorios';
 async function carregarAtividades(forcar){ if(ATIV.carregando) return; if(ATIV.ok&&!forcar) return; ATIV.carregando=true; ATIV.erro=false; ATIV.msgErro='';
   let url=ATIV_URL; try{ url=new URL(ATIV_URL,window.location.href).href; }catch(e){} if(forcar) url+='&t='+Date.now(); ATIV.url=url;
   try{ const r=await fetch(url); if(!r.ok) throw new Error('o arquivo não foi encontrado (HTTP '+r.status+')'); let j; try{ j=await r.json(); }catch(e){ throw new Error('o endereço devolveu uma página em vez do arquivo (provavelmente fora da raiz do site)'); }
@@ -20330,5 +20387,189 @@ Object.assign(window.ORC_UI,{badgeConf,textoConf,confiancaHH,blocoConfianca,gera
 </script>
 <!-- ===== MÓDULO "ORÇAMENTO" — fim ===== -->
 
+
+<!-- PRÉ-VISUALIZAÇÃO — Absenteísmo e Folha de Ponto (somente leitura; o Excel continua sendo gerado pelas mesmas rotinas de sempre) -->
+<div id="prev-rel-modal">
+  <div class="prel-head" id="prel-head"><span id="prel-titulo"></span><button type="button" data-prel="fechar" title="Fechar">✕</button></div>
+  <div class="prel-sub" id="prel-sub"></div>
+  <div class="prel-chips" id="prel-chips"></div>
+  <div class="prel-tools" id="prel-tools"></div>
+  <div class="prel-aviso" id="prel-aviso" style="display:none"></div>
+  <div class="prel-leg" id="prel-leg"></div>
+  <div class="prel-corpo" id="prel-corpo"></div>
+  <div class="prel-foot"><button type="button" class="sec" data-prel="voltar">← Voltar</button><button type="button" class="ok" id="prel-excel" data-prel="excel" disabled>📥 Gerar Excel</button></div>
+  <div id="prev-rel-det"></div>
+</div>
+<script>
+(function(){
+'use strict';
+/* PRÉ-VISUALIZAÇÃO dos relatórios Absenteísmo e Folha de Ponto — SOMENTE LEITURA.
+   Mostra na tela os mesmos dados que o Excel vai conter, antes de gerar. Não grava nada, não altera as
+   rotinas que geram o Excel (exportarRelatorioAbsenteismo / exportarFolhaPontoExcel): o botão "Gerar Excel"
+   daqui apenas chama essas mesmas rotinas, sem mudar nada nelas. */
+const $=id=>document.getElementById(id);
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const n1=n=>(Number(n)||0).toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1});
+const fmtISO=iso=>{ const p=String(iso||'').split('-'); return p[2]?`${p[2]}/${p[1]}/${p[0]}`:(iso||''); };
+const S={tipo:null,tok:0,abs:null,fp:null,aba:'resumo',mes:null};
+window.__PREVREL=S; // só para conferência/teste
+
+function abrir(tipo,titulo,fundo,botaoExcel){
+  S.tipo=tipo; S.tok++;
+  $('prel-head').style.background=fundo; $('prel-titulo').textContent=titulo;
+  $('prel-sub').textContent=''; $('prel-chips').innerHTML=''; $('prel-tools').innerHTML=''; $('prel-aviso').style.display='none'; $('prel-leg').innerHTML='';
+  $('prel-corpo').innerHTML=''; $('prel-excel').disabled=true; $('prel-excel').textContent=botaoExcel;
+  $('prev-rel-det').classList.remove('show'); $('prev-rel-modal').classList.add('show');
+}
+function fechar(){ S.tok++; const m=$('prev-rel-modal'); if(m) m.classList.remove('show'); const d=$('prev-rel-det'); if(d) d.classList.remove('show'); }
+function fecharPrevRel(){ const d=$('prev-rel-det'); if(d&&d.classList.contains('show')){ d.classList.remove('show'); return; } fechar(); }
+const carregando=txt=>{ $('prel-corpo').innerHTML=`<div class="prel-vazio">⏳ ${esc(txt)}</div>`; };
+const erro=txt=>{ $('prel-corpo').innerHTML=`<div class="prel-vazio" style="color:#b91c1c">❌ ${esc(txt)}</div>`; };
+
+/* ───────────── ABSENTEÍSMO ───────────── */
+async function visualizarAbsenteismo(){
+  if(typeof exigirAdmin==='function'&&!exigirAdmin()) return;
+  const cli=getSupabaseClient(); if(!cli){ showToast('Sistema não conectado ao banco.','#dc2626'); return; }
+  const desde=$('absenteismo-de')?.value||null; const ate=$('absenteismo-ate')?.value||new Date().toISOString().slice(0,10);
+  abrir('abs','🚨 Absenteísmo — conferir antes de gerar o Excel','linear-gradient(135deg,#b91c1c,#7f1d1d)','📥 Gerar Excel');
+  const tok=S.tok; carregando('Buscando o histórico de absenteísmo do período…'); let data;
+  try{ const r=await cli.rpc('relatorio_absenteismo',{p_desde_data:desde,p_ate_data:ate}); if(tok!==S.tok) return; if(r.error){ erro('Erro ao buscar: '+r.error.message); return; } data=r.data||[]; }
+  catch(e){ if(tok!==S.tok) return; erro('Erro de conexão ao buscar o relatório.'); return; }
+  let total=0;
+  const rows=data.map(l=>{ const horasAbs=Number(l.horas_absenteismo)||0; total+=horasAbs; return{ data:fmtISO(l.data_rdo||''), obra:(l.obra||'').toUpperCase(), colaborador:(l.colaborador||'').toUpperCase(), funcao:(l.funcao||'').toUpperCase(), disciplina:(l.disciplina||'').toUpperCase(), encarregado:(l.encarregado||'').toUpperCase(), status:l.status_ocorrencia||'', horasTrabalhadas:Number(l.horas_trabalhadas)||0, horasAbsenteismo:horasAbs }; });
+  S.abs={rows,total,desde,ate,q:'',status:'',obra:'',limite:300};
+  renderAbs();
+}
+const stCls=s=>/^FALTA/.test(s)?'FALTA':/^SAIU/.test(s)?'SAIU':/^TRANSF/.test(s)?'TRANSFERIDO':/^PRESENTE/.test(s)?'PRESENTE':'';
+function filtrarAbs(){ const a=S.abs; const q=a.q.trim().toLowerCase(); return a.rows.filter(r=>(!a.status||r.status===a.status)&&(!a.obra||r.obra===a.obra)&&(!q||(r.colaborador+' '+r.obra+' '+r.encarregado+' '+r.funcao+' '+r.disciplina).toLowerCase().includes(q))); }
+function renderAbs(){
+  const a=S.abs; const per=(a.desde?fmtISO(a.desde):'o início do sistema')+' a '+fmtISO(a.ate);
+  $('prel-sub').textContent='Período: '+per+' · '+a.rows.length+' ocorrência(s) · '+n1(a.total)+' h de absenteísmo no total';
+  if(!a.rows.length){ $('prel-chips').innerHTML=''; $('prel-tools').innerHTML=''; $('prel-corpo').innerHTML='<div class="prel-vazio">Nenhuma ocorrência de FALTA / SAIU CEDO / TRANSFERIDO encontrada nesse período.</div>'; $('prel-excel').disabled=true; return; }
+  $('prel-excel').disabled=false;
+  const cont={}; a.rows.forEach(r=>{ cont[r.status]=(cont[r.status]||0)+1; });
+  $('prel-chips').innerHTML=Object.keys(cont).sort().map(s=>`<button type="button" class="prel-chip ${stCls(s)==='FALTA'?'f':stCls(s)==='SAIU'?'sc':stCls(s)==='TRANSFERIDO'?'t':stCls(s)==='PRESENTE'?'tr':''}${a.status===s?' on':''}" data-prel="status" data-v="${esc(s)}">${esc(s||'(sem status)')}: ${cont[s]}</button>`).join('')+`<span class="prel-chip">Total: ${a.rows.length}</span>`;
+  const obras=[...new Set(a.rows.map(r=>r.obra))].sort((x,y)=>x.localeCompare(y,'pt-BR'));
+  $('prel-tools').innerHTML=`<input type="search" id="prel-q" placeholder="🔎 Buscar colaborador, obra, encarregado…" value="${esc(a.q)}" autocomplete="off"><select id="prel-fobra"><option value="">— Todas as obras —</option>${obras.map(o=>`<option value="${esc(o)}"${a.obra===o?' selected':''}>${esc(o||'(sem obra)')}</option>`).join('')}</select><button type="button" data-prel="limpar">✕ Limpar filtros</button>`;
+  renderListaAbs();
+}
+function renderListaAbs(){
+  const a=S.abs; const f=filtrarAbs(); const vis=f.slice(0,a.limite); const filtrando=!!(a.q.trim()||a.status||a.obra);
+  const aviso=$('prel-aviso'); aviso.style.display=filtrando?'block':'none'; aviso.textContent='ℹ️ Os filtros valem só para esta tela — o Excel traz TODAS as '+a.rows.length+' ocorrências do período.';
+  const totF=f.reduce((s,r)=>s+r.horasAbsenteismo,0);
+  const linhas=vis.map(r=>`<tr><td class="n">${esc(r.data)}</td><td>${esc(r.obra)}</td><td><b>${esc(r.colaborador)}</b></td><td>${esc(r.funcao)}</td><td>${esc(r.disciplina)}</td><td>${esc(r.encarregado)}</td><td><span class="prel-st ${stCls(r.status)}">${esc(r.status)}</span></td><td class="n">${n1(r.horasTrabalhadas)}</td><td class="n${r.horasAbsenteismo>0?' bad':''}">${n1(r.horasAbsenteismo)}</td></tr>`).join('');
+  const cards=vis.map(r=>`<div class="prel-card"><b>${esc(r.colaborador)}</b> · ${esc(r.data)} <span class="prel-st ${stCls(r.status)}">${esc(r.status)}</span><small>${esc(r.obra)} · ${esc(r.funcao)}${r.disciplina?' · '+esc(r.disciplina):''}</small><small>Encarregado: ${esc(r.encarregado)} · Trabalhadas: ${n1(r.horasTrabalhadas)} h · <b style="color:${r.horasAbsenteismo>0?'#b91c1c':'inherit'}">Absenteísmo: ${n1(r.horasAbsenteismo)} h</b></small></div>`).join('');
+  $('prel-corpo').innerHTML=f.length?`<table class="prel-tab abs"><thead><tr><th class="n">DATA</th><th>OBRA / CENTRO DE CUSTO</th><th>COLABORADOR</th><th>FUNÇÃO</th><th>DISCIPLINA</th><th>ENCARREGADO</th><th>STATUS / OCORRÊNCIA</th><th class="n">H. TRABALHADAS</th><th class="n">H. ABSENTEÍSMO</th></tr></thead><tbody>${linhas}</tbody></table><div class="prel-cards">${cards}</div>${f.length>vis.length?`<button type="button" class="prel-mais" data-prel="mais">Mostrar mais (${f.length-vis.length} restantes)</button>`:''}<div class="prel-tot">${filtrando?'NESTA TELA ('+f.length+' ocorrência(s)): ':'TOTAL GERAL ('+f.length+' ocorrência(s)): '}${n1(totF)} h de absenteísmo ("FALTA")</div>`:'<div class="prel-vazio">Nenhuma ocorrência com esses filtros.</div>';
+}
+
+/* ───────────── FOLHA DE PONTO ───────────── */
+function classificarDia(cel,iso){
+  const soma=o=>o.horasNormais+o.horasExtra70+o.horasExtra100;
+  switch(cel.tipo){
+    case 'sem_registro': return{k:'sr',t:'–',h:0,desc:'Sem registro — nenhum RDO lançou a pessoa neste dia.'};
+    case 'falta': return{k:'f',t:'F',h:0,desc:'Falta declarada.'};
+    case 'conflito': return{k:'c',t:'⚠C',h:0,desc:'CONFLITO — há falta declarada e, no mesmo dia, horas lançadas em outro RDO. As duas informações não podem ser verdade ao mesmo tempo: precisa investigar.'};
+    case 'transferido_confirmado': { const h=cel.horasOrigem.normais+cel.horasOrigem.extra70+cel.horasOrigem.extra100+cel.destinos.reduce((s,d)=>s+soma(d),0); return{k:'t',t:'TR '+n1(h),h,desc:'Transferido de '+(cel.origem||'(sem obra)')+' — confirmado por horas lançadas em outro RDO no mesmo dia.'}; }
+    case 'transferido_confirmado_amanha': return{k:'t',t:'TR',h:0,desc:'Transferido de '+(cel.origem||'(sem obra)')+' — confirmado só pelo RDO do dia seguinte (conta como "sem registro" neste dia).'};
+    case 'transferido_sem_confirmar': return{k:'t',t:'TR?',h:0,desc:'Transferido de '+(cel.origem||'(sem obra)')+' — sem nenhum RDO confirmando onde trabalhou.'};
+    case 'saiu_cedo': return{k:'sc',t:'SC '+n1(cel.horas),h:cel.horas,desc:'Saiu mais cedo — '+n1(cel.horas)+' h trabalhadas.'};
+    case 'incompleto_sem_explicacao': return{k:'inc',t:'⚠0',h:0,desc:'Nome lançado, mas sem nenhuma hora e sem status (falta, saiu cedo ou transferido) explicando.'};
+    case 'trabalhou': { const total=cel.horasNormais+cel.extra70+cel.extra100; const fds=(typeof ehSabadoOuDomingo==='function')?ehSabadoOuDomingo(iso):[0,6].includes(new Date(iso+'T12:00:00').getDay());
+      if(fds||cel.ehFeriado){ const rot=cel.ehFeriado&&!fds?'FER':'HE'; return{k:'tr',t:rot+' '+n1(total),h:total,desc:(rot==='FER'?'Feriado':'Fim de semana (hora extra '+(cel.extra100>0?'100%':'70%')+')')+' — '+n1(total)+' h.'}; }
+      if(total<9) return{k:'inc',t:'⚠ '+n1(total),h:total,desc:'Dia útil INCOMPLETO — '+n1(total)+' h (esperado 9 h) e sem status explicando.'};
+      return{k:'tr',t:'✓ '+n1(total),h:total,desc:'Trabalhou — '+n1(total)+' h.'}; }
+  }
+  return{k:'sr',t:'?',h:0,desc:''};
+}
+async function visualizarFolhaPonto(){
+  if(typeof exigirAdmin==='function'&&!exigirAdmin()) return;
+  const de=$('folha-ponto-de')?.value, ate=$('folha-ponto-ate')?.value;
+  if(!de||!ate){ showToast('Escolha o período (De / Até).','#d97706'); return; }
+  if(de>ate){ showToast('A Data "De" não pode ser depois da Data "Até".','#dc2626'); return; }
+  abrir('fp','🗓️ Folha de Ponto — conferir antes de gerar o Excel','linear-gradient(135deg,#94a3b8,#475569)','📥 Gerar Excel');
+  const tok=S.tok; carregando('Buscando os dados da Folha de Ponto…'); let bruto;
+  try{ bruto=await coletarDadosFolhaPonto(de,ate); }catch(e){ if(tok!==S.tok) return; erro('Erro ao buscar dados: '+(e.message||e)); return; }
+  if(tok!==S.tok) return;
+  const matriz=processarDadosFolhaPonto(bruto);
+  const nomes=Object.keys(matriz).sort((x,y)=>matriz[x].nomeExibicao.localeCompare(matriz[y].nomeExibicao,'pt-BR'));
+  const datas=[]; { const c=new Date(de+'T12:00:00'), fim=new Date(ate+'T12:00:00'); while(c<=fim){ datas.push(`${c.getFullYear()}-${String(c.getMonth()+1).padStart(2,'0')}-${String(c.getDate()).padStart(2,'0')}`); c.setDate(c.getDate()+1); } }
+  const meses=[...new Set(datas.map(d=>d.slice(0,7)))].sort();
+  const func=nomes.map(chave=>{ const L=matriz[chave]; let faltas=0,semReg=0,conf=0,horas=0;
+    const cels=datas.map((dt,i)=>{ const cel=resolverCelulaFolhaPonto(L.porData[dt],L.porData[datas[i+1]]); const cl=classificarDia(cel,dt);
+      if(cel.tipo==='falta') faltas++; else if(cel.tipo==='conflito') conf++; else if(cel.tipo==='sem_registro'||cel.tipo==='transferido_confirmado_amanha'||cel.tipo==='incompleto_sem_explicacao') semReg++;
+      else if(cel.tipo==='trabalhou') horas+=cel.horasNormais+cel.extra70+cel.extra100; else if(cel.tipo==='saiu_cedo') horas+=cel.horas; else if(cel.tipo==='transferido_confirmado') horas+=cel.horasOrigem.normais+cel.horasOrigem.extra70+cel.horasOrigem.extra100+cel.destinos.reduce((s,d)=>s+d.horasNormais+d.horasExtra70+d.horasExtra100,0);
+      return{dt,cel,cl}; });
+    return{chave,nome:L.nomeExibicao,funcao:L.funcao,lanc:L.porData,cels,faltas,semReg,conf,horas:Number(horas.toFixed(1))}; });
+  S.fp={de,ate,func,datas,meses,q:'',soProblemas:false}; S.aba='resumo'; S.mes=meses[0]||null;
+  renderFP();
+}
+const nomeMes=m=>{ const [a,n]=m.split('-').map(Number); return `${(typeof NOMES_MESES_FOLHA_PONTO!=='undefined'?NOMES_MESES_FOLHA_PONTO[n]:n)} ${a}`; };
+function renderFP(){
+  const f=S.fp; const confs=[]; f.func.forEach(x=>x.cels.forEach(c=>{ if(c.cel.tipo==='conflito') confs.push({x,c}); }));
+  const T=f.func.reduce((o,x)=>({fa:o.fa+x.faltas,sr:o.sr+x.semReg,co:o.co+x.conf,h:o.h+x.horas}),{fa:0,sr:0,co:0,h:0});
+  $('prel-sub').textContent='Período: '+fmtISO(f.de)+' a '+fmtISO(f.ate)+' ('+f.datas.length+' dias) · '+f.func.length+' funcionário(s) · uso interno, não substitui o relógio de ponto oficial';
+  $('prel-chips').innerHTML=`<span class="prel-chip f">Faltas: ${T.fa}</span><span class="prel-chip sr">Sem registro: ${T.sr}</span><span class="prel-chip c">Conflitos: ${T.co}</span><span class="prel-chip tr">Horas no período: ${n1(T.h)}</span>`;
+  $('prel-excel').disabled=false; f.confs=confs.length;
+  const aba=S.aba; const tabs=`<button type="button" class="prel-aba${aba==='resumo'?' on':''}" data-prel="aba" data-v="resumo">📋 Resumo por funcionário</button><button type="button" class="prel-aba${aba==='grade'?' on':''}" data-prel="aba" data-v="grade">🗓️ Grade por dia</button><button type="button" class="prel-aba${aba==='conf'?' on':''}" data-prel="aba" data-v="conf">⚠ Conflitos (${confs.length})</button>`;
+  let ferr=`<input type="search" id="prel-q" placeholder="🔎 Buscar funcionário…" value="${esc(f.q)}" autocomplete="off">`;
+  if(aba==='resumo') ferr+=`<label style="font-size:12px;font-weight:800;display:flex;gap:5px;align-items:center"><input type="checkbox" id="prel-prob"${f.soProblemas?' checked':''}> só com faltas / conflitos / sem registro</label>`;
+  if(aba==='grade'&&f.meses.length>1) ferr+=f.meses.map(m=>`<button type="button" class="prel-aba${S.mes===m?' on':''}" data-prel="mes" data-v="${m}">${esc(nomeMes(m))}</button>`).join('');
+  $('prel-tools').innerHTML=`<div style="display:flex;gap:6px;flex-wrap:wrap;width:100%">${tabs}</div>`+ferr;
+  $('prel-leg').innerHTML=aba==='grade'?'<span><i class="prel-c-tr"></i>Trabalhou</span><span><i class="prel-c-sc"></i>Saiu mais cedo</span><span><i class="prel-c-f"></i>Falta / incompleto</span><span><i class="prel-c-t"></i>Transferido</span><span><i class="prel-c-sr"></i>Sem registro</span><span><i class="prel-c-c"></i>Conflito — investigar</span><span style="opacity:.75">Toque num dia para ver os detalhes.</span>':'';
+  renderCorpoFP();
+}
+function filtrarFP(){ const f=S.fp; const q=f.q.trim().toLowerCase(); return f.func.filter(x=>(!q||(x.nome+' '+x.funcao).toLowerCase().includes(q))&&(!f.soProblemas||x.faltas||x.conf||x.semReg)); }
+function renderCorpoFP(){
+  const f=S.fp, aba=S.aba, lista=filtrarFP(); let h='';
+  if(!f.func.length){ $('prel-corpo').innerHTML='<div class="prel-vazio">Nenhum funcionário ou RDO encontrado nesse período.</div>'; return; }
+  if(aba==='resumo'){
+    h=`<table class="prel-tab"><thead><tr><th>FUNCIONÁRIO</th><th>FUNÇÃO</th><th class="n">TOTAL FALTAS</th><th class="n">TOTAL SEM REGISTRO</th><th class="n">TOTAL CONFLITOS</th><th class="n">TOTAL HORAS NO PERÍODO</th></tr></thead><tbody>${lista.map(x=>`<tr><td><b>${esc(x.nome)}</b></td><td>${esc(x.funcao)}</td><td class="n${x.faltas?' bad':''}">${x.faltas}</td><td class="n">${x.semReg}</td><td class="n${x.conf?' bad':''}">${x.conf}</td><td class="n">${n1(x.horas)}</td></tr>`).join('')}</tbody></table>`+(lista.length?'':'<div class="prel-vazio">Nenhum funcionário com esses filtros.</div>');
+  }else if(aba==='grade'){
+    const dias=f.datas.filter(d=>d.startsWith(S.mes||f.meses[0]));
+    const cab=dias.map(d=>{ const dt=new Date(d+'T12:00:00'); const fds=[0,6].includes(dt.getDay()); const ab=(typeof DIAS_SEMANA_ABREV!=='undefined'?DIAS_SEMANA_ABREV[dt.getDay()]:''); return `<th class="${fds?'fds':''}">${dt.getDate()}<br>${ab}</th>`; }).join('');
+    h=`<table class="prel-grade"><thead><tr><th class="nm">FUNCIONÁRIO</th>${cab}</tr></thead><tbody>${lista.map(x=>`<tr><td class="nm" title="${esc(x.nome)} — ${esc(x.funcao)}">${esc(x.nome)}</td>${dias.map(d=>{ const c=x.cels[f.datas.indexOf(d)]; return `<td><button type="button" class="prel-c-${c.cl.k}" data-prel="cel" data-v="${esc(x.chave)}|${d}">${esc(c.cl.t)}</button></td>`; }).join('')}</tr>`).join('')}</tbody></table>`+(lista.length?'':'<div class="prel-vazio">Nenhum funcionário com esses filtros.</div>');
+  }else{
+    const q=f.q.trim().toLowerCase(); const itens=[]; f.func.forEach(x=>x.cels.forEach(c=>{ if(c.cel.tipo==='conflito'&&(!q||x.nome.toLowerCase().includes(q))) itens.push({x,c}); }));
+    h=itens.length?`<div style="display:flex;flex-direction:column;gap:6px;padding-top:6px">${itens.map(({x,c})=>`<button type="button" class="prel-card prel-c-c" style="text-align:left;cursor:pointer;width:100%" data-prel="cel" data-v="${esc(x.chave)}|${c.dt}"><b>${esc(x.nome)}</b> — ${fmtISO(c.dt)}<small>${esc(c.cl.desc)}</small></button>`).join('')}</div>`:'<div class="prel-vazio">✅ Nenhum conflito encontrado nesse período.</div>';
+  }
+  $('prel-corpo').innerHTML=h;
+}
+function detalheDia(chave,iso){
+  const x=S.fp.func.find(y=>y.chave===chave); if(!x) return; const c=x.cels[S.fp.datas.indexOf(iso)]; const dt=new Date(iso+'T12:00:00');
+  const dia=(typeof DIAS_SEMANA_ABREV!=='undefined'?DIAS_SEMANA_ABREV[dt.getDay()]:''); const lanc=x.lanc[iso]||[];
+  const linhas=lanc.length?lanc.map(l=>`<div class="lin"><b>${esc(l.obra||'(sem obra)')}</b> · ${l.status==='falta'?'FALTA':l.status==='saiu_cedo'?'SAIU MAIS CEDO':l.status==='transferido'?'TRANSFERIDO':'trabalhou'}<br>Normais: ${n1(l.horasNormais)} h · 70%: ${n1(l.horasExtra70)} h · 100%: ${n1(l.horasExtra100)} h${l.ehFeriado?' · feriado':''}</div>`).join(''):'<div class="lin">Nenhum lançamento neste dia.</div>';
+  $('prev-rel-det').innerHTML=`<div class="prel-detbox"><h4>${esc(x.nome)}</h4><div style="font-size:12px;font-weight:700;margin-bottom:6px">${esc(x.funcao)} · ${fmtISO(iso)} (${esc(dia)})</div><div class="lin prel-c-${c.cl.k}" style="font-weight:800">${esc(c.cl.desc)}</div><div style="margin-top:8px;font-size:11px;font-weight:900;text-transform:uppercase">Lançamentos nos RDOs</div>${linhas}<button type="button" data-prel="fechar-det">Fechar</button></div>`;
+  $('prev-rel-det').classList.add('show');
+}
+
+/* ───────────── eventos (um só ponto) ───────────── */
+function iniciar(){
+  const m=$('prev-rel-modal'); if(!m) return;
+  try{ if(typeof IDS_MODAIS_COM_ESC!=='undefined'&&!IDS_MODAIS_COM_ESC.includes('prev-rel-modal')) IDS_MODAIS_COM_ESC.unshift('prev-rel-modal'); }catch(e){}
+  try{ if(typeof FECHAR_MODAL_POR_ID!=='undefined') FECHAR_MODAL_POR_ID['prev-rel-modal']=fecharPrevRel; }catch(e){}
+  m.addEventListener('click',e=>{
+    const b=e.target.closest('[data-prel]'); if(!b){ if(e.target.id==='prev-rel-det') $('prev-rel-det').classList.remove('show'); return; }
+    const a=b.getAttribute('data-prel'), v=b.getAttribute('data-v');
+    if(a==='fechar'||a==='voltar') fechar();
+    else if(a==='fechar-det') $('prev-rel-det').classList.remove('show');
+    else if(a==='excel'){ const t=S.tipo; fechar(); if(t==='abs') exportarRelatorioAbsenteismo(); else if(t==='fp') exportarFolhaPontoExcel(); }
+    else if(a==='status'&&S.abs){ S.abs.status=S.abs.status===v?'':v; S.abs.limite=300; renderAbs(); }
+    else if(a==='limpar'&&S.abs){ S.abs.q='';S.abs.status='';S.abs.obra='';S.abs.limite=300; renderAbs(); }
+    else if(a==='mais'&&S.abs){ S.abs.limite+=300; renderListaAbs(); }
+    else if(a==='aba'&&S.fp){ S.aba=v; renderFP(); }
+    else if(a==='mes'&&S.fp){ S.mes=v; renderFP(); }
+    else if(a==='cel'&&S.fp){ const p=v.split('|'); detalheDia(p[0],p[1]); }
+  });
+  m.addEventListener('input',e=>{ const t=e.target;
+    if(t.id==='prel-q'){ if(S.tipo==='abs'&&S.abs){ S.abs.q=t.value; S.abs.limite=300; renderListaAbs(); } else if(S.tipo==='fp'&&S.fp){ S.fp.q=t.value; renderCorpoFP(); } } });
+  m.addEventListener('change',e=>{ const t=e.target;
+    if(t.id==='prel-fobra'&&S.abs){ S.abs.obra=t.value; S.abs.limite=300; renderListaAbs(); }
+    else if(t.id==='prel-prob'&&S.fp){ S.fp.soProblemas=t.checked; renderCorpoFP(); } });
+}
+window.visualizarAbsenteismo=visualizarAbsenteismo; window.visualizarFolhaPonto=visualizarFolhaPonto;
+if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',iniciar); else iniciar();
+})();
+
+</script>
 </body>
 </html>
