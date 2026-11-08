@@ -1719,6 +1719,31 @@ body.dark #workers-body tr:hover{background-color:rgba(58,110,232,.08)}
   to{opacity:1;transform:translateY(0)}
 }
 </style>
+
+<style id="tela-cheia">
+/* ═══ TELA CHEIA nos painéis de dados (v71) — só na tela; impressão e janelinhas de ação ficam como estavam ═══
+   Painéis: Orçamento · Orçado vs Executado · Extra Escopo · Andamento · Horas Extras · Horas por Projeto ·
+   Check de Integridade · Histórico H.H · Buscar RDOs · RDOs Não Enviados · Painel Executivo (Dashboard ao vivo já era tela cheia). */
+@media screen{
+  #oex-modal,#extra-escopo-modal,#andamento-modal,#horas-extras-modal,#projetos-modal,#check-modal,#grafico-modal,#search-modal,#pendentes-modal,#exec-modal,#orc-modal{padding:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) env(safe-area-inset-bottom,0px) env(safe-area-inset-left,0px)!important;align-items:stretch!important;justify-content:stretch!important;overflow:hidden!important}
+  #oex-modal .multipdf-box,#extra-escopo-modal .multipdf-box,#andamento-modal .multipdf-box,#horas-extras-modal .multipdf-box,#projetos-modal .multipdf-box,#check-modal .multipdf-box,#grafico-modal .grafico-box,#search-modal .search-box,#pendentes-modal .search-box,#exec-modal .exec-box,#orc-modal .orc-box{width:100%!important;max-width:none!important;min-width:0!important;height:100%!important;max-height:none!important;margin:0!important;border:0!important;border-radius:0!important;box-shadow:none!important}
+  /* caixas que não eram "coluna" passam a ser: cabeçalho fixo · corpo que rola · rodapé fixo */
+  #search-modal .search-box,#pendentes-modal .search-box{display:flex!important;flex-direction:column!important}
+  #search-modal .search-box-header,#pendentes-modal .search-box-header,#search-modal .search-box-footer,#pendentes-modal .search-box-footer{flex-shrink:0}
+  #search-modal .search-box-body,#pendentes-modal .search-box-body{flex:1 1 auto!important;min-height:0!important;overflow-y:auto!important}
+  #search-modal .search-results,#pendentes-modal .search-results{max-height:none!important;overflow:visible!important}
+  #search-modal #search-results{grid-auto-rows:min-content}
+  #grafico-modal .grafico-bar-wrap{max-height:none!important;overflow:visible!important}
+  #check-modal #check-lista-wrap{max-height:none!important;flex:1 1 auto!important;min-height:160px}
+  /* celular: os dois campos de data do filtro do Orçado vs Executado dividem a linha (o 2º ficava cortado na borda) */
+  @media(max-width:700px){ #oex-modal .oex-toolbar label.per{ flex-wrap:wrap!important; max-width:100%!important; white-space:normal!important } #oex-modal .oex-toolbar input[type=date]{ width:auto!important; min-width:0!important; flex:1 1 118px!important; max-width:100%!important } }
+  /* telas muito largas: cabeçalho e rodapé esticam; o conteúdo fica centralizado (campos não viram faixas gigantes) */
+  @media(min-width:2000px){
+    #oex-modal .multipdf-body,#extra-escopo-modal .multipdf-body,#andamento-modal .multipdf-body,#horas-extras-modal .multipdf-body,#projetos-modal .multipdf-body,#check-modal .multipdf-body,#search-modal .search-box-body,#pendentes-modal .search-box-body,#grafico-modal .grafico-body{padding-left:max(16px,calc((100% - 1800px)/2))!important;padding-right:max(16px,calc((100% - 1800px)/2))!important}
+    #orc-corpo>*{max-width:1800px;margin-left:auto!important;margin-right:auto!important}
+  }
+}
+</style>
 </head>
 <body>
 
@@ -1731,7 +1756,7 @@ body.dark #workers-body tr:hover{background-color:rgba(58,110,232,.08)}
      fontes) — os dois sistemas usam a mesma "moldura" de login, só
      o papel de parede muda entre eles. -->
 <div id="login-overlay" style="position:fixed;inset:0;z-index:99999;background:#0b1220 url('login-fundo-rdo.jpg') center center / cover no-repeat;color-scheme:dark">
-  <div style="position:absolute;bottom:6px;right:8px;font-size:9px;color:rgba(255,255,255,.35);font-family:monospace;pointer-events:none">v2026.10.70-orc-escopo-empilhado</div>
+  <div style="position:absolute;bottom:6px;right:8px;font-size:9px;color:rgba(255,255,255,.35);font-family:monospace;pointer-events:none">v2026.10.71-tela-cheia</div>
   <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:calc(100% - 32px);max-width:380px;background:rgb(10,17,32);border:1px solid rgba(255,255,255,.14);border-radius:18px;padding:32px 28px;box-shadow:0 20px 60px rgba(0,0,0,.6);text-transform:none;font-weight:400">
     <h1 style="font-size:20px;margin:0 0 4px;color:#fff;text-align:center;font-weight:700">RDO <span style="color:#3ea6ff">Master Energy</span></h1>
     <p style="margin:0 0 24px;text-align:center;color:#9ca3af;font-size:13px;letter-spacing:.5px;font-weight:600">DIÁRIO DE OBRA PRO</p>
@@ -14391,7 +14416,7 @@ window.addEventListener('beforeinstallprompt',(e)=>{
   };
 });
 </script>
-<div class="no-print" style="position:fixed;bottom:2px;right:4px;font-size:8px;color:rgba(120,120,120,.4);font-family:monospace;pointer-events:none;z-index:5">v2026.10.70-orc-escopo-empilhado</div>
+<div class="no-print" style="position:fixed;bottom:2px;right:4px;font-size:8px;color:rgba(120,120,120,.4);font-family:monospace;pointer-events:none;z-index:5">v2026.10.71-tela-cheia</div>
 
 <!-- MODAL DE ALERTA DE PENDÊNCIAS — substitui o toast/alert escuro de antes. Aparece
      sempre que a validação unificada (validarFormularioRDO) bloqueia uma tentativa de
@@ -18273,7 +18298,7 @@ const PECAS=(function(){
 // na própria linha (params.ativ_sn): se o catálogo mudar depois, orçamentos já feitos continuam com o texto de quando foram feitos.
 const ATIV={ok:false,carregando:false,erro:false,v:'',lista:[],disc:[],sub:[],t:{},porCod:new Map()};
 const ATIV_URL='catalogo_atividades.json?v=v5b-2026-10';
-const ORC_VERSAO='v2026.10.70-orc-escopo-empilhado';
+const ORC_VERSAO='v2026.10.71-tela-cheia';
 async function carregarAtividades(forcar){ if(ATIV.carregando) return; if(ATIV.ok&&!forcar) return; ATIV.carregando=true; ATIV.erro=false; ATIV.msgErro='';
   let url=ATIV_URL; try{ url=new URL(ATIV_URL,window.location.href).href; }catch(e){} if(forcar) url+='&t='+Date.now(); ATIV.url=url;
   try{ const r=await fetch(url); if(!r.ok) throw new Error('o arquivo não foi encontrado (HTTP '+r.status+')'); let j; try{ j=await r.json(); }catch(e){ throw new Error('o endereço devolveu uma página em vez do arquivo (provavelmente fora da raiz do site)'); }
