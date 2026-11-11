@@ -1921,6 +1921,76 @@ button.prel-chip{cursor:pointer}
 .rq-vl{background:#fff;color:#0e4a5f;border:2px solid #000;font-weight:900;font-size:12.5px;padding:5px 11px;cursor:pointer;border-radius:3px;font-family:inherit;white-space:nowrap}
 .rq-vl:hover{background:#e0f2fe}
 @media(max-width:760px){.rq-top b{font-size:12px}.rq-vl{padding:5px 8px;font-size:12px}.rq-fam{padding:7px 9px;font-size:11.5px}}
+
+/* selos de situação (mesmas cores de sempre, agora por classe — o tema escuro troca por tokens) */
+.rq-st.st-RASCUNHO{background:#64748b}.rq-st.st-ENVIADA{background:#1457c8}.rq-st.st-CONCLUIDA{background:#16a34a}.rq-st.st-CANCELADA{background:#b91c1c}
+
+/* ═══════════════════════════════════════════════════════════════════════════════════════════
+   TEMA ESCURO da Requisição — só vale com body.dark e só dentro de #req-modal (o claro NÃO é tocado)
+   Cinza neutro em camadas (fundo → cartão → campo → realce), texto off-white, contornos visíveis,
+   avisos translúcidos coloridos (nunca fundo pastel), controles nativos escuros (color-scheme).
+   ═══════════════════════════════════════════════════════════════════════════════════════════ */
+body.dark #req-modal{
+  color-scheme:dark;
+  --bg:#222221;--surface:#2b2b29;--surface2:#353533;--surface3:#403f3c;--border:#4d4b47;--border2:#42413d;
+  --text:#f3f2ee;--text2:#c9c7be;--text3:#b0aea4;--accent:#7aa7ff;
+  --rq-line:#5a5853;--rq-focus:#7aa7ff;--rq-link:#93b8ff;--rq-teal:#2aa5c7;
+  --rq-ok-bg:rgba(52,211,153,.14);--rq-ok-tx:#b9f1d6;--rq-ok-bd:#2f7a5c;--rq-ok-fg:#86efac;
+  --rq-warn-bg:rgba(251,191,36,.13);--rq-warn-tx:#f6e0a0;--rq-warn-bd:#8a6a1f;--rq-warn-fg:#f4c76a;
+  --rq-info-bg:rgba(56,189,248,.12);--rq-info-tx:#bde6fb;--rq-info-bd:#2b6f8e;
+  --rq-err-bg:rgba(248,113,113,.13);--rq-err-fg:#fca5a5;--rq-err-bd:#ef4444;
+}
+body.dark #req-modal ::placeholder{color:var(--text3);opacity:.9}
+body.dark #req-modal input[type=checkbox]{accent-color:#7aa7ff}
+body.dark #req-modal .rq-top{background:linear-gradient(135deg,#0b6a82,#123f50);border-bottom-color:var(--rq-line)}
+body.dark #req-modal .rq-vl{background:var(--surface3);color:var(--text);border-color:var(--rq-line)}
+body.dark #req-modal .rq-vl:hover{background:var(--surface2)}
+/* contornos que eram pretos */
+body.dark #req-modal .rq-b,body.dark #req-modal .rq-ic,body.dark #req-modal .rq-fam,body.dark #req-modal .rq-sit,body.dark #req-modal .rq-card,body.dark #req-modal .rq-sec,body.dark #req-modal .rq-pv,
+body.dark #req-modal .rq-home-top input,body.dark #req-modal .rq-home-top select,body.dark #req-modal .rq-lt-f select,body.dark #req-modal .rq-lt-f input[type=search],
+body.dark #req-modal .rq-f input,body.dark #req-modal .rq-f select,body.dark #req-modal .rq-f textarea,body.dark #req-modal .rq-dlgbox input,body.dark #req-modal .rq-dlgbox select,body.dark #req-modal .rq-dlgbox textarea{border-color:var(--rq-line)}
+body.dark #req-modal .rq-lt{border-bottom-color:var(--rq-line)}body.dark #req-modal .rq-barra{border-top-color:var(--rq-line)}
+body.dark #req-modal .rq-card{box-shadow:none}body.dark #req-modal .rq-card:hover{border-color:var(--rq-focus)}
+body.dark #req-modal .rq-dlg{background:rgba(0,0,0,.66)}
+body.dark #req-modal .rq-dlgbox{border-color:var(--rq-line);box-shadow:0 10px 32px rgba(0,0,0,.6)}
+body.dark #req-modal .rq-addbox{border-color:var(--rq-teal);box-shadow:0 0 0 1px var(--rq-teal)}
+body.dark #req-modal .rq-f input:focus,body.dark #req-modal .rq-f select:focus,body.dark #req-modal .rq-busca input:focus,body.dark #req-modal .rq-dlgbox input:focus{outline-color:var(--rq-focus)}
+/* botões, links, selos */
+body.dark #req-modal .rq-b.ok{background:#1f7a45;color:#fff}
+body.dark #req-modal .rq-pvtabs .rq-b.on,body.dark #req-modal .rq-fam.on{background:#0e7490;color:#fff;border-color:#2aa5c7}
+body.dark #req-modal .rq-lk,body.dark #req-modal .rq-edit{color:var(--rq-link)}
+body.dark #req-modal .rq-st.st-RASCUNHO{background:#4b5563}body.dark #req-modal .rq-st.st-ENVIADA{background:#2f5fcf}body.dark #req-modal .rq-st.st-CONCLUIDA{background:#1e7a45}body.dark #req-modal .rq-st.st-CANCELADA{background:#b03a3a}
+body.dark #req-modal .rq-bd{background:rgba(148,163,184,.22);color:#d3d8e0}
+body.dark #req-modal .rq-bd.nov{background:rgba(52,211,153,.2);color:#a7f3d0}body.dark #req-modal .rq-bd.alt{background:rgba(251,191,36,.2);color:#fde68a}
+body.dark #req-modal .rq-bd.cer{background:rgba(167,139,250,.22);color:#ddd6fe}body.dark #req-modal .rq-bd.forn{background:rgba(56,189,248,.2);color:#bae6fd}body.dark #req-modal .rq-bd.alta{background:rgba(248,113,113,.22);color:#fecaca}
+body.dark #req-modal .rq-chip{background:rgba(56,189,248,.16);color:#bde6fb}
+/* estados (verde ok · âmbar atenção · azul informação · vermelho erro) */
+body.dark #req-modal .rq-msg,body.dark #req-modal .rq-eq{background:var(--rq-ok-bg);color:var(--rq-ok-tx);border-color:var(--rq-ok-bd)}
+body.dark #req-modal .rq-alerta,body.dark #req-modal .rq-aviso,body.dark #req-modal .rq-parec{background:var(--rq-warn-bg);color:var(--rq-warn-tx);border-color:var(--rq-warn-bd)}
+body.dark #req-modal .rq-pre,body.dark #req-modal .rq-desc-auto,body.dark #req-modal .rq-regra{background:var(--rq-info-bg);color:var(--rq-info-tx);border-color:var(--rq-info-bd)}
+body.dark #req-modal .rq-eq small,body.dark #req-modal .rq-eq .rq-eq-n{color:var(--rq-ok-tx)}
+body.dark #req-modal .rq-falta,body.dark #req-modal .rq-hint.bad,body.dark #req-modal .rq-pre button{color:var(--rq-err-fg)}
+body.dark #req-modal .rq-okp,body.dark #req-modal .rq-ok2,body.dark #req-modal .rq-hint.ok,body.dark #req-modal .rq-p.ok{color:var(--rq-ok-fg)}
+body.dark #req-modal .rq-aviso-l{color:var(--rq-warn-fg)!important}
+body.dark #req-modal .rq-row.pend{background:var(--rq-err-bg);border-left-color:var(--rq-err-bd)}
+body.dark #req-modal .rq-row:nth-child(even){background:rgba(255,255,255,.03)}
+body.dark #req-modal .rq-row.pend:nth-child(even){background:var(--rq-err-bg)}
+@keyframes rqflashd{0%{background:#6b5410;box-shadow:0 0 0 3px #b8860b}100%{background:transparent;box-shadow:none}}
+body.dark #req-modal .rq-row.flash{animation-name:rqflashd}
+body.dark #req-modal .rq-ents{background:rgba(56,189,248,.07);border-color:var(--rq-info-bd)}
+body.dark #req-modal .rq-gh{background:#2f3a55;color:#dbe6ff;border-top-color:#44527a;border-bottom-color:#44527a}
+/* passos, busca, sugestões */
+body.dark #req-modal .rq-p i{background:#4a4945;color:#e7e5dc}body.dark #req-modal .rq-p.at i{background:#0e7490;color:#fff}body.dark #req-modal .rq-p.ok i{background:#1f7a45;color:#fff}
+body.dark #req-modal .rq-passos u{background:var(--rq-line)}body.dark #req-modal .rq-sec3{color:#67d4ee}
+body.dark #req-modal .rq-busca{border-color:var(--rq-teal)}
+body.dark #req-modal .rq-sg{border-color:var(--rq-line)}body.dark #req-modal .rq-sg:hover,body.dark #req-modal .rq-sg.at{border-color:var(--rq-focus);background:rgba(122,167,255,.12)}
+body.dark #req-modal .rq-sg mark{background:#7a5c10;color:#fff3c4}
+body.dark #req-modal .rq-sel,body.dark #req-modal .rq-det{border-color:var(--rq-line)}
+body.dark #req-modal .rq-tb th{background:#1c2a44}
+/* pré-visualização: o papel continua branco (é o PDF); só o redor e o balão do WhatsApp mudam */
+body.dark #req-modal .rq-pv{background:#171716}
+body.dark #req-modal .pv-wpp{background:#005c4b;color:#e9edef}
+body.dark #req-modal .rq-tb,body.dark #req-modal .rq-tb th,body.dark #req-modal .rq-tb td{border-color:var(--rq-line)}
 </style>
 </head>
 <body>
@@ -20826,14 +20896,14 @@ const stCor={RASCUNHO:'#64748b',ENVIADA:'#1457c8',CONCLUIDA:'#16a34a',CANCELADA:
 function renderHome(){ const c=$q('rq-corpo'); const f=RQ.filtro, q=nrm(f.q);
   const lst=RQ.lista.filter(r=>(!f.s||r.status===f.s)&&(!q||nrm([r.numero,r.titulo,r.obra,r.orcamento_numero,r.destinatario].join(' ')).indexOf(q)>=0));
   const loc=rascunhosLocais().filter(d=>d.R._nova||!RQ.lista.some(x=>x.id===d.R.id)).filter(d=>!q||nrm([d.R.titulo,d.R.obra].join(' ')).indexOf(q)>=0);
-  const card=(r,local)=>{ const t=r.totais||{}; return '<div class="rq-card" data-rq="abrir" data-id="'+esc(r.id)+'"><div class="rq-card-h"><b>'+esc(r.numero||'(rascunho local)')+'</b>'+(r.revisao?'<span class="rq-bd">rev. '+r.revisao+'</span>':'')+'<span class="rq-st" style="background:'+(stCor[r.status]||'#64748b')+'">'+esc(local?'Só neste aparelho':(STATUS[r.status]||r.status))+'</span></div><div class="rq-card-t">'+esc(r.titulo||'(sem título)')+'</div><small>'+esc(TIPOS[r.tipo]||r.tipo)+(r.orcamento_numero?' · orçamento '+esc(r.orcamento_numero):'')+(r.obra?' · '+esc(r.obra):'')+(r.destinatario?' · para '+esc(r.destinatario):'')+(r.necessario_ate?' · até '+fmtData(r.necessario_ate):'')+'</small><small>'+(t.itens!=null?t.itens+' item(ns)':'')+(t.pendencias?' · <b style="color:#b91c1c">⚠ '+t.pendencias+' pendência(s)</b>':'')+(r.atualizado_em?' · atualizada em '+fmtData(r.atualizado_em):'')+'</small><div class="rq-card-a"><button type="button" class="rq-b sec" data-rq="abrir" data-id="'+esc(r.id)+'">Abrir</button>'+(local?'':'<button type="button" class="rq-b sec" data-rq="dup" data-id="'+esc(r.id)+'">Duplicar</button>')+'<button type="button" class="rq-b sec" data-rq="del" data-id="'+esc(r.id)+'">Excluir</button></div></div>'; };
+  const card=(r,local)=>{ const t=r.totais||{}; return '<div class="rq-card" data-rq="abrir" data-id="'+esc(r.id)+'"><div class="rq-card-h"><b>'+esc(r.numero||'(rascunho local)')+'</b>'+(r.revisao?'<span class="rq-bd">rev. '+r.revisao+'</span>':'')+'<span class="rq-st st-'+esc(r.status)+'">'+esc(local?'Só neste aparelho':(STATUS[r.status]||r.status))+'</span></div><div class="rq-card-t">'+esc(r.titulo||'(sem título)')+'</div><small>'+esc(TIPOS[r.tipo]||r.tipo)+(r.orcamento_numero?' · orçamento '+esc(r.orcamento_numero):'')+(r.obra?' · '+esc(r.obra):'')+(r.destinatario?' · para '+esc(r.destinatario):'')+(r.necessario_ate?' · até '+fmtData(r.necessario_ate):'')+'</small><small>'+(t.itens!=null?t.itens+' item(ns)':'')+(t.pendencias?' · <b class="rq-falta">⚠ '+t.pendencias+' pendência(s)</b>':'')+(r.atualizado_em?' · atualizada em '+fmtData(r.atualizado_em):'')+'</small><div class="rq-card-a"><button type="button" class="rq-b sec" data-rq="abrir" data-id="'+esc(r.id)+'">Abrir</button>'+(local?'':'<button type="button" class="rq-b sec" data-rq="dup" data-id="'+esc(r.id)+'">Duplicar</button>')+'<button type="button" class="rq-b sec" data-rq="del" data-id="'+esc(r.id)+'">Excluir</button></div></div>'; };
   c.innerHTML='<div class="rq-home"><div class="rq-home-top"><input id="rq-fq" type="search" placeholder="🔎 Buscar por número, título, obra, orçamento…" value="'+esc(f.q)+'" autocomplete="off"><select id="rq-fs"><option value="">Todas as situações</option>'+Object.keys(STATUS).map(k=>'<option value="'+k+'"'+(f.s===k?' selected':'')+'>'+STATUS[k]+'</option>').join('')+'</select><button type="button" class="rq-b ok" data-rq="nova">＋ Nova requisição</button></div>'
    +(RQ.semTabela?'<div class="rq-alerta">⚠ O banco ainda não tem a tabela das requisições. Rode o arquivo <b>26_requisicao_materiais.sql</b> no Supabase. Enquanto isso você pode criar e exportar listas — elas ficam salvas só neste aparelho.</div>':'')
    +(!RQ.listaOk?'<div class="rq-vazio">⏳ Carregando…</div>':((lst.length+loc.length)?'<div class="rq-cards">'+loc.map(d=>card(d.R,true)).join('')+lst.map(r=>card(r,false)).join('')+'</div>':'<div class="rq-vazio"><div style="font-size:42px">📦</div><b>Nenhuma requisição ainda.</b><br>Crie uma lista para comprar, separar do estoque ou levantar o que um serviço vai gastar.<br><br><button type="button" class="rq-b ok" data-rq="nova">＋ Criar a primeira requisição</button></div>'))+'</div>'; }
 function renderEditor(){ $q('rq-corpo').innerHTML='<div class="rq-ed"><div id="rq-cab" class="rq-sec rq-cab"></div><div id="rq-add" class="rq-sec rq-addbox"></div><div id="rq-lista" class="rq-sec"></div></div>'; renderCab(); renderAdd(true); renderLista(); }
 /* ── cabeçalho ── */
 function renderCab(soAtualizaNumero){ const R=RQ.R, box=$q('rq-cab'); if(!box) return; const t=totaisReq(R);
-  const resumo='<div class="rq-cab-r" data-rq="cab"><b>'+esc(R.numero||'Nova requisição')+(R.revisao?' · rev. '+R.revisao:'')+'</b> · '+esc(R.titulo||'(dê um título)')+' · '+esc(TIPOS[R.tipo])+(R.destinatario?' · para '+esc(R.destinatario):'')+(R.necessario_ate?' · até '+fmtData(R.necessario_ate):'')+'<span class="rq-st" style="background:'+(stCor[R.status]||'#64748b')+'">'+esc(STATUS[R.status])+'</span><span class="rq-edit">✏️ '+(RQ.cabAberto?'recolher':'editar dados')+'</span></div>';
+  const resumo='<div class="rq-cab-r" data-rq="cab"><b>'+esc(R.numero||'Nova requisição')+(R.revisao?' · rev. '+R.revisao:'')+'</b> · '+esc(R.titulo||'(dê um título)')+' · '+esc(TIPOS[R.tipo])+(R.destinatario?' · para '+esc(R.destinatario):'')+(R.necessario_ate?' · até '+fmtData(R.necessario_ate):'')+'<span class="rq-st st-'+esc(R.status)+'">'+esc(STATUS[R.status])+'</span><span class="rq-edit">✏️ '+(RQ.cabAberto?'recolher':'editar dados')+'</span></div>';
   if(!RQ.cabAberto){ box.innerHTML=resumo; return; } if(soAtualizaNumero&&box.querySelector('[data-rqh]')){ const b=box.querySelector('.rq-cab-r b'); if(b) b.textContent=(R.numero||'Nova requisição')+(R.revisao?' · rev. '+R.revisao:''); return; }
   const opt=(o,v)=>Object.keys(o).map(k=>'<option value="'+k+'"'+(v===k?' selected':'')+'>'+esc(o[k])+'</option>').join(''); const lst=(est.lista||[]);
   const vinc=R.orcamento_id?'ORC':'AVULSA';
@@ -21140,7 +21210,7 @@ function edCampo(t,fim){ const ed=RQ.ed; if(!ed) return; const c=ed.c, k=t.getAt
   if(k==='fam'){ if(!fim) return; const un0=(unInfo(FAMS[v].un)||{fam:'C'}).fam; if((un0==='L')!==(c.ufam==='L')){ toast('Esse tipo de material usa outra unidade de medida (metro × unidade). Exclua o item e adicione de novo.','#d97706'); dlgItemHTML(); return; } if(c.chave){ c.chave_origem=c.chave; c.desc_origem=c.desc; c.chave=''; c.origem='livre'; } c.fam=v; c.spec={}; c.descManual=false; c.desc=''; dlgItemHTML(); return; }
   if(k==='un'&&c.ufam==='C'){ const ni=unInfo(v); if(ni){ c.entradas.forEach(e=>{ if(e.base!=null) e.texto=nB(r6(e.base/ni.k),6)+' '+v; }); c.un=v; dlgItemHTML(); } return; } /* trocar a unidade de compra NÃO muda a quantidade: 20 un viram 0,2 cento */
   if(k==='cert'){ c.cert=v==='1'; return; } c[k]=v; }
-function atualizaResumoCab(){ const r=document.querySelector('#rq-cab .rq-cab-r'); if(!r) return; const R=RQ.R; const edit=r.querySelector('.rq-edit'); r.innerHTML='<b>'+esc(R.numero||'Nova requisição')+(R.revisao?' · rev. '+R.revisao:'')+'</b> · '+esc(R.titulo||'(dê um título)')+' · '+esc(TIPOS[R.tipo])+(R.destinatario?' · para '+esc(R.destinatario):'')+(R.necessario_ate?' · até '+fmtData(R.necessario_ate):'')+'<span class="rq-st" style="background:'+(stCor[R.status]||'#64748b')+'">'+esc(STATUS[R.status])+'</span><span class="rq-edit">✏️ '+(RQ.cabAberto?'recolher':'editar dados')+'</span>'; }
+function atualizaResumoCab(){ const r=document.querySelector('#rq-cab .rq-cab-r'); if(!r) return; const R=RQ.R; const edit=r.querySelector('.rq-edit'); r.innerHTML='<b>'+esc(R.numero||'Nova requisição')+(R.revisao?' · rev. '+R.revisao:'')+'</b> · '+esc(R.titulo||'(dê um título)')+' · '+esc(TIPOS[R.tipo])+(R.destinatario?' · para '+esc(R.destinatario):'')+(R.necessario_ate?' · até '+fmtData(R.necessario_ate):'')+'<span class="rq-st st-'+esc(R.status)+'">'+esc(STATUS[R.status])+'</span><span class="rq-edit">✏️ '+(RQ.cabAberto?'recolher':'editar dados')+'</span>'; }
 /* — abrir, voltar, fechar (ESC em camadas) — */
 function voltar(){ if(RQ.dlg){ dlgFechar(); return true; } if(RQ.tela==='editor'){ if(RQ.trocando){ RQ.trocando=null; RQ.add=addVazio(); renderAdd(true); return true; } if(RQ.add&&(RQ.add.sel||RQ.add.livre)){ RQ.add=addVazio(); renderAdd(true); return true; } sairEditor(); return true; } fecharModal(); return true; }
 async function sairEditor(){ if(RQ.sujo) await salvar(false); RQ.tela='lista'; RQ.R=null; render(); await listarReq(); if(RQ.tela==='lista') render(); }
