@@ -2019,6 +2019,95 @@ body.dark #req-modal .rq-previa,body.dark #req-modal .rq-falta,body.dark #req-mo
 body.dark #req-modal small{font-size:12px}
 body.dark #req-modal .rq-ver{font-size:11px}
 </style>
+<style id="dark-sistema">
+/* ═══════════════════════════════════════════════════════════════════════════════════════════
+   TEMA ESCURO DO SISTEMA — camada única, só vale com body.dark (o modo claro NÃO é tocado)
+   1) cinza neutro em camadas (mesma família da Requisição) · 2) controles nativos escuros (color-scheme)
+   3) rótulos legíveis (--text3) · 4) cores de marca usadas como texto ganham versão clara
+   5) fundos claros fixos viram tons translúcidos · 6) contornos pretos viram contornos visíveis
+   ═══════════════════════════════════════════════════════════════════════════════════════════ */
+body.dark{
+  color-scheme:dark;
+  --bg:#181818;--surface:#1f1f1f;--surface2:#282828;--surface3:#313131;--border:#3c3c3c;--border2:#303030;
+  --text:#ecebe7;--text2:#bfbdb4;--text3:#a9a79e;--accent:#3a6ee8;--accent2:#1a4ccc;--accent-light:#1c2740;
+  --hbg-solid:#101010;--hbg:linear-gradient(135deg,#101010 0%,#1b2a4a 100%);--hbg2:linear-gradient(135deg,#141414 0%,#203259 100%);--total-bg:#101010;
+  --shadow-card:0 0 0 1px #3c3c3c;--c-sem:#2a2a2a;--ct-sem:#bfbdb4;--cb-sem:#3c3c3c;
+}
+body.dark select:not(.hrs-status):not(.ose-status-sel) option{background:var(--surface2);color:var(--text)}
+body.dark .list-input-row input{background:var(--surface3);border-color:var(--border)}
+body.dark .list-item{background:var(--surface2);border-color:var(--border)}
+body.dark #menu-usuario-dropdown{background:var(--surface2)}
+/* ── 4) cores de marca usadas COMO TEXTO (geradas a partir do CSS do sistema) ── */
+body.dark :is(.grafico-stat-val,.hfield input:focus,.hfield textarea:focus,.rdo-result-date){color:#8fb4ff}
+body.dark :is(.check-ok,.ee-card .v,.oex-det summary,.oex-vd.verde,.ose-orc-nota.ok){color:#4ade80}
+body.dark :is(.pj-total){color:#c4a3ff}
+body.dark :is(.jf-x,.oex-orc.verm,.oex-tb2 tr.verm td,.oex-vd.verm,.orc-faixa .mal,.orc-mini.perigo,.pk-aviso,.prel-tab td.bad){color:#fca5a5}
+
+/* texto de cor de marca escrito direto no HTML/JavaScript (estilo inline) — só "color:" de verdade (não pega border-color nem background-color) */
+body.dark [style*=";color:#1a52c8"],body.dark [style*=" color:#1a52c8"],body.dark [style^="color:#1a52c8"],body.dark [style*=";color: #1a52c8"],body.dark [style*=" color: #1a52c8"],body.dark [style^="color: #1a52c8"],body.dark [style*=";color:#1457c8"],body.dark [style*=" color:#1457c8"],body.dark [style^="color:#1457c8"],body.dark [style*=";color: #1457c8"],body.dark [style*=" color: #1457c8"],body.dark [style^="color: #1457c8"],body.dark [style*=";color:#0d3a82"],body.dark [style*=" color:#0d3a82"],body.dark [style^="color:#0d3a82"],body.dark [style*=";color: #0d3a82"],body.dark [style*=" color: #0d3a82"],body.dark [style^="color: #0d3a82"]{color:#8fb4ff!important}
+body.dark [style*=";color:#158038"],body.dark [style*=" color:#158038"],body.dark [style^="color:#158038"],body.dark [style*=";color: #158038"],body.dark [style*=" color: #158038"],body.dark [style^="color: #158038"]{color:#4ade80!important}
+body.dark [style*=";color:#dc2626"],body.dark [style*=" color:#dc2626"],body.dark [style^="color:#dc2626"],body.dark [style*=";color: #dc2626"],body.dark [style*=" color: #dc2626"],body.dark [style^="color: #dc2626"],body.dark [style*=";color:#b91c1c"],body.dark [style*=" color:#b91c1c"],body.dark [style^="color:#b91c1c"],body.dark [style*=";color: #b91c1c"],body.dark [style*=" color: #b91c1c"],body.dark [style^="color: #b91c1c"]{color:#fca5a5!important}
+body.dark [style*=";color:#6830cc"],body.dark [style*=" color:#6830cc"],body.dark [style^="color:#6830cc"],body.dark [style*=";color: #6830cc"],body.dark [style*=" color: #6830cc"],body.dark [style^="color: #6830cc"]{color:#c4a3ff!important}
+body.dark [style*=";color:#d97706"],body.dark [style*=" color:#d97706"],body.dark [style^="color:#d97706"],body.dark [style*=";color: #d97706"],body.dark [style*=" color: #d97706"],body.dark [style^="color: #d97706"],body.dark [style*=";color:#c2410c"],body.dark [style*=" color:#c2410c"],body.dark [style^="color:#c2410c"],body.dark [style*=";color: #c2410c"],body.dark [style*=" color: #c2410c"],body.dark [style^="color: #c2410c"]{color:#fdba74!important}
+body.dark [style*=";color:#666"],body.dark [style*=" color:#666"],body.dark [style^="color:#666"],body.dark [style*=";color: #666"],body.dark [style*=" color: #666"],body.dark [style^="color: #666"],body.dark [style*=";color:#333"],body.dark [style*=" color:#333"],body.dark [style^="color:#333"],body.dark [style*=";color: #333"],body.dark [style*=" color: #333"],body.dark [style^="color: #333"],body.dark [style*=";color:#1e293b"],body.dark [style*=" color:#1e293b"],body.dark [style^="color:#1e293b"],body.dark [style*=";color: #1e293b"],body.dark [style*=" color: #1e293b"],body.dark [style^="color: #1e293b"],body.dark [style*=";color:#7c9cc4"],body.dark [style*=" color:#7c9cc4"],body.dark [style^="color:#7c9cc4"],body.dark [style*=";color: #7c9cc4"],body.dark [style*=" color: #7c9cc4"],body.dark [style^="color: #7c9cc4"]{color:var(--text2)!important}
+body.dark [style*="color:var(--accent"]{color:#8fb4ff!important}
+/* fundos claros escritos direto no HTML */
+body.dark [style*="background:#fef3c7"]:not(.tb-color){background:rgba(251,191,36,.14)!important;color:#f6e0a0!important;border-color:#8a6a1f!important}
+body.dark [style*="background:#fee2e2"]:not(.tb-color){background:rgba(248,113,113,.14)!important;color:#fecaca!important}
+body.dark [style*="background:#fff8ee"]:not(.tb-color){background:rgba(251,146,60,.12)!important;color:#fdba74!important}
+body.dark [style*="background:#f4f6fb"]:not(.tb-color){background:var(--surface3)!important;color:var(--text)!important}
+body.dark [style*="background:#dcebff"]:not(.tb-color){background:rgba(107,155,255,.15)!important;color:#dbe6ff!important}
+body.dark button[style*="background:#fff;"]:not(.tb-color),body.dark button[style$="background:#fff"]:not(.tb-color){background:var(--surface2)!important}
+body.dark #aviso-operacional{color:#f6e0a0!important;border-bottom-color:#8a6a1f!important}
+/* laranja com letra branca (3,2:1) → laranja mais fundo (5:1) */
+body.dark{--c-par:#b45309;--cb-par:#8a4508}
+body.dark [style*="background:#d97706"],body.dark [style*="background: rgb(217, 119, 6)"]{background:#b45309!important;border-color:#8a3f06!important}
+body.dark .ose-card.s-par .ose-total-box,body.dark textarea.hrs.col-par{background:#b45309!important}
+body.dark #btn-folha-ponto{background:linear-gradient(180deg,#52607a 0%,#3b475c 100%)!important;color:#f1f5f9!important;border-color:#2b3548!important}
+body.dark .orc-chip[style*="#64748b"]{background:#4b5563!important}
+/* Orçado vs Executado: cor do texto dos chips/percentuais sem mexer nas barras e pontos (que usam --c como fundo) */
+body.dark #oex-modal .verde{--ct:#86efac}body.dark #oex-modal .amar{--ct:#fcd34d}body.dark #oex-modal .verm{--ct:#fca5a5}body.dark #oex-modal .sem{--ct:#cbd5e1}
+body.dark #oex-modal :is(.oex-fchip .n,.oex-pct,.oex-tb td.cor){color:var(--ct,var(--c))!important}
+body.dark :is(.rdo-header,.total-hrs){border-color:var(--border)}
+body.dark div[style*="border:2px solid #000"],body.dark div[style*="border:2.5px solid #000"]{border-color:var(--border)!important}
+/* menus (select) dos painéis: mesmo fundo dos campos, sem o cinza claro padrão do navegador */
+body.dark :is(.multipdf-box,#oex-modal,#projetos-modal,#check-modal,#backup-modal,#search-modal,#clientes-modal,#frases-modal) select:not(.ose-status-sel):not(.hrs-status){background-color:var(--surface2)}
+/* botões e rótulos soltos */
+body.dark :is(.btn-del-row,.frase-item-del){color:#fca5a5}
+body.dark .btn-add-row{color:#8fb4ff}
+body.dark .tb-color{color:#1e293b}
+body.dark .no-print[style*="monospace"]{color:rgba(190,190,190,.55)!important}
+body.dark :is(.bn-energy,.banner-brand-tag){color:#0070b0}
+body.dark :is(.dash-feed-time,.dash-status-info),body.dark [style*="color:#6688aa"]{color:#9db3cf!important}
+body.dark .oex-fchip[style*="--c:#dc2626"] .n{color:#fca5a5}body.dark .oex-fchip[style*="--c:#16a34a"] .n{color:#86efac}body.dark .oex-fchip[style*="--c:#1a52c8"] .n{color:#8fb4ff}
+body.dark .oex-fchip[style*="--c:#6830cc"] .n{color:#c4a3ff}body.dark .oex-fchip[style*="--c:#d97706"] .n{color:#fdba74}body.dark .oex-fchip[style*="--c:#158038"] .n{color:#4ade80}
+/* ── 5) listas de Extra Escopo, Andamento e Horas/Projeto ── */
+body.dark .ee-projeto{background:rgba(34,197,94,.07);border-color:#1f6f3e}
+body.dark .ee-dia{border-top-color:rgba(74,222,128,.28)}
+body.dark .an-projeto{background:rgba(107,155,255,.07);border-color:#2f4f9a}
+body.dark .an-dia{border-top-color:rgba(143,180,255,.28)}
+body.dark .pj-card{background:rgba(167,139,250,.08);border-color:#5a3aa8}
+body.dark .pj-status:not(.concluido){background:rgba(167,139,250,.2);color:#ddd6fe}
+body.dark .ee-dia,body.dark .an-dia{color:var(--text)}
+body.dark .ee-dia b,body.dark .an-dia b{color:var(--text)}
+/* ── OSE sem atividade (cartão branco) e campos de horas ── */
+body.dark .ose-card.s-sem{background:var(--surface);border-color:var(--border)}
+body.dark .ose-card.s-sem .ose-header{background:var(--surface2);border-bottom-color:var(--border)}
+body.dark .ose-card.s-sem .ose-name-input{border-bottom-color:var(--border);color:var(--text)}
+body.dark .ose-card.s-sem .ose-status-sel{background:var(--surface3);color:var(--text2);border-color:var(--border)}
+body.dark .ose-card.s-sem .ose-total-box{background:var(--surface3);border-color:var(--border)}
+body.dark .ose-card.s-sem .ose-total-val{color:var(--text)!important}
+body.dark .ose-card.s-sem .ose-total-box span{color:var(--text2)!important}
+body.dark textarea.hrs.col-sem{background:var(--surface2)!important;border-color:var(--border)!important;color:var(--text)!important}
+body.dark textarea.hrs.special{background:#3d2b12!important;color:#fdba74!important;border-color:#a04e08!important}
+body.dark .badge-sem{background:var(--surface3);color:var(--text);border-color:var(--border)}
+/* ── 6) contornos que eram pretos ── */
+body.dark :is(.ee-card,.summary-card,.legend-bar,.frases-box,.table-wrap,.search-box-footer,.grafico-stats,.multipdf-box,.multipdf-footer,.multipdf-check-list,.rdo-result-item,.pj-card,.ose-desc-wrap,.multipdf-cancel,.oex-fchip,.novo-rdo-radio,.frases-box,.table-wrap){border-color:var(--border)}
+body.dark .multipdf-box{box-shadow:0 10px 32px rgba(0,0,0,.6)}
+body.dark .summary-card,body.dark .ee-card{box-shadow:none}
+body.dark :is(input:not(.hrs):not([type=checkbox]):not([type=radio]):not(:focus),select:not(.ose-status-sel):not(.hrs-status):not(:focus),textarea:not(.hrs):not(:focus)){border-color:var(--border)}
+
+</style>
 </head>
 <body>
 
